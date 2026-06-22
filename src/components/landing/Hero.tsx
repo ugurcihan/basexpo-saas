@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, QrCode, Zap, Users, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { InstallBadges } from "@/components/landing/AppInstallSection";
 
 const STATS = [
   { value: 8500, suffix: "+", label: "Ziyaretçi", icon: Users },
@@ -317,6 +318,12 @@ export function Hero() {
                   Fuarı Gez
                 </Link>
               </Button>
+            </motion.div>
+
+            {/* App install badges */}
+            <motion.div variants={itemVariants} className="space-y-2">
+              <p className="text-xs text-muted-foreground">Uygulamayı indir:</p>
+              <InstallBadges size="sm" />
             </motion.div>
 
             {/* Animated stats */}
