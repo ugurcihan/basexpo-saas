@@ -55,7 +55,7 @@ export function MyBoothsClient({ profile, booths }: Props) {
   return (
     <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-6">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
               <Store className="w-5 h-5 text-brand-indigo-light" />
@@ -67,7 +67,7 @@ export function MyBoothsClient({ profile, booths }: Props) {
 
         {booths.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="glass rounded-2xl border border-white/8 p-12 flex flex-col items-center text-center"
           >
             <Store className="w-12 h-12 text-muted-foreground/30 mb-4" />
@@ -83,7 +83,7 @@ export function MyBoothsClient({ profile, booths }: Props) {
               return (
                 <motion.div
                   key={booth.id}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
+                  initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
                   className="glass rounded-2xl border border-white/8 p-5 hover:border-white/15 transition-colors"
                 >
                   <div className="flex items-start gap-4">

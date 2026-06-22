@@ -118,7 +118,7 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* ── Back link ──────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <Link
             href={backHref}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors"
@@ -130,7 +130,7 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
         {/* ── Hero Image ─────────────────────────── */}
         {(event.cover_url || (event.gallery_urls && event.gallery_urls.length > 0)) && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.04 }}
+            initial={{ scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.04 }}
             className="relative rounded-2xl overflow-hidden h-52 lg:h-72 border border-white/8"
           >
             <img
@@ -147,13 +147,13 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
 
         {/* ── Header (no hero) ───────────────────── */}
         {!event.cover_url && (!event.gallery_urls || event.gallery_urls.length === 0) && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
             <h1 className="font-display text-2xl lg:text-3xl font-bold text-white mb-2">{event.name}</h1>
           </motion.div>
         )}
 
         {/* ── Meta info ──────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {event.location}</span>
             <span className="flex items-center gap-1.5">
@@ -175,7 +175,7 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
 
         {/* ── Galeri ─────────────────────────────── */}
         {event.gallery_urls && event.gallery_urls.length > 1 && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Galeri</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {event.gallery_urls.slice(0, 8).map((url) => (
@@ -188,7 +188,7 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
         )}
 
         {/* ── Sponsor Piramidi ────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <div className="flex items-center gap-2 mb-5">
             <Crown className="w-5 h-5 text-brand-gold" />
             <h2 className="font-semibold text-white text-lg">Sponsorlar</h2>
@@ -248,7 +248,7 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
         </motion.div>
 
         {/* ── Katılımcı Firmalar ──────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <button
             onClick={() => setShowParticipants((v) => !v)}
             className="w-full glass rounded-2xl border border-white/8 px-6 py-4 flex items-center justify-between hover:border-white/15 transition-colors group"
@@ -270,7 +270,7 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
 
           {showParticipants && (
             <motion.div
-              initial={{ opacity: 0, y: -8 }}
+              initial={{ y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
               className="mt-3 glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden"

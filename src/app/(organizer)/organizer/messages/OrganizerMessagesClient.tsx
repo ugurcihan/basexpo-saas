@@ -96,7 +96,7 @@ export function OrganizerMessagesClient({ profile, events, sentNotifications }: 
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
               <Bell className="w-5 h-5 text-brand-indigo-light" />
@@ -108,7 +108,7 @@ export function OrganizerMessagesClient({ profile, events, sentNotifications }: 
 
         {/* Compose form */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+          initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
           className="glass rounded-2xl border border-white/8 p-6 space-y-5"
         >
           <h2 className="font-semibold text-white flex items-center gap-2"><Send className="w-4 h-4 text-brand-indigo-light" /> Yeni Bildirim</h2>
@@ -190,7 +190,7 @@ export function OrganizerMessagesClient({ profile, events, sentNotifications }: 
 
         {/* Sent history */}
         {sentNotifications.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
             <h2 className="font-semibold text-white mb-3">Gönderilen Bildirimler</h2>
             <div className="glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden">
               {sentNotifications.map((n) => {

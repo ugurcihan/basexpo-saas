@@ -97,7 +97,7 @@ export function ConnectionsClient({ profile, incoming, outgoing, accepted, disco
     <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-5">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-display text-2xl font-bold text-white">Bağlantılar</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {accepted.length} bağlantı · {incoming.length} bekleyen istek
@@ -159,7 +159,7 @@ export function ConnectionsClient({ profile, incoming, outgoing, accepted, disco
                 filtered.map((v, i) => (
                   <motion.div
                     key={v.id}
-                    initial={{ opacity: 0, y: 14 }}
+                    initial={{ y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
                     className="glass rounded-xl border border-white/8 hover:border-white/12 transition-all p-4 flex items-center gap-4"
@@ -207,7 +207,7 @@ export function ConnectionsClient({ profile, incoming, outgoing, accepted, disco
                 incoming.map((conn, i) => (
                   <motion.div
                     key={conn.id}
-                    initial={{ opacity: 0, y: 14 }}
+                    initial={{ y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
                     className="glass rounded-xl border border-brand-cyan/15 p-4 flex items-center gap-4"
@@ -281,7 +281,7 @@ export function ConnectionsClient({ profile, incoming, outgoing, accepted, disco
                 accepted.map((conn, i) => (
                   <motion.div
                     key={conn.id}
-                    initial={{ opacity: 0, y: 14 }}
+                    initial={{ y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
                     className="glass rounded-xl border border-white/8 hover:border-white/12 transition-all p-4 flex items-center gap-4"

@@ -169,7 +169,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
     <DashboardShell role="exhibitor" userName="" navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 max-w-2xl space-y-6">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-display text-2xl font-bold text-white">
             {exhibitor ? "Firma Profilim" : "Profil Oluştur"}
           </h1>
@@ -186,7 +186,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="glass rounded-2xl border border-white/8 p-6 space-y-5"
@@ -358,7 +358,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
         {/* Payment card — shown only when exhibitor exists */}
         {exhibitor && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
           >
@@ -373,7 +373,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
         {/* AI embedding card — shown only when exhibitor exists */}
         {exhibitor && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="glass rounded-2xl border border-brand-violet/15 p-5 flex items-start gap-4"

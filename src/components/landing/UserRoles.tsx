@@ -93,7 +93,7 @@ export function UserRoles() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
@@ -119,7 +119,7 @@ export function UserRoles() {
             return (
               <motion.div
                 key={role.id}
-                initial={{ opacity: 0, y: 50 }}
+                initial={{ y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{

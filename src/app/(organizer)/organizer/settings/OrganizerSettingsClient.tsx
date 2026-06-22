@@ -26,7 +26,7 @@ export function OrganizerSettingsClient() {
   return (
     <DashboardShell role="organizer" userName="" navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-6">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-9 h-9 rounded-xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
               <Settings className="w-5 h-5 text-brand-indigo-light" />
@@ -39,7 +39,7 @@ export function OrganizerSettingsClient() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.15 }}
           className="glass rounded-2xl border border-white/8 p-12 flex flex-col items-center text-center"

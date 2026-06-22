@@ -87,7 +87,7 @@ export function BoothTrackingClient({ profile, events, scans }: Props) {
   return (
     <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-6">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center">
               <Activity className="w-5 h-5 text-brand-cyan" />
@@ -99,7 +99,7 @@ export function BoothTrackingClient({ profile, events, scans }: Props) {
 
         {/* Legend */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
           className="flex flex-wrap items-center gap-3 text-xs"
         >
           {[
@@ -120,7 +120,7 @@ export function BoothTrackingClient({ profile, events, scans }: Props) {
         {/* AI Öngörü */}
         {totalScans > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="glass rounded-2xl border border-brand-violet/25 p-5"
           >
             <div className="flex items-start gap-3">
@@ -179,7 +179,7 @@ export function BoothTrackingClient({ profile, events, scans }: Props) {
               return (
                 <motion.div
                   key={event.id}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 + ei * 0.06 }}
+                  initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 + ei * 0.06 }}
                   className="glass rounded-2xl border border-white/8 overflow-hidden"
                 >
                   {/* Event header */}

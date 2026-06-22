@@ -97,7 +97,7 @@ export function MeetingsClient({ profile, meetings, connections, preselectedId, 
     <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-white">Toplantılarım</h1>
             <p className="text-muted-foreground text-sm mt-0.5">
@@ -119,7 +119,7 @@ export function MeetingsClient({ profile, meetings, connections, preselectedId, 
 
         {/* Upcoming */}
         {upcoming.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-3">
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-3">
             <p className="text-xs text-muted-foreground px-1 font-medium uppercase tracking-wide">Yaklaşan</p>
             {upcoming.map((m, i) => <MeetingCard key={m.id} meeting={m} userId={profile.id} index={i} onRespond={handleRespond} isPending={isPending} />)}
           </motion.div>
@@ -127,7 +127,7 @@ export function MeetingsClient({ profile, meetings, connections, preselectedId, 
 
         {/* Empty */}
         {meetings.length === 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }}
             className="glass rounded-2xl border border-white/8 p-12 flex flex-col items-center text-center">
             <CalendarClock className="w-12 h-12 text-muted-foreground/25 mb-3" />
             <p className="text-muted-foreground font-medium">Henüz toplantı yok</p>
@@ -228,7 +228,7 @@ function MeetingCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       className="glass rounded-xl border border-white/8 p-5"

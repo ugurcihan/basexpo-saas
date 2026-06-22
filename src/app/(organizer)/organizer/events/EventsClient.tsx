@@ -145,7 +145,7 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between"
         >
@@ -164,7 +164,7 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
         {/* Event list */}
         {events.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass rounded-2xl border border-brand-indigo/20 p-12 flex flex-col items-center text-center"
           >
@@ -188,7 +188,7 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
               return (
                 <motion.div
                   key={event.id}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }}
                   className="group glass rounded-xl border border-white/8 hover:border-white/15 transition-all duration-200 overflow-hidden"

@@ -156,7 +156,7 @@ export function GoldenQRClient({ profile, goldenQRs: initialQRs, events }: Props
       <div className="p-6 lg:p-8 space-y-6">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-brand-gold/15 border border-brand-gold/30 flex items-center justify-center">
@@ -175,7 +175,7 @@ export function GoldenQRClient({ profile, goldenQRs: initialQRs, events }: Props
 
         {/* Info card */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+          initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
           className="glass rounded-2xl border border-brand-gold/20 p-4 flex items-start gap-3"
         >
           <Gift className="w-5 h-5 text-brand-gold flex-shrink-0 mt-0.5" />
@@ -189,7 +189,7 @@ export function GoldenQRClient({ profile, goldenQRs: initialQRs, events }: Props
         {/* QR List */}
         {qrs.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+            initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
             className="glass rounded-2xl border border-dashed border-brand-gold/20 p-14 flex flex-col items-center text-center"
           >
             <QrCode className="w-14 h-14 text-brand-gold/30 mb-4" />
@@ -205,7 +205,7 @@ export function GoldenQRClient({ profile, goldenQRs: initialQRs, events }: Props
               return (
                 <motion.div
                   key={qr.id}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
+                  initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
                   className={`glass rounded-2xl border p-5 ${qr.is_active ? "border-brand-gold/25" : "border-white/8 opacity-60"}`}
                 >
                   <div className="flex items-start gap-4">

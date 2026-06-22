@@ -49,7 +49,7 @@ export function ExhibitorDashboard({ profile }: { profile: Profile }) {
       <div className="p-6 lg:p-8 space-y-8">
         {/* Welcome */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
@@ -63,7 +63,7 @@ export function ExhibitorDashboard({ profile }: { profile: Profile }) {
 
         {/* Stats */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           className="grid grid-cols-2 lg:grid-cols-4 gap-4"
@@ -71,7 +71,7 @@ export function ExhibitorDashboard({ profile }: { profile: Profile }) {
           {STAT_CARDS.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.06 }}
               className="glass rounded-xl p-5 border border-white/8"
@@ -86,7 +86,7 @@ export function ExhibitorDashboard({ profile }: { profile: Profile }) {
 
         {/* Setup prompt */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
           className="grid md:grid-cols-2 gap-4"

@@ -74,7 +74,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
       <div className="max-w-lg mx-auto px-4 py-10 space-y-6">
         {/* Exhibitor header card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="glass rounded-2xl border border-white/10 p-6"
         >
@@ -121,7 +121,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
 
         {/* Check-in action */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="glass rounded-2xl border border-white/10 p-6"
@@ -130,7 +130,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
             {checkedIn ? (
               <motion.div
                 key="success"
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex flex-col items-center text-center py-2"
               >
@@ -207,7 +207,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
         {/* Products */}
         {exhibitor.products.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="glass rounded-2xl border border-white/8 p-5"

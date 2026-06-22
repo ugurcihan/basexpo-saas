@@ -72,7 +72,7 @@ export function HowItWorks() {
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
@@ -103,7 +103,7 @@ export function HowItWorks() {
             return (
               <motion.div
                 key={step.step}
-                initial={{ opacity: 0, y: 40 }}
+                initial={{ y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{

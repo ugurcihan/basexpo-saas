@@ -252,7 +252,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* ── Header ─────────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <Link
             href="/organizer/events"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mb-4"
@@ -278,7 +278,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
 
         {/* ── Stats ──────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="grid grid-cols-3 gap-4"
@@ -301,7 +301,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         </motion.div>
 
         {/* ── SPONSOR PİRAMİDİ ───────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Crown className="w-5 h-5 text-brand-gold" />
@@ -369,7 +369,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         </motion.div>
 
         {/* ── GALERİ YÖNETİMİ ──────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
           <div className="flex items-center gap-2 mb-4">
             <Images className="w-5 h-5 text-brand-violet-light" />
             <h2 className="font-semibold text-white">Fotoğraf Galerisi</h2>
@@ -413,7 +413,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         </motion.div>
 
         {/* ── SALONLAR & STANDLAR ───────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Layers className="w-5 h-5 text-brand-indigo-light" />
@@ -435,7 +435,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
               {event.halls.map((hall, hi) => (
                 <motion.div
                   key={hall.id}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 + hi * 0.07 }}
                   className="glass rounded-2xl border border-white/8 overflow-hidden"

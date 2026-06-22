@@ -78,7 +78,7 @@ export function BadgeClient({ profile }: { profile: Profile }) {
   return (
     <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 max-w-md space-y-6">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-display text-2xl font-bold text-white">QR Badge&apos;im</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Firma temsilcilerine göster, bağlantı kur
@@ -86,7 +86,7 @@ export function BadgeClient({ profile }: { profile: Profile }) {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="glass rounded-2xl border border-white/8 p-8 flex flex-col items-center"

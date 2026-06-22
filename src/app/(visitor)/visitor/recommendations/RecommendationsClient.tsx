@@ -123,7 +123,7 @@ export function RecommendationsClient({
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between"
         >
@@ -154,9 +154,9 @@ export function RecommendationsClient({
           {(step === "interests" || (step !== "results" && initialRecs.length === 0 && !hasEmbedding)) && (
             <motion.div
               key="interests"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
+              exit={{ y: -16 }}
               className="glass rounded-2xl border border-brand-violet/20 p-6 space-y-5"
             >
               {/* Explainer */}
@@ -228,9 +228,9 @@ export function RecommendationsClient({
           {step === "generate" && (
             <motion.div
               key="generate"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
+              exit={{ y: -16 }}
               className="glass rounded-2xl border border-brand-indigo/20 p-8 flex flex-col items-center text-center"
             >
               <div className="w-16 h-16 rounded-2xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center mb-5">
@@ -294,7 +294,7 @@ export function RecommendationsClient({
               {/* Current interests */}
               {profile.interests.length > 0 && (
                 <motion.div
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-white/3 border border-white/8"
                 >
@@ -315,7 +315,7 @@ export function RecommendationsClient({
 
               {initialRecs.length === 0 ? (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="glass rounded-2xl border border-white/8 p-12 flex flex-col items-center text-center"
                 >
@@ -338,7 +338,7 @@ export function RecommendationsClient({
                     {initialRecs.map((rec, i) => (
                       <motion.div
                         key={rec.id}
-                        initial={{ opacity: 0, y: 18 }}
+                        initial={{ y: 18 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.07 }}
                         className="group glass rounded-xl border border-white/8 hover:border-white/15 transition-all overflow-hidden"

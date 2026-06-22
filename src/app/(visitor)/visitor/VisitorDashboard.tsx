@@ -45,7 +45,7 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
       <div className="p-6 lg:p-8 space-y-8">
         {/* Welcome */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
@@ -59,7 +59,7 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
 
         {/* AI recommendation preview */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           className="glass rounded-2xl border border-brand-violet/20 p-6"
@@ -117,7 +117,7 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
 
         {/* QR Badge teaser */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
           className="glass rounded-2xl border border-brand-cyan/20 p-8 flex flex-col items-center text-center"

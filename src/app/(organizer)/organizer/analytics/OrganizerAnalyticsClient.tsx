@@ -94,7 +94,7 @@ export function OrganizerAnalyticsClient({
   return (
     <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-6">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
               <BarChart2 className="w-5 h-5 text-brand-indigo-light" />
@@ -106,7 +106,7 @@ export function OrganizerAnalyticsClient({
 
         {/* KPI Cards */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+          initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
           className="grid grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {[
@@ -128,7 +128,7 @@ export function OrganizerAnalyticsClient({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Hourly chart */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
+            initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
             className="glass rounded-2xl border border-white/8 p-5"
           >
             <div className="flex items-center gap-2 mb-4">
@@ -144,7 +144,7 @@ export function OrganizerAnalyticsClient({
 
           {/* Top booths */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+            initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
             className="glass rounded-2xl border border-white/8 p-5"
           >
             <div className="flex items-center gap-2 mb-4">
@@ -160,7 +160,7 @@ export function OrganizerAnalyticsClient({
         </div>
 
         {/* Events summary */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
           <h2 className="font-semibold text-white mb-3">Fuar Listesi</h2>
           <div className="glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden">
             {events.length === 0 ? (

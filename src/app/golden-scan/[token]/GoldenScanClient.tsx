@@ -32,7 +32,7 @@ export function GoldenScanClient({ token, initialResult }: Props) {
   if (result.error) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+        <motion.div initial={{ scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
           className="glass rounded-3xl border border-red-500/20 p-8 max-w-sm w-full text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h1 className="font-display text-xl font-bold text-white mb-2">QR Kodu Geçersiz</h1>
@@ -48,7 +48,7 @@ export function GoldenScanClient({ token, initialResult }: Props) {
   if (result.alreadyScanned) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+        <motion.div initial={{ scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
           className="glass rounded-3xl border border-brand-gold/30 p-8 max-w-sm w-full text-center">
           <CheckCircle2 className="w-12 h-12 text-brand-gold mx-auto mb-4" />
           <h1 className="font-display text-xl font-bold text-white mb-2">Zaten Katıldınız!</h1>
@@ -76,7 +76,7 @@ export function GoldenScanClient({ token, initialResult }: Props) {
           />
         ))}
         <motion.div
-          initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
+          initial={{ scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 15 }}
           className="glass rounded-3xl border border-brand-gold/40 p-8 max-w-sm w-full text-center relative z-10"
         >
@@ -110,7 +110,7 @@ export function GoldenScanClient({ token, initialResult }: Props) {
   if (result.requiresLogin) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="glass rounded-3xl border border-brand-gold/30 p-8 max-w-sm w-full text-center">
           <Crown className="w-12 h-12 text-brand-gold mx-auto mb-4" />
           <h1 className="font-display text-xl font-bold text-white mb-2">{result.qr?.label}</h1>
@@ -136,7 +136,7 @@ export function GoldenScanClient({ token, initialResult }: Props) {
   // Initial state — show QR info and scan button (shouldn't reach here normally since server scans)
   return (
     <div className="min-h-screen bg-brand-dark flex items-center justify-center p-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="glass rounded-3xl border border-brand-gold/30 p-8 max-w-sm w-full text-center">
         <Crown className="w-12 h-12 text-brand-gold mx-auto mb-4" />
         <h1 className="font-display text-xl font-bold text-white mb-4">{result.qr?.label ?? "Altın QR"}</h1>

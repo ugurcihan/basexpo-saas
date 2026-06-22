@@ -151,7 +151,7 @@ function RegisterForm() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className="w-full max-w-lg"
@@ -198,7 +198,7 @@ function RegisterForm() {
         {/* Error */}
         {error && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm mb-6"
           >

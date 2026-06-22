@@ -70,7 +70,7 @@ export function LeadsClient({
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between"
         >
@@ -84,7 +84,7 @@ export function LeadsClient({
 
         {/* Stats */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
           className="grid grid-cols-3 gap-4"
@@ -109,7 +109,7 @@ export function LeadsClient({
         {/* Lead list */}
         {leads.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass rounded-2xl border border-brand-cyan/20 p-12 flex flex-col items-center text-center"
           >
@@ -126,7 +126,7 @@ export function LeadsClient({
             {leads.map((lead, i) => (
               <motion.div
                 key={lead.id}
-                initial={{ opacity: 0, y: 14 }}
+                initial={{ y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className="glass rounded-xl border border-white/8 hover:border-white/12 transition-all p-5 flex items-center gap-4"
