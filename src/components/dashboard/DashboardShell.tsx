@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { UserRole } from "@/types";
+import PushToggle from "@/components/push/PushToggle";
 
 interface NavItem {
   label: string;
@@ -162,9 +163,12 @@ export function DashboardShell({
             <Menu className="w-5 h-5" />
           </button>
           <span className="font-display font-bold text-white">BasExpo</span>
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="w-8 h-8">
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <PushToggle />
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="w-8 h-8">
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </header>
 
         {/* Page content */}

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
+import SendPushForm from "@/components/push/SendPushForm";
 
 const NAV_ITEMS = [
   { label: "Panel",               href: "/organizer",                          icon: LayoutDashboard },
@@ -38,9 +39,10 @@ interface Stats {
 interface Props {
   profile: Profile;
   stats: Stats;
+  events: { id: string; title: string }[];
 }
 
-export function OrganizerDashboard({ profile, stats }: Props) {
+export function OrganizerDashboard({ profile, stats, events }: Props) {
   const formatTRY = (cents: number) =>
     (cents / 100).toLocaleString("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
 
@@ -165,6 +167,11 @@ export function OrganizerDashboard({ profile, stats }: Props) {
             </Button>
           </motion.div>
         )}
+
+        {/* Push notification panel */}
+        <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+          <SendPushForm events={events} />
+        </motion.div>
       </div>
     </DashboardShell>
   );

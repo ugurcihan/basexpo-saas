@@ -35,6 +35,12 @@ export default async function OrganizerPage() {
       : Promise.resolve({ data: [] }),
   ]);
 
+  const { data: myEvents } = await supabase
+    .from("events")
+    .select("id, title")
+    .eq("organizer_id", profile.id)
+    .order("created_at", { ascending: false });
+
   const paidCount = myExhibitors?.filter((e) => e.paid_at).length ?? 0;
   const totalRevenueCents =
     myExhibitors?.filter((e) => e.paid_at).reduce((s, e) => s + (e.booth_fee_cents ?? 0), 0) ?? 0;
@@ -43,6 +49,7 @@ export default async function OrganizerPage() {
   return (
     <OrganizerDashboard
       profile={profile}
+      events={myEvents ?? []}
       stats={{
         eventCount: eventCount ?? 0,
         exhibitorCount: myExhibitors?.length ?? 0,
