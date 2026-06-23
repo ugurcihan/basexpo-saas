@@ -16,7 +16,7 @@ export default async function ExhibitorFairDetailPage({ params }: Props) {
   const [{ data: event }, { data: sponsorsRaw }, { data: participantsRaw }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, name, description, location, start_date, end_date, status, capacity, cover_url, gallery_urls")
+      .select("id, name, description, location, start_date, end_date, status, capacity, cover_url, gallery_urls, maps_url, youtube_url, social_links, tags, category")
       .eq("id", eventId)
       .in("status", ["published", "active", "ended"])
       .single(),

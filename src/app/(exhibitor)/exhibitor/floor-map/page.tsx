@@ -26,11 +26,11 @@ export default async function ExhibitorFloorMapPage() {
 
     const { data: event } = await supabase
       .from("events")
-      .select("title")
+      .select("name")
       .eq("id", exhibitor.event_id)
       .single();
 
-    eventName = event?.title ?? "";
+    eventName = event?.name ?? "";
   }
 
   return (

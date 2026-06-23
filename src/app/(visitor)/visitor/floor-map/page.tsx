@@ -12,7 +12,7 @@ export default async function VisitorFloorMapPage() {
   // Most recent event the visitor is registered for
   const { data: reg } = await supabase
     .from("event_registrations")
-    .select("event_id, events(title)")
+    .select("event_id, events(name)")
     .eq("visitor_id", profile.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -23,8 +23,8 @@ export default async function VisitorFloorMapPage() {
 
   if (reg?.event_id) {
     halls = await getEventHallsWithMaps(reg.event_id);
-    const eventData = reg.events as { title?: string } | null;
-    eventName = eventData?.title ?? "";
+    const eventData = reg.events as { name?: string } | null;
+    eventName = eventData?.name ?? "";
   }
 
   return (
