@@ -223,8 +223,11 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
               <p className="text-sm font-semibold text-gray-700">{new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
           </div>
-          <div className="h-px bg-gray-200 mb-4" />
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="h-px bg-gray-200 mb-5" />
+
+          {/* Firma Bilgileri */}
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Firma Bilgileri</p>
+          <div className="grid grid-cols-3 gap-4 text-sm mb-5">
             <div>
               <p className="text-xs text-gray-400 uppercase mb-1">Firma Adı</p>
               <p className="font-semibold text-gray-800">{exhibitorInfo.company_name}</p>
@@ -241,27 +244,65 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
               <p className="text-xs text-gray-400 uppercase mb-1">Sektör</p>
               <p className="text-gray-700">{exhibitorInfo.industry ?? "—"}</p>
             </div>
-            {exhibitorInfo.company_size && (
-              <div>
-                <p className="text-xs text-gray-400 uppercase mb-1">Firma Büyüklüğü</p>
-                <p className="text-gray-700">{exhibitorInfo.company_size} çalışan</p>
-              </div>
-            )}
-            {roi?.event_name && (
-              <div>
-                <p className="text-xs text-gray-400 uppercase mb-1">Fuar Adı</p>
-                <p className="text-gray-700">{roi.event_name}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">Firma Büyüklüğü</p>
+              <p className="text-gray-700">{exhibitorInfo.company_size ? `${exhibitorInfo.company_size} çalışan` : "—"}</p>
+            </div>
             {exhibitorInfo.address && (
-              <div className="col-span-2">
+              <div>
                 <p className="text-xs text-gray-400 uppercase mb-1">Adres</p>
                 <p className="text-gray-700">{exhibitorInfo.address}</p>
               </div>
             )}
           </div>
-          <div className="h-px bg-gray-200 mt-4" />
-          <p className="text-xs text-gray-400 mt-2">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir.</p>
+
+          {/* Fuar Bilgileri */}
+          <div className="h-px bg-gray-200 mb-5" />
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Katılım Sağlanan Fuar</p>
+          {roi?.event_name ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-5">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-xs text-gray-400 uppercase mb-1">Fuar Adı</p>
+                  <p className="font-bold text-gray-800">{roi.event_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase mb-1">Tarih</p>
+                  <p className="text-gray-700">
+                    {roi.event_start ? formatDate(roi.event_start) : "—"}
+                    {roi.event_end ? ` – ${formatDate(roi.event_end)}` : ""}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase mb-1">Konum / Şehir</p>
+                  <p className="text-gray-700">{roi.event_location ?? "—"}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 mb-5">Fuar bilgisi mevcut değil.</p>
+          )}
+
+          {/* ROI Özeti */}
+          <div className="h-px bg-gray-200 mb-5" />
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Yatırım Getirisi (ROI) Özeti</p>
+          <div className="grid grid-cols-5 gap-3 text-sm mb-2">
+            {[
+              { label: "Katılım Yatırımı", value: roi?.investment_tl ? formatTL(roi.investment_tl) : "—" },
+              { label: "Toplam Lead", value: roi?.total_leads?.toString() ?? "0" },
+              { label: "Gerçekleşen Görüşme", value: roi?.meetings_held?.toString() ?? "0" },
+              { label: "Kazanılan Anlaşma", value: roi?.deals_won?.toString() ?? "0" },
+              { label: "Hesaplanan ROI", value: roi?.roi_percent != null ? `%${roi.roi_percent}` : "—" },
+            ].map(({ label, value }) => (
+              <div key={label} className="border border-gray-200 rounded-lg p-3 text-center">
+                <p className="font-bold text-lg text-gray-800">{value}</p>
+                <p className="text-xs text-gray-500 mt-1 leading-tight">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="h-px bg-gray-200 mt-5" />
+          <p className="text-xs text-gray-400 mt-3">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir. Belge doğrulama: basexpo.vercel.app</p>
         </div>
 
         {/* ── Screen Header ── */}
