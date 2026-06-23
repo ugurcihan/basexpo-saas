@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -45,18 +45,31 @@ import {
   Tag,
   Youtube,
   ChevronDown,
+  Check,
+  Copy,
+  Download,
 } from "lucide-react";
 import { createEvent, updateEvent, deleteEvent, updateEventDetails } from "@/features/events/actions";
 import type { ExpoEvent, EventStatus } from "@/types";
 import { useRouter } from "next/navigation";
 import { ORGANIZER_NAV } from "../_nav";
+import { QRCodeSVG } from "qrcode.react";
 
 const STATUS_MAP: Record<EventStatus, { label: string; variant: "default" | "cyan" | "violet" | "gold" | "outline" }> = {
-  draft: { label: "Taslak", variant: "outline" },
+  draft:     { label: "Taslak",  variant: "outline" },
   published: { label: "Yayında", variant: "default" },
-  active: { label: "Aktif", variant: "cyan" },
-  ended: { label: "Bitti", variant: "gold" },
+  active:    { label: "Aktif",   variant: "cyan" },
+  ended:     { label: "Bitti",   variant: "gold" },
 };
+
+const STATUS_PALETTE: Record<EventStatus, { border: string; hover: string; accent: string; iconColor: string; groupColor: string; dotColor: string }> = {
+  active:    { border: "border-green-500/40",    hover: "hover:border-green-400/60 hover:bg-green-500/8",    accent: "bg-green-500",    iconColor: "text-green-400",           groupColor: "text-green-400",         dotColor: "bg-green-400" },
+  published: { border: "border-brand-indigo/30", hover: "hover:border-brand-indigo/50 hover:bg-brand-indigo/8", accent: "bg-brand-indigo", iconColor: "text-brand-indigo-light",  groupColor: "text-brand-indigo-light",dotColor: "bg-brand-indigo" },
+  draft:     { border: "border-slate-500/25",    hover: "hover:border-slate-400/40 hover:bg-slate-500/6",    accent: "bg-slate-500",    iconColor: "text-slate-400",           groupColor: "text-slate-400",         dotColor: "bg-slate-500" },
+  ended:     { border: "border-brand-gold/25",   hover: "hover:border-brand-gold/40 hover:bg-brand-gold/6",  accent: "bg-brand-gold",   iconColor: "text-brand-gold",          groupColor: "text-brand-gold",        dotColor: "bg-brand-gold" },
+};
+
+const STATUS_ORDER: EventStatus[] = ["active", "published", "draft", "ended"];
 
 interface EventFormData {
   name: string;
@@ -90,6 +103,13 @@ const emptyForm: EventFormData = {
   social_linkedin: "",
 };
 
+function QRDisplay({ url, size }: { url: string; size: number }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div style={{ width: size, height: size }} className="bg-white/10 rounded animate-pulse" />;
+  return <QRCodeSVG id="event-qr-code" value={url} size={size} level="M" />;
+}
+
 export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -97,8 +117,46 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ExpoEvent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExpoEvent | null>(null);
+  const [qrEvent, setQrEvent] = useState<ExpoEvent | null>(null);
+  const [qrUrl, setQrUrl] = useState("");
+  const [copied, setCopied] = useState(false);
   const [form, setForm] = useState<EventFormData>(emptyForm);
   const [error, setError] = useState<string | null>(null);
+
+  function openQr(event: ExpoEvent) {
+    const url = `${window.location.origin}/e/${event.id}`;
+    setQrUrl(url);
+    setQrEvent(event);
+    setCopied(false);
+  }
+
+  function copyUrl() {
+    navigator.clipboard.writeText(qrUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+
+  function downloadQr() {
+    const svg = document.getElementById("event-qr-code") as SVGElement | null;
+    if (!svg) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 400; canvas.height = 400;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 400, 400);
+      ctx.drawImage(img, 0, 0, 400, 400);
+      canvas.toBlob((b) => {
+        if (!b) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = `qr-${qrEvent?.name?.replace(/\s+/g, "-") ?? "event"}.png`;
+        a.click();
+      });
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  }
 
   function openCreate() {
     setForm(emptyForm);
@@ -210,9 +268,7 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
             <div className="w-14 h-14 rounded-2xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center mb-4">
               <CalendarDays className="w-7 h-7 text-brand-indigo-light" />
             </div>
-            <h2 className="font-display text-lg font-semibold text-white mb-2">
-              Henüz fuar yok
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-white mb-2">Henüz fuar yok</h2>
             <p className="text-muted-foreground text-sm mb-6 max-w-sm">
               İlk fuarını oluştur. Salon ve stand ekle, firmaları davet et.
             </p>
@@ -221,65 +277,95 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
             </Button>
           </motion.div>
         ) : (
-          <div className="space-y-3">
-            {events.map((event, i) => {
-              const status = STATUS_MAP[event.status];
+          <div className="space-y-6">
+            {STATUS_ORDER.map((status) => {
+              const group = events.filter((e) => e.status === status);
+              if (group.length === 0) return null;
+              const pal = STATUS_PALETTE[status];
+              const smap = STATUS_MAP[status];
               return (
-                <motion.div
-                  key={event.id}
-                  initial={{ y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06 }}
-                  className="group glass rounded-xl border border-white/8 hover:border-white/15 transition-all duration-200 overflow-hidden"
-                >
-                  <div className="p-5 flex items-center gap-4">
-                    {/* Icon */}
-                    <div className="w-10 h-10 rounded-xl bg-brand-indigo/15 border border-brand-indigo/20 flex items-center justify-center flex-shrink-0">
-                      <CalendarDays className="w-5 h-5 text-brand-indigo-light" />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white truncate">{event.name}</h3>
-                        <Badge variant={status.variant} className="text-xs flex-shrink-0">
-                          {status.label}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> {event.location}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(event.start_date).toLocaleDateString("tr-TR")} →{" "}
-                          {new Date(event.end_date).toLocaleDateString("tr-TR")}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => openEdit(event)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-white hover:bg-white/8 transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(event)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <Link href={`/organizer/events/${event.id}`}>
-                        <Button variant="outline" size="sm" className="gap-1 h-8 text-xs">
-                          Detaylar <ChevronRight className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
-                    </div>
+                <div key={status}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-2 h-2 rounded-full ${pal.dotColor}`} />
+                    <span className={`text-xs font-semibold uppercase tracking-wide ${pal.groupColor}`}>
+                      {smap.label} ({group.length})
+                    </span>
                   </div>
-                </motion.div>
+                  <div className="space-y-2">
+                    {group.map((event, i) => (
+                      <motion.div
+                        key={event.id}
+                        initial={{ y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className={`group flex rounded-xl border glass transition-all duration-200 overflow-hidden ${pal.border} ${pal.hover}`}
+                      >
+                        {/* Left accent strip */}
+                        <div className={`w-1 flex-shrink-0 ${pal.accent}`} />
+
+                        <div className="flex-1 p-4 flex items-center gap-4">
+                          {/* Icon */}
+                          <div className="w-9 h-9 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center flex-shrink-0">
+                            <CalendarDays className={`w-4.5 h-4.5 ${pal.iconColor}`} />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                              <h3 className="font-semibold text-white truncate">{event.name}</h3>
+                              {event.category && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-md bg-white/8 text-muted-foreground flex-shrink-0">
+                                  {event.category}
+                                </span>
+                              )}
+                              <Badge variant={smap.variant} className="text-xs flex-shrink-0">
+                                {smap.label}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> {event.location}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(event.start_date).toLocaleDateString("tr-TR")} →{" "}
+                                {new Date(event.end_date).toLocaleDateString("tr-TR")}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => openQr(event)}
+                              title="Kapı QR Kodu"
+                              className="p-2 rounded-lg text-muted-foreground hover:text-brand-indigo-light hover:bg-brand-indigo/10 transition-colors"
+                            >
+                              <QrCode className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openEdit(event)}
+                              className="p-2 rounded-lg text-muted-foreground hover:text-white hover:bg-white/8 transition-colors"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(event)}
+                              className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            <Link href={`/organizer/events/${event.id}`}>
+                              <Button variant="outline" size="sm" className="gap-1 h-8 text-xs">
+                                Detaylar <ChevronRight className="w-3.5 h-3.5" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -325,6 +411,38 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
             </Button>
             <Button variant="gradient" onClick={handleUpdate} disabled={isPending || !isFormValid}>
               {isPending ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR MODAL */}
+      <Dialog open={!!qrEvent} onOpenChange={(o) => !o && setQrEvent(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-brand-indigo-light" />
+              Kapı QR Kodu
+            </DialogTitle>
+            <DialogDescription>{qrEvent?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            {qrUrl && (
+              <div className="bg-white p-4 rounded-2xl">
+                <QRDisplay url={qrUrl} size={200} />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground text-center px-2">
+              Bu QR'ı kapıya asın. Ziyaretçiler okutarak kayıt olabilir veya biletini gösterebilir.
+            </p>
+            <p className="text-xs font-mono text-muted-foreground/60 text-center break-all px-2">{qrUrl}</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={copyUrl} className="gap-1.5">
+              {copied ? <><Check className="w-3.5 h-3.5 text-green-400" /> Kopyalandı</> : <><Copy className="w-3.5 h-3.5" /> URL Kopyala</>}
+            </Button>
+            <Button variant="gradient" size="sm" onClick={downloadQr} className="gap-1.5">
+              <Download className="w-3.5 h-3.5" /> PNG İndir
             </Button>
           </DialogFooter>
         </DialogContent>

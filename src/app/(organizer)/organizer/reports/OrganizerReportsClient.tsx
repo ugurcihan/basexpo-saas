@@ -18,7 +18,7 @@ interface HallRow  { id: string; name: string; floor: number; booths: BoothRow[]
 interface EventRow {
   id: string; name: string; status: string;
   location: string | null; start_date: string | null; end_date: string | null;
-  capacity: number | null; halls: HallRow[];
+  capacity: number | null; halls: HallRow[]; category?: string | null;
 }
 interface ScanData { booth_id: string | null; scanned_at: string; event_id: string }
 interface RegData  { id: string; event_id: string; status: string }
@@ -131,83 +131,239 @@ async function generateEventPDF(event: EventRow, scans: ScanData[], registration
 
   const eventScans = scans.filter((s) => s.event_id === event.id);
   const eventRegs  = registrations.filter((r) => r.event_id === event.id);
+  const confirmed  = eventRegs.filter((r) => r.status === "confirmed").length;
+  const waitlisted = eventRegs.filter((r) => r.status === "waitlisted").length;
+  const pending    = eventRegs.filter((r) => r.status === "pending_approval").length;
   const totalBooths = event.halls.reduce((s, h) => s + h.booths.length, 0);
   const filledBooths = event.halls.reduce((s, h) => s + h.booths.filter((b) => b.exhibitor_id).length, 0);
   const fillPct = totalBooths > 0 ? Math.round((filledBooths / totalBooths) * 100) : 0;
 
-  doc.setFillColor(20, 20, 40);
+  // White background
+  doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, 210, 297, "F");
 
-  doc.setFontSize(22);
-  doc.setTextColor(200, 180, 255);
-  doc.setFont("helvetica", "bold");
-  doc.text("BasExpo Fuar Raporu", 14, 22);
+  // Indigo header bar
+  doc.setFillColor(79, 70, 229);
+  doc.rect(0, 0, 210, 28, "F");
 
-  doc.setFontSize(14);
+  doc.setFontSize(18);
   doc.setTextColor(255, 255, 255);
-  doc.text(event.name, 14, 34);
+  doc.setFont("helvetica", "bold");
+  doc.text("BasExpo Fuar Raporu", 14, 18);
 
-  doc.setFontSize(9);
-  doc.setTextColor(160, 160, 200);
+  doc.setFontSize(13);
+  doc.setTextColor(30, 30, 60);
+  doc.setFont("helvetica", "bold");
+  doc.text(event.name, 14, 40);
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 100, 130);
   doc.setFont("helvetica", "normal");
-  if (event.location) doc.text(`Konum: ${event.location}`, 14, 42);
-  if (event.start_date) doc.text(`Tarih: ${new Date(event.start_date).toLocaleDateString("tr-TR")}`, 14, 48);
-  doc.text(`Rapor: ${new Date().toLocaleDateString("tr-TR")}`, 14, 54);
+  if (event.location)   doc.text(`Konum: ${event.location}`, 14, 48);
+  if (event.start_date) doc.text(`Tarih: ${new Date(event.start_date).toLocaleDateString("tr-TR")} — ${event.end_date ? new Date(event.end_date).toLocaleDateString("tr-TR") : ""}`, 14, 54);
+  doc.text(`Rapor tarihi: ${new Date().toLocaleDateString("tr-TR")}`, 14, 60);
 
-  doc.setDrawColor(80, 60, 160);
-  doc.line(14, 58, 196, 58);
+  doc.setDrawColor(200, 200, 220);
+  doc.line(14, 64, 196, 64);
 
+  // Stats row
   const stats = [
-    { label: "Ziyaretçi Kayıt", value: String(eventRegs.filter((r) => r.status === "confirmed").length) },
-    { label: "QR Tarama",       value: String(eventScans.length) },
-    { label: "Stand Doluluk",   value: `${filledBooths}/${totalBooths} (%${fillPct})` },
-    { label: "Toplam Salon",    value: String(event.halls.length) },
+    { label: "Onaylı Ziyaretçi", value: String(confirmed) },
+    { label: "QR Tarama",        value: String(eventScans.length) },
+    { label: "Stand Doluluk",    value: `%${fillPct} (${filledBooths}/${totalBooths})` },
+    { label: "Toplam Salon",     value: String(event.halls.length) },
   ];
 
-  let y = 68;
+  let y = 72;
   stats.forEach((s, i) => {
     const x = 14 + (i % 2) * 96;
     if (i % 2 === 0 && i > 0) y += 22;
-    doc.setFillColor(40, 30, 80);
+    doc.setFillColor(245, 247, 250);
     doc.roundedRect(x, y, 88, 16, 3, 3, "F");
-    doc.setFontSize(10);
-    doc.setTextColor(180, 160, 255);
+    doc.setDrawColor(220, 220, 235);
+    doc.roundedRect(x, y, 88, 16, 3, 3, "S");
+    doc.setFontSize(11);
+    doc.setTextColor(79, 70, 229);
     doc.setFont("helvetica", "bold");
     doc.text(s.value, x + 8, y + 7);
-    doc.setFontSize(8);
-    doc.setTextColor(130, 130, 180);
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 100, 130);
     doc.setFont("helvetica", "normal");
     doc.text(s.label, x + 8, y + 13);
   });
 
-  y += 32;
-  doc.setFontSize(10);
-  doc.setTextColor(200, 180, 255);
+  // Registration status breakdown
+  y += 28;
+  doc.setFontSize(9.5);
+  doc.setTextColor(30, 30, 60);
+  doc.setFont("helvetica", "bold");
+  doc.text("Ziyaretçi Durumu", 14, y);
+  y += 6;
+  [
+    { label: "Onaylı",           val: confirmed  },
+    { label: "Bekleme Listesi",  val: waitlisted },
+    { label: "Onay Bekliyor",    val: pending    },
+  ].forEach(({ label, val }) => {
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 100);
+    doc.text(`${label}: ${val}`, 18, y);
+    y += 5.5;
+  });
+
+  // Hall details
+  y += 4;
+  doc.setDrawColor(200, 200, 220);
+  doc.line(14, y, 196, y);
+  y += 6;
+  doc.setFontSize(9.5);
+  doc.setTextColor(30, 30, 60);
   doc.setFont("helvetica", "bold");
   doc.text("Salon Detayları", 14, y);
   y += 6;
 
   event.halls.forEach((hall) => {
-    if (y > 260) { doc.addPage(); doc.setFillColor(20, 20, 40); doc.rect(0, 0, 210, 297, "F"); y = 20; }
+    if (y > 260) { doc.addPage(); doc.setFillColor(255, 255, 255); doc.rect(0, 0, 210, 297, "F"); y = 20; }
     const hFilled = hall.booths.filter((b) => b.exhibitor_id).length;
-    doc.setFillColor(35, 25, 65);
-    doc.roundedRect(14, y, 182, 12, 2, 2, "F");
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(14, y, 182, 11, 2, 2, "F");
+    doc.setDrawColor(220, 220, 235);
+    doc.roundedRect(14, y, 182, 11, 2, 2, "S");
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 30, 60);
     doc.setFont("helvetica", "bold");
-    doc.text(hall.name, 18, y + 8);
-    doc.setTextColor(130, 130, 180);
+    doc.text(hall.name, 18, y + 7);
+    doc.setTextColor(100, 100, 130);
     doc.setFont("helvetica", "normal");
-    doc.text(`${hFilled}/${hall.booths.length} dolu · Kat ${hall.floor}`, 140, y + 8);
-    y += 16;
+    doc.text(`${hFilled}/${hall.booths.length} dolu · Kat ${hall.floor}`, 140, y + 7);
+    y += 14;
   });
 
+  // Footer
+  doc.setDrawColor(200, 200, 220);
+  doc.line(14, 285, 196, 285);
   doc.setFontSize(7);
-  doc.setTextColor(80, 80, 120);
-  doc.text("BasExpo — basexpo.com", 14, 290);
-  doc.text(`Oluşturulma: ${new Date().toLocaleString("tr-TR")}`, 110, 290);
+  doc.setTextColor(150, 150, 180);
+  doc.text("BasExpo · basexpo.com", 14, 291);
+  doc.text(`Rapor tarihi: ${new Date().toLocaleString("tr-TR")}`, 110, 291);
 
   doc.save(`${event.name.replace(/\s+/g, "_")}_raporu.pdf`);
+}
+
+// ─── Per-event AI insights ────────────────────────────────────────────────────
+
+const CATEGORY_TIPS: Record<string, string[]> = {
+  "teknoloji": [
+    "Tech fuarlarında öğleden sonra (13–16) demo talebi zirve yapar — standlara ekstra teknik personel ekleyin.",
+    "Demo makineleri ve şarj istasyonları ilgi çekicidir.",
+  ],
+  "sağlık": [
+    "Sağlık fuarlarında sabah saatleri (9–11) profesyoneller için yoğundur.",
+    "Broşür ve klinik çalışma özetleri hazır bulundurun.",
+  ],
+  "gıda": [
+    "Gıda fuarlarında öğle arası (12–14) en yoğun periyottur — tadım standlarını bu saatte tam kapasitede tutun.",
+    "Paket ürün numuneleri ziyaretçi memnuniyetini artırır.",
+  ],
+  "otomotiv": [
+    "Otomotiv fuarlarında hafta sonu ziyaretçi yoğunluğu %30 daha fazladır.",
+    "Test sürüşü organizasyonu beklenti yönetimini kolaylaştırır.",
+  ],
+  "genel": [
+    "Tüm fuarlarda en yoğun saat diliminde stand personelini artırın.",
+    "İlk ve son gün ziyaretçi akışı çoğunlukla orta günlere göre daha düşüktür.",
+  ],
+};
+
+function analyzeEventInsights(
+  event: EventRow & { category?: string | null },
+  scans: ScanData[],
+  registrations: RegData[]
+) {
+  const eventScans = scans.filter((s) => s.event_id === event.id);
+  const eventRegs  = registrations.filter((r) => r.event_id === event.id);
+  const category   = (event.category ?? "genel").toLowerCase().trim();
+
+  const peakHours: { hour: number; count: number }[] = [];
+  if (eventScans.length > 0) {
+    const hourCounts: Record<number, number> = {};
+    eventScans.forEach((s) => {
+      const h = new Date(s.scanned_at).getHours();
+      hourCounts[h] = (hourCounts[h] ?? 0) + 1;
+    });
+    Object.entries(hourCounts)
+      .map(([h, c]) => ({ hour: parseInt(h), count: c }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2)
+      .forEach((p) => peakHours.push(p));
+  }
+
+  const allBooths = event.halls.flatMap((h) => h.booths);
+  const fillRate  = allBooths.length > 0 ? Math.round((allBooths.filter((b) => b.exhibitor_id).length / allBooths.length) * 100) : 0;
+
+  const tips = CATEGORY_TIPS[category] ?? CATEGORY_TIPS["genel"];
+
+  return { peakHours, fillRate, tips, scanCount: eventScans.length, regCount: eventRegs.length };
+}
+
+function EventAIInsights({
+  event,
+  scans,
+  registrations,
+}: {
+  event: EventRow & { category?: string | null };
+  scans: ScanData[];
+  registrations: RegData[];
+}) {
+  const [open, setOpen] = useState(false);
+  const insights = analyzeEventInsights(event, scans, registrations);
+
+  if (insights.scanCount === 0 && insights.regCount === 0) return null;
+
+  return (
+    <div className="border-t border-white/8">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-6 py-3 text-sm text-muted-foreground hover:text-white transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Brain className="w-4 h-4 text-brand-violet-light" />
+          <span>AI Öngörüsü</span>
+          {event.category && <span className="text-xs px-1.5 py-0.5 rounded-md bg-white/8 text-muted-foreground">{event.category}</span>}
+        </div>
+        <span className={`text-xs transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+      </button>
+      {open && (
+        <div className="px-6 pb-5 space-y-3">
+          {insights.peakHours.length > 0 && (
+            <div className="flex items-start gap-2 text-sm">
+              <Flame className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+              <span className="text-muted-foreground">
+                En yoğun saatler:{" "}
+                {insights.peakHours.map((p, i) => (
+                  <span key={p.hour} className="text-brand-violet-light font-medium">
+                    {String(p.hour).padStart(2, "0")}:00
+                    {i < insights.peakHours.length - 1 ? ", " : ""}
+                  </span>
+                ))}. Bu saatlerde stand personelini artırın.
+              </span>
+            </div>
+          )}
+          {insights.tips.map((tip, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm">
+              <span className="text-brand-violet-light flex-shrink-0">·</span>
+              <span className="text-muted-foreground">{tip}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+            <span>Stand doluluk: <span className="text-white font-medium">%{insights.fillRate}</span></span>
+            <span>Toplam kayıt: <span className="text-white font-medium">{insights.regCount}</span></span>
+            <span>Toplam tarama: <span className="text-white font-medium">{insights.scanCount}</span></span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Main Client ──────────────────────────────────────────────────────────────
@@ -553,6 +709,9 @@ export function OrganizerReportsClient({
                           />
                         </div>
                       </div>
+
+                      {/* AI Öngörüsü */}
+                      <EventAIInsights event={event} scans={scans} registrations={registrations} />
                     </div>
                   );
                 })}

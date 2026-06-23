@@ -17,15 +17,19 @@ import {
 import {
   Wrench, Trophy, Store, QrCode, Crown, Gift, Plus, Trash2,
   Download, Copy, Check, Power, PowerOff, AlertCircle,
+  CheckSquare, Square, Calendar, Building2, ChevronDown, Link as LinkIcon,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { createGoldenQR, deleteGoldenQR, toggleGoldenQR } from "@/features/events/goldenQRActions";
+import { createTask, createTasksBulk, toggleTask, deleteTask, getTasksByEvent, type FairTask } from "@/features/events/taskActions";
 import type { Profile } from "@/types";
 import { ORGANIZER_NAV } from "../_nav";
+import Link from "next/link";
 
-interface BoothOption { id: string; code: string; hall: { name: string } | null }
+interface ExhibitorOption { id: string; company_name: string; logo_url: string | null }
+interface BoothOption { id: string; code: string; exhibitor_id: string | null; exhibitor: ExhibitorOption | null; hall: { name: string } | null }
 interface HallOption  { id: string; name: string; booths: BoothOption[] }
-interface EventOption { id: string; name: string; halls: HallOption[] }
+interface EventOption { id: string; name: string; status: string; halls: HallOption[] }
 
 interface GoldenQRRow {
   id: string;
@@ -269,6 +273,256 @@ function GoldenQRTab({ goldenQRs: initialQRs, events }: { goldenQRs: GoldenQRRow
   );
 }
 
+const TEMPLATE_TASKS = [
+  "Stand düzenini tamamla",
+  "Sponsor logolarını topla",
+  "Kapı tarayıcı test et",
+  "Ziyaretçi bilet bildirimini gönder",
+];
+
+function TasksTab({ events }: { events: EventOption[] }) {
+  const [isPending, startTransition] = useTransition();
+  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
+  const [tasks, setTasks] = useState<FairTask[]>([]);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDue, setTaskDue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!selectedEventId || loaded[selectedEventId]) return;
+    startTransition(async () => {
+      const data = await getTasksByEvent(selectedEventId);
+      setTasks(data);
+      setLoaded((prev) => ({ ...prev, [selectedEventId]: true }));
+    });
+  }, [selectedEventId]);
+
+  const eventTasks = tasks.filter((t) => t.event_id === selectedEventId);
+
+  async function handleAdd() {
+    if (!taskTitle.trim() || !selectedEventId) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await createTask(selectedEventId, taskTitle.trim(), taskDue || undefined);
+      if (result?.error) { setError(result.error); return; }
+      const data = await getTasksByEvent(selectedEventId);
+      setTasks(data);
+      setTaskTitle("");
+      setTaskDue("");
+    });
+  }
+
+  async function handleToggle(taskId: string, isDone: boolean) {
+    startTransition(async () => {
+      await toggleTask(taskId, !isDone);
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, is_done: !isDone } : t));
+    });
+  }
+
+  async function handleDelete(taskId: string) {
+    startTransition(async () => {
+      await deleteTask(taskId);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    });
+  }
+
+  async function handleTemplate() {
+    if (!selectedEventId) return;
+    startTransition(async () => {
+      await createTasksBulk(selectedEventId, TEMPLATE_TASKS);
+      const data = await getTasksByEvent(selectedEventId);
+      setTasks(data);
+    });
+  }
+
+  const done = eventTasks.filter((t) => t.is_done).length;
+
+  return (
+    <div className="space-y-4">
+      {/* Event selector */}
+      {events.length > 1 && (
+        <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue placeholder="Fuar seçin..." />
+          </SelectTrigger>
+          <SelectContent>
+            {events.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+
+      {/* Add task */}
+      <div className="glass rounded-2xl border border-white/8 p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-white text-sm">Yeni Görev Ekle</h3>
+          <button
+            onClick={handleTemplate}
+            disabled={isPending || !selectedEventId}
+            className="text-xs text-muted-foreground hover:text-brand-violet-light transition-colors flex items-center gap-1"
+          >
+            <CheckSquare className="w-3.5 h-3.5" /> Hazır Şablon
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Görev başlığı..."
+            value={taskTitle}
+            onChange={(e) => setTaskTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            className="flex-1"
+          />
+          <Input
+            type="date"
+            value={taskDue}
+            onChange={(e) => setTaskDue(e.target.value)}
+            className="w-36"
+          />
+          <Button variant="gradient" size="sm" onClick={handleAdd} disabled={isPending || !taskTitle.trim() || !selectedEventId}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </div>
+
+      {/* Task list */}
+      <div className="glass rounded-2xl border border-white/8 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/8">
+          <span className="text-sm text-muted-foreground">
+            {eventTasks.length > 0 ? `${done}/${eventTasks.length} tamamlandı` : "Henüz görev yok"}
+          </span>
+          {eventTasks.length > 0 && (
+            <div className="h-1.5 w-32 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-brand-violet rounded-full transition-all" style={{ width: `${(done / eventTasks.length) * 100}%` }} />
+            </div>
+          )}
+        </div>
+        {eventTasks.length === 0 ? (
+          <div className="p-10 flex flex-col items-center text-center">
+            <Trophy className="w-10 h-10 text-muted-foreground/25 mb-3" />
+            <p className="text-sm text-muted-foreground">Görev ekleyin veya "Hazır Şablon" ile başlayın.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {eventTasks.map((task) => (
+              <div key={task.id} className="flex items-center gap-3 px-5 py-3 group">
+                <button
+                  onClick={() => handleToggle(task.id, task.is_done)}
+                  disabled={isPending}
+                  className="flex-shrink-0 text-muted-foreground hover:text-brand-violet-light transition-colors"
+                >
+                  {task.is_done
+                    ? <CheckSquare className="w-4.5 h-4.5 text-brand-violet-light" />
+                    : <Square className="w-4.5 h-4.5" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${task.is_done ? "line-through text-muted-foreground" : "text-white"}`}>{task.title}</p>
+                  {task.due_date && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(task.due_date).toLocaleDateString("tr-TR")}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDelete(task.id)}
+                  disabled={isPending}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BoothsTab({ events }: { events: EventOption[] }) {
+  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
+  const selectedEvent = events.find((e) => e.id === selectedEventId);
+
+  const totalBooths = selectedEvent?.halls.reduce((s, h) => s + h.booths.length, 0) ?? 0;
+  const filledBooths = selectedEvent?.halls.reduce((s, h) => s + h.booths.filter((b) => b.exhibitor_id).length, 0) ?? 0;
+
+  return (
+    <div className="space-y-4">
+      {events.length > 1 && (
+        <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue placeholder="Fuar seçin..." />
+          </SelectTrigger>
+          <SelectContent>
+            {events.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+
+      {!selectedEvent ? (
+        <div className="glass rounded-2xl border border-dashed border-white/10 p-14 flex flex-col items-center text-center">
+          <Store className="w-12 h-12 text-muted-foreground/25 mb-3" />
+          <p className="text-sm text-muted-foreground">Fuar seçin</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-4 glass rounded-xl border border-white/8 p-4">
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground">Doluluk</p>
+              <p className="text-xl font-display font-bold text-white">{filledBooths}/{totalBooths}</p>
+            </div>
+            <div className="h-2 flex-1 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-brand-indigo to-brand-cyan rounded-full transition-all"
+                style={{ width: totalBooths > 0 ? `${(filledBooths / totalBooths) * 100}%` : "0%" }}
+              />
+            </div>
+            <Link href={`/organizer/events/${selectedEventId}`}>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <LinkIcon className="w-3.5 h-3.5" /> Yönet
+              </Button>
+            </Link>
+          </div>
+
+          {selectedEvent.halls.map((hall) => (
+            <div key={hall.id} className="glass rounded-2xl border border-white/8 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/8">
+                <span className="font-medium text-white text-sm">{hall.name}</span>
+                <span className="text-xs text-muted-foreground">{hall.booths.filter((b) => b.exhibitor_id).length}/{hall.booths.length} dolu</span>
+              </div>
+              {hall.booths.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Bu salonda stand yok.</p>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {hall.booths.map((booth) => (
+                    <div key={booth.id} className="flex items-center gap-3 px-5 py-2.5">
+                      <span className="font-mono text-xs text-muted-foreground w-10 flex-shrink-0">{booth.code}</span>
+                      {booth.exhibitor ? (
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-6 h-6 rounded-lg bg-brand-cyan/15 border border-brand-cyan/20 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-3 h-3 text-brand-cyan" />
+                          </div>
+                          <span className="text-sm text-white truncate">{booth.exhibitor.company_name}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded-md bg-green-500/15 border border-green-500/20 text-green-400 flex-shrink-0">Atandı</span>
+                        </div>
+                      ) : (
+                        <div className="flex-1">
+                          <span className="text-xs text-muted-foreground/60 italic">Atanmamış</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function OrganizerToolsClient({ profile, goldenQRs, events }: Props) {
   const [tab, setTab] = useState<"tasks" | "booths" | "golden-qr">("golden-qr");
 
@@ -312,18 +566,14 @@ export function OrganizerToolsClient({ profile, goldenQRs, events }: Props) {
 
         {/* Tab content */}
         {tab === "tasks" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl border border-dashed border-white/10 p-14 flex flex-col items-center text-center">
-            <Trophy className="w-12 h-12 text-muted-foreground/30 mb-4" />
-            <h2 className="font-semibold text-white mb-2">Henüz görev tanımlanmadı</h2>
-            <p className="text-sm text-muted-foreground max-w-sm">Yakında eklenecek: Fuar hazırlık görevleri, yapılacaklar listesi ve hatırlatıcılar.</p>
+          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+            <TasksTab events={events} />
           </motion.div>
         )}
 
         {tab === "booths" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl border border-dashed border-white/10 p-14 flex flex-col items-center text-center">
-            <Store className="w-12 h-12 text-muted-foreground/30 mb-4" />
-            <h2 className="font-semibold text-white mb-2">Stand yönetimi</h2>
-            <p className="text-sm text-muted-foreground max-w-sm">Stand atamaları ve düzeni Fuarlar → Fuar Detayı → Salonlar bölümünden yönetilir.</p>
+          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+            <BoothsTab events={events} />
           </motion.div>
         )}
 

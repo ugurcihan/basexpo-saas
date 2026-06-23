@@ -199,6 +199,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   const [sponsorModalOpen, setSponsorModalOpen] = useState(false);
   const [selectedExhibitorId, setSelectedExhibitorId] = useState("");
   const [selectedTier, setSelectedTier]               = useState("1");
+  const [customTierName, setCustomTierName]           = useState("");
 
   // Gallery state
   const [galleryUrls, setGalleryUrls]   = useState<string[]>(initialEvent.gallery_urls ?? []);
@@ -254,14 +255,15 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   async function handleAddSponsor() {
     if (!selectedExhibitorId) return;
     setError(null);
-    const tier = parseInt(selectedTier, 10);
-    const tierMeta = TIER_MAP[tier];
+    const tier = parseInt(selectedTier, 10) || 1;
+    const tierName = customTierName.trim() || (tier === 1 ? "Ana Sponsor" : tier === 2 ? "Altın Sponsor" : tier === 3 ? "Gümüş Sponsor" : "Bronz Sponsor");
     startTransition(async () => {
-      const result = await addSponsor(event.id, selectedExhibitorId, tier, tierMeta.name);
+      const result = await addSponsor(event.id, selectedExhibitorId, tier, tierName);
       if (result.error) { setError(result.error); return; }
       setSponsorModalOpen(false);
       setSelectedExhibitorId("");
       setSelectedTier("1");
+      setCustomTierName("");
       router.refresh();
     });
   }
@@ -384,48 +386,65 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
               <p className="text-muted-foreground text-sm">Henüz sponsor yok.</p>
               <p className="text-muted-foreground/60 text-xs mt-1">Katılımcı firmalar arasından sponsor seçin.</p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((tier) => {
-                const tierSponsors = sponsorsByTier[tier];
-                if (!tierSponsors || tierSponsors.length === 0) return null;
-                const meta = TIER_MAP[tier];
-                const Icon = meta.icon;
-                return (
-                  <div key={tier} className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <Icon className={`w-3.5 h-3.5 ${meta.color}`} />
-                      <span className={`text-xs font-semibold ${meta.color}`}>{meta.name}</span>
-                    </div>
-                    <div className="grid grid-cols-12 gap-3">
-                      {tierSponsors.map((sponsor) => (
-                        <div
-                          key={sponsor.id}
-                          className={`${meta.cols} glass rounded-xl border ${meta.bg} p-4 flex items-center justify-between gap-3 group`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                              <Building2 className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                            <p className={`font-semibold truncate ${meta.color}`}>
-                              {sponsor.exhibitor?.company_name ?? "—"}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveSponsor(sponsor.id)}
-                            disabled={isPending}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
+          ) : (() => {
+            const maxTier = Math.max(...sponsors.map((s) => s.tier), 1);
+            function getTierCols(tier: number): string {
+              const ratio = 1 - (tier - 1) / Math.max(maxTier, 1);
+              if (ratio >= 0.9) return "col-span-12";
+              if (ratio >= 0.7) return "col-span-8";
+              if (ratio >= 0.5) return "col-span-6";
+              if (ratio >= 0.35) return "col-span-4";
+              return "col-span-3";
+            }
+            const TIER_COLORS = [
+              "text-slate-200 border-slate-400/30 bg-slate-400/10",
+              "text-brand-gold border-brand-gold/30 bg-brand-gold/10",
+              "text-brand-cyan border-brand-cyan/25 bg-brand-cyan/8",
+              "text-orange-400 border-orange-500/25 bg-orange-500/8",
+            ];
+            return (
+              <div className="space-y-3">
+                {Object.keys(sponsorsByTier).map(Number).sort((a, b) => a - b).map((tier) => {
+                  const tierSponsors = sponsorsByTier[tier];
+                  const colorCls = TIER_COLORS[Math.min(tier - 1, TIER_COLORS.length - 1)];
+                  const tierName = tierSponsors[0]?.tier_name ?? `Seviye ${tier}`;
+                  const [textCls] = colorCls.split(" ");
+                  return (
+                    <div key={tier} className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Crown className={`w-3.5 h-3.5 ${textCls}`} />
+                        <span className={`text-xs font-semibold ${textCls}`}>{tierName}</span>
+                      </div>
+                      <div className="grid grid-cols-12 gap-3">
+                        {tierSponsors.map((sponsor) => (
+                          <div
+                            key={sponsor.id}
+                            className={`${getTierCols(tier)} glass rounded-xl border ${colorCls} p-4 flex items-center justify-between gap-3 group`}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <Building2 className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                              <p className={`font-semibold truncate ${textCls}`}>
+                                {sponsor.exhibitor?.company_name ?? "—"}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveSponsor(sponsor.id)}
+                              disabled={isPending}
+                              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            );
+          })()}
         </motion.div>
 
         {/* ── GALERİ YÖNETİMİ ──────────────────────────────── */}
@@ -631,7 +650,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
       </Dialog>
 
       {/* ── ADD SPONSOR MODAL ────────────────────────────────── */}
-      <Dialog open={sponsorModalOpen} onOpenChange={setSponsorModalOpen}>
+      <Dialog open={sponsorModalOpen} onOpenChange={(o) => { setSponsorModalOpen(o); if (!o) setError(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Sponsor Ekle</DialogTitle>
@@ -656,18 +675,28 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Sponsor Seviyesi</Label>
-              <Select value={selectedTier} onValueChange={setSelectedTier}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIER_OPTIONS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Seviye Numarası</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={selectedTier}
+                  onChange={(e) => setSelectedTier(e.target.value)}
+                  placeholder="1"
+                />
+                <p className="text-xs text-muted-foreground">1 = en büyük</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Seviye Adı</Label>
+                <Input
+                  value={customTierName}
+                  onChange={(e) => setCustomTierName(e.target.value)}
+                  placeholder="Ana Sponsor"
+                />
+                <p className="text-xs text-muted-foreground">Boş = otomatik</p>
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-2">

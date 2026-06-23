@@ -13,9 +13,8 @@ export default async function ToolsPage() {
     getGoldenQRsForOrganizer(),
     supabase
       .from("events")
-      .select("id, name, halls(id, name, booths(id, code))")
+      .select("id, name, status, halls(id, name, booths(id, code, exhibitor_id, exhibitor:exhibitors(id, company_name, logo_url)))")
       .eq("organizer_id", profile.id)
-      .in("status", ["published", "active"])
       .order("created_at", { ascending: false }),
   ]);
 

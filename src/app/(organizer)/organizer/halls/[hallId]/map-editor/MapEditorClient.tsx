@@ -10,7 +10,7 @@ import {
   Settings, Store, Activity, MessageSquare, UserCircle2,
   FileBarChart, ClipboardList, Trophy, QrCode, Map,
   Upload, Save, MousePointer, CheckCircle2, ArrowLeft,
-  Trash2, Eye, LogIn, LogOut, UserCheck,
+  Trash2, Eye, LogIn, LogOut, UserCheck, Layers, AlertCircle,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import {
@@ -25,6 +25,27 @@ import { ORGANIZER_NAV } from "../../../_nav";
 
 type PendingPos = { x_pct: number; y_pct: number };
 type PlaceMode  = "booth" | "entrance" | "exit";
+
+const SVG_TEMPLATES = [
+  {
+    id: "rect",
+    label: "Dikdörtgen Salon",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700"><rect width="1000" height="700" fill="#1a1a2e"/><rect x="40" y="40" width="920" height="620" rx="12" fill="none" stroke="#4f46e5" stroke-width="4"/><line x1="40" y1="200" x2="960" y2="200" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="40" y1="360" x2="960" y2="360" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="40" y1="520" x2="960" y2="520" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="250" y1="40" x2="250" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="500" y1="40" x2="500" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="750" y1="40" x2="750" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><text x="500" y="680" text-anchor="middle" fill="#6b7280" font-size="18" font-family="sans-serif">Dikdörtgen Salon</text></svg>`,
+    w: 1000, h: 700,
+  },
+  {
+    id: "l-shape",
+    label: "L-Tipi Salon",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700"><rect width="1000" height="700" fill="#1a1a2e"/><path d="M40 40 L600 40 L600 360 L960 360 L960 660 L40 660 Z" fill="none" stroke="#4f46e5" stroke-width="4"/><line x1="40" y1="200" x2="600" y2="200" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="600" y1="520" x2="960" y2="520" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="200" y1="40" x2="200" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="400" y1="40" x2="400" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="750" y1="360" x2="750" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><text x="500" y="690" text-anchor="middle" fill="#6b7280" font-size="18" font-family="sans-serif">L-Tipi Salon</text></svg>`,
+    w: 1000, h: 700,
+  },
+  {
+    id: "corridor",
+    label: "Koridor Düzeni",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700"><rect width="1000" height="700" fill="#1a1a2e"/><rect x="40" y="40" width="920" height="280" rx="8" fill="none" stroke="#4f46e5" stroke-width="4"/><rect x="40" y="380" width="920" height="280" rx="8" fill="none" stroke="#4f46e5" stroke-width="4"/><line x1="40" y1="320" x2="960" y2="320" stroke="#06b6d4" stroke-width="3" stroke-dasharray="20,10" opacity="0.6"/><line x1="180" y1="40" x2="180" y2="320" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="340" y1="40" x2="340" y2="320" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="500" y1="40" x2="500" y2="320" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="660" y1="40" x2="660" y2="320" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="820" y1="40" x2="820" y2="320" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="180" y1="380" x2="180" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="340" y1="380" x2="340" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="500" y1="380" x2="500" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="660" y1="380" x2="660" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><line x1="820" y1="380" x2="820" y2="660" stroke="#4f46e5" stroke-width="2" stroke-dasharray="12,8" opacity="0.4"/><text x="500" y="690" text-anchor="middle" fill="#6b7280" font-size="18" font-family="sans-serif">Koridor Düzeni</text></svg>`,
+    w: 1000, h: 700,
+  },
+];
 
 interface Props {
   profile: Profile;
@@ -57,6 +78,9 @@ export function MapEditorClient({ profile, hall, exhibitors }: Props) {
   );
   const [assigningBoothId, setAssigningBoothId] = useState<string | null>(null);
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
+
   const mapRef      = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,6 +100,7 @@ export function MapEditorClient({ profile, hall, exhibitors }: Props) {
     if (!file) return;
 
     setUploading(true);
+    setUploadError(null);
     const ext = file.name.split(".").pop();
     const path = `${hall.event_id}/${hall.id}.${ext}`;
 
@@ -84,7 +109,7 @@ export function MapEditorClient({ profile, hall, exhibitors }: Props) {
       .upload(path, file, { upsert: true, contentType: file.type });
 
     if (error) {
-      alert("Görsel yüklenemedi: " + error.message);
+      setUploadError("Görsel yüklenemedi: " + error.message);
       setUploading(false);
       return;
     }
@@ -103,8 +128,22 @@ export function MapEditorClient({ profile, hall, exhibitors }: Props) {
         setMapUrl(publicUrl);
         setUploading(false);
       };
+      img.onerror = () => {
+        setUploadError("Görsel okunamadı.");
+        setUploading(false);
+      };
       img.src = publicUrl;
     }
+  }
+
+  async function handleSelectTemplate(tpl: typeof SVG_TEMPLATES[number]) {
+    setTemplateOpen(false);
+    setUploading(true);
+    setUploadError(null);
+    const dataUri = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(tpl.svg)))}`;
+    await updateHallMap(hall.id, dataUri, tpl.w, tpl.h);
+    setMapUrl(dataUri);
+    setUploading(false);
   }
 
   function getPctFromClick(e: React.MouseEvent<HTMLDivElement>): { x_pct: number; y_pct: number } | null {
@@ -260,6 +299,16 @@ export function MapEditorClient({ profile, hall, exhibitors }: Props) {
               <Upload className="w-4 h-4" />
               {uploading ? "Yükleniyor..." : mapUrl ? "Görseli Değiştir" : "Kat Planı Yükle"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-brand-violet/30 text-brand-violet-light hover:bg-brand-violet/10"
+              onClick={() => setTemplateOpen(true)}
+              disabled={uploading}
+            >
+              <Layers className="w-4 h-4" />
+              Şablon Seç
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -279,6 +328,49 @@ export function MapEditorClient({ profile, hall, exhibitors }: Props) {
             </Button>
           </div>
         </div>
+
+        {/* Upload error */}
+        {uploadError && (
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {uploadError}
+            <button onClick={() => setUploadError(null)} className="ml-auto text-red-400 hover:text-red-300">✕</button>
+          </div>
+        )}
+
+        {/* Template selector modal */}
+        {templateOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setTemplateOpen(false)}>
+            <div className="glass rounded-2xl border border-white/12 p-6 max-w-lg w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-brand-violet-light" />
+                  <h3 className="font-semibold text-white">Harita Şablonu Seç</h3>
+                </div>
+                <button onClick={() => setTemplateOpen(false)} className="text-muted-foreground hover:text-white">✕</button>
+              </div>
+              <p className="text-sm text-muted-foreground">Başlangıç şablonu seçin. Standlarınızı harita üzerine sürükleyerek yerleştirebilirsiniz.</p>
+              <div className="grid grid-cols-3 gap-3">
+                {SVG_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => handleSelectTemplate(tpl)}
+                    className="group flex flex-col gap-2 p-3 rounded-xl border border-white/10 bg-white/5 hover:border-brand-violet/40 hover:bg-brand-violet/10 transition-all text-left"
+                  >
+                    <div className="aspect-video rounded-lg overflow-hidden bg-brand-dark/50 flex items-center justify-center">
+                      <img
+                        src={`data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(tpl.svg)))}`}
+                        alt={tpl.label}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <p className="text-xs font-medium text-white group-hover:text-brand-violet-light transition-colors">{tpl.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Instructions banner */}
         {modeInstruction && (
