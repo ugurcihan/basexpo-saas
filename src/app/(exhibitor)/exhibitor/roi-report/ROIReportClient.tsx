@@ -302,7 +302,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
           </div>
 
           <div className="h-px bg-gray-200 mt-5" />
-          <p className="text-xs text-gray-400 mt-3">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir. Belge doğrulama: basexpo.vercel.app</p>
+          <p className="text-xs text-gray-400 mt-3">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir. Belge doğrulama: basexpo.com</p>
         </div>
 
         {/* ── Screen Header ── */}
