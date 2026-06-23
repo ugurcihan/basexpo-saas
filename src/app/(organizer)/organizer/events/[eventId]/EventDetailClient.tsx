@@ -65,6 +65,7 @@ import { addSponsor, removeSponsor } from "@/features/events/sponsorActions";
 import { updateEventGallery } from "@/features/events/actions";
 import { getCheckins, type CheckinRecord } from "@/features/events/checkinActions";
 import type { EventStatus } from "@/types";
+import { ORGANIZER_NAV } from "../../_nav";
 
 // ── Giriş Kayıtları Bileşeni ─────────────────────────────
 function CheckinSection({ eventId }: { eventId: string }) {
@@ -131,21 +132,6 @@ function CheckinSection({ eventId }: { eventId: string }) {
   );
 }
 
-const NAV_ITEMS = [
-  { label: "Panel",               href: "/organizer",                          icon: LayoutDashboard },
-  { label: "Fuarlar",             href: "/organizer/events",                   icon: CalendarDays },
-  { label: "Katılım Talepleri",   href: "/organizer/participation-requests",   icon: ClipboardList },
-  { label: "Ziyaretçilerim",      href: "/organizer/visitors",                 icon: Users },
-  { label: "Görevler",            href: "/organizer/tasks",                    icon: Trophy },
-  { label: "Standlar",            href: "/organizer/booths",                   icon: Store },
-  { label: "Stand Takip",         href: "/organizer/booth-tracking",           icon: Activity },
-  { label: "Mesajlar",            href: "/organizer/messages",                 icon: MessageSquare },
-  { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
-  { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
-  { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
-  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
-  { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
-];
 
 const STATUS_MAP: Record<EventStatus, { label: string; variant: "default" | "cyan" | "violet" | "gold" | "outline" }> = {
   draft:     { label: "Taslak",  variant: "outline" },
@@ -317,7 +303,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   const availableExhibitors = eventExhibitors.filter((e) => !sponsoredExhibitorIds.has(e.id));
 
   return (
-    <DashboardShell role="organizer" userName="" navItems={NAV_ITEMS}>
+    <DashboardShell role="organizer" userName="" navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* ── Header ─────────────────────────────────────────── */}
@@ -522,8 +508,8 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                     </div>
                     <div className="flex items-center gap-1">
                       <Link href={`/organizer/halls/${hall.id}/map-editor`}>
-                        <Button variant="ghost" size="sm" className="text-xs h-8 gap-1 text-brand-cyan/70 hover:text-brand-cyan">
-                          <Map className="w-3.5 h-3.5" /> Harita
+                        <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5 border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10 hover:border-brand-cyan/60">
+                          <Map className="w-3.5 h-3.5" /> Harita Düzenle
                         </Button>
                       </Link>
                       <Button

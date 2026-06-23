@@ -5,5 +5,5 @@ import { OrganizerSettingsClient } from "./OrganizerSettingsClient";
 export default async function OrganizerSettingsPage() {
   const profile = await getProfile();
   if (!profile || profile.role !== "organizer") redirect("/login");
-  return <OrganizerSettingsClient />;
+  return <OrganizerSettingsClient profile={profile} />;
 }

@@ -4,36 +4,17 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
-  LayoutDashboard, CalendarDays, Building2, BarChart2,
-  Settings, Plus, TrendingUp, Users, QrCode, Banknote, CheckCircle2,
-  ClipboardList, Trophy, Store, Activity, MessageSquare, UserCircle2,
-  FileBarChart
+  LayoutDashboard, CalendarDays, Building2,
+  Plus, QrCode, Users2, Map, Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
 import SendPushForm from "@/components/push/SendPushForm";
-
-const NAV_ITEMS = [
-  { label: "Panel",               href: "/organizer",                          icon: LayoutDashboard },
-  { label: "Fuarlar",             href: "/organizer/events",                   icon: CalendarDays },
-  { label: "Katılım Talepleri",   href: "/organizer/participation-requests",   icon: ClipboardList },
-  { label: "Ziyaretçilerim",      href: "/organizer/visitors",                 icon: Users },
-  { label: "Görevler",            href: "/organizer/tasks",                    icon: Trophy },
-  { label: "Standlar",            href: "/organizer/booths",                   icon: Store },
-  { label: "Stand Takip",         href: "/organizer/booth-tracking",           icon: Activity },
-  { label: "Mesajlar",            href: "/organizer/messages",                 icon: MessageSquare },
-  { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
-  { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
-  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
-  { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
-  { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
-];
+import { ORGANIZER_NAV } from "./_nav";
 
 interface Stats {
   eventCount: number;
   exhibitorCount: number;
-  paidCount: number;
-  totalRevenueCents: number;
   leadCount: number;
   visitorCount: number;
 }
@@ -41,22 +22,19 @@ interface Stats {
 interface Props {
   profile: Profile;
   stats: Stats;
-  events: { id: string; title: string }[];
+  events: { id: string; name: string }[];
 }
 
 export function OrganizerDashboard({ profile, stats, events }: Props) {
-  const formatTRY = (cents: number) =>
-    (cents / 100).toLocaleString("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
-
   const statCards = [
-    { label: "Aktif Fuar",       value: stats.eventCount,     desc: "Toplam fuar sayısı",        icon: CalendarDays, color: "text-brand-indigo-light", bg: "bg-brand-indigo/12" },
-    { label: "Kayıtlı Firma",    value: stats.exhibitorCount, desc: `${stats.paidCount} ödeme yaptı`, icon: Building2,   color: "text-brand-cyan",         bg: "bg-brand-cyan/10" },
-    { label: "Toplam Lead",      value: stats.leadCount,      desc: `${stats.visitorCount} farklı ziyaretçi`, icon: QrCode, color: "text-brand-violet-light", bg: "bg-brand-violet/12" },
-    { label: "Toplam Gelir",     value: formatTRY(stats.totalRevenueCents), desc: "Stand aktivasyon gelirleri", icon: Banknote, color: "text-green-400", bg: "bg-green-500/10" },
+    { label: "Aktif Fuar",      value: stats.eventCount,     desc: "Toplam fuar sayısı",           icon: CalendarDays, color: "text-brand-indigo-light", bg: "bg-brand-indigo/12" },
+    { label: "Kayıtlı Firma",   value: stats.exhibitorCount, desc: "Fuarlarınızdaki firma sayısı",  icon: Building2,    color: "text-brand-cyan",         bg: "bg-brand-cyan/10" },
+    { label: "Toplam Lead",     value: stats.leadCount,      desc: `${stats.visitorCount} ziyaretçi`, icon: QrCode,    color: "text-brand-violet-light", bg: "bg-brand-violet/12" },
+    { label: "Ziyaretçi",       value: stats.visitorCount,   desc: "Toplam kayıtlı ziyaretçi",     icon: Users2,       color: "text-brand-gold",         bg: "bg-brand-gold/12" },
   ];
 
   return (
-    <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+    <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-8">
         {/* Welcome */}
         <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -91,47 +69,35 @@ export function OrganizerDashboard({ profile, stats, events }: Props) {
           ))}
         </motion.div>
 
-        {/* Revenue breakdown */}
-        {stats.exhibitorCount > 0 && (
-          <motion.div
-            initial={{ y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass rounded-2xl border border-white/8 p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-brand-indigo-light" />
-                <h2 className="font-semibold text-white">Ödeme Özeti</h2>
-              </div>
-              <Link href="/organizer/events" className="text-xs text-brand-indigo-light hover:underline">
-                Detaylar →
+        {/* Hızlı Erişim */}
+        <motion.div
+          initial={{ y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <h2 className="font-semibold text-white mb-3">Hızlı Erişim</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Katılımcılar", href: "/organizer/participants", icon: Users2,       color: "brand-indigo" },
+              { label: "Harita",       href: "/organizer/events",       icon: Map,          color: "brand-cyan" },
+              { label: "Araçlar",      href: "/organizer/tools",        icon: Ticket,       color: "brand-gold" },
+              { label: "Raporlar",     href: "/organizer/reports",      icon: Building2,    color: "brand-violet" },
+            ].map(({ label, href, icon: Icon, color }) => (
+              <Link
+                key={label}
+                href={href}
+                className={`glass rounded-xl border border-${color}/20 p-4 flex flex-col items-center gap-2 hover:border-${color}/40 hover:bg-${color}/5 transition-all`}
+              >
+                <div className={`w-10 h-10 rounded-xl bg-${color}/15 flex items-center justify-center`}>
+                  <Icon className={`w-5 h-5 text-${color}`} />
+                </div>
+                <span className="text-xs font-medium text-white">{label}</span>
               </Link>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-xl bg-white/4 border border-white/6 p-4 text-center">
-                <p className="text-xl font-bold text-white">{stats.exhibitorCount}</p>
-                <p className="text-xs text-muted-foreground mt-1">Toplam Firma</p>
-              </div>
-              <div className="rounded-xl bg-green-500/8 border border-green-500/15 p-4 text-center">
-                <p className="text-xl font-bold text-green-400">{stats.paidCount}</p>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-green-400" /> Ödeme Yapan
-                </p>
-              </div>
-              <div className="rounded-xl bg-brand-indigo/10 border border-brand-indigo/20 p-4 text-center">
-                <p className="text-xl font-bold text-brand-indigo-light">
-                  {stats.exhibitorCount > 0
-                    ? Math.round((stats.paidCount / stats.exhibitorCount) * 100)
-                    : 0}%
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">Dönüşüm Oranı</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
+            ))}
+          </div>
+        </motion.div>
 
-        {/* CTA */}
+        {/* CTA - yeni fuar */}
         {stats.eventCount === 0 && (
           <motion.div
             initial={{ y: 20 }}
@@ -158,20 +124,20 @@ export function OrganizerDashboard({ profile, stats, events }: Props) {
           <motion.div
             initial={{ y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.35 }}
             className="flex gap-3"
           >
             <Button variant="gradient" asChild>
               <Link href="/organizer/events"><CalendarDays className="w-4 h-4" /> Fuarlarım</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/organizer/events/new"><Plus className="w-4 h-4" /> Yeni Fuar</Link>
+              <Link href="/organizer/events"><Plus className="w-4 h-4" /> Yeni Fuar</Link>
             </Button>
           </motion.div>
         )}
 
         {/* Push notification panel */}
-        <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+        <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
           <SendPushForm events={events} />
         </motion.div>
       </div>

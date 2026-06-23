@@ -18,22 +18,7 @@ import {
 } from "lucide-react";
 import { sendNotification } from "@/features/notifications/notificationActions";
 import type { Profile } from "@/types";
-
-const NAV_ITEMS = [
-  { label: "Panel",               href: "/organizer",                          icon: LayoutDashboard },
-  { label: "Fuarlar",             href: "/organizer/events",                   icon: CalendarDays },
-  { label: "Katılım Talepleri",   href: "/organizer/participation-requests",   icon: ClipboardList },
-  { label: "Ziyaretçilerim",      href: "/organizer/visitors",                 icon: Users },
-  { label: "Görevler",            href: "/organizer/tasks",                    icon: Trophy },
-  { label: "Standlar",            href: "/organizer/booths",                   icon: Store },
-  { label: "Stand Takip",         href: "/organizer/booth-tracking",           icon: Activity },
-  { label: "Mesajlar",            href: "/organizer/messages",                 icon: MessageSquare },
-  { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
-  { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
-  { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
-  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
-  { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
-];
+import { ORGANIZER_NAV } from "../_nav";
 
 interface SentRow {
   id: string;
@@ -94,7 +79,7 @@ export function OrganizerMessagesClient({ profile, events, sentNotifications }: 
   }
 
   return (
-    <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+    <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* Header */}

@@ -9,54 +9,44 @@ export default async function OrganizerPage() {
 
   const supabase = await createSupabaseServerClient();
 
-  // Fetch exhibitor IDs for this organizer's events
-  const { data: myExhibitors } = await supabase
-    .from("exhibitors")
-    .select("id, paid_at, booth_fee_cents, event_id")
-    .in(
-      "event_id",
-      (
-        await supabase
-          .from("events")
-          .select("id")
-          .eq("organizer_id", profile.id)
-      ).data?.map((e) => e.id) ?? []
-    );
-
-  const exhibitorIds = myExhibitors?.map((e) => e.id) ?? [];
-
-  const [{ count: eventCount }, { data: leadRows }] = await Promise.all([
-    supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("organizer_id", profile.id),
-    exhibitorIds.length > 0
-      ? supabase.from("leads").select("id, visitor_id").in("exhibitor_id", exhibitorIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const { data: myEvents } = await supabase
+  const { data: myEventsRaw } = await supabase
     .from("events")
-    .select("id, title")
+    .select("id, name")
     .eq("organizer_id", profile.id)
     .order("created_at", { ascending: false });
 
-  const paidCount = myExhibitors?.filter((e) => e.paid_at).length ?? 0;
-  const totalRevenueCents =
-    myExhibitors?.filter((e) => e.paid_at).reduce((s, e) => s + (e.booth_fee_cents ?? 0), 0) ?? 0;
-  const uniqueVisitors = new Set((leadRows ?? []).map((r) => r.visitor_id)).size;
+  const myEvents = myEventsRaw ?? [];
+  const eventIds = myEvents.map((e) => e.id);
+
+  const [
+    { data: exhibitors },
+    { data: leads },
+    { count: visitorCount },
+  ] = await Promise.all([
+    eventIds.length > 0
+      ? supabase.from("exhibitors").select("id").in("event_id", eventIds)
+      : Promise.resolve({ data: [] }),
+    eventIds.length > 0
+      ? supabase.from("leads").select("id, visitor_id").in("exhibitor_id",
+          (await supabase.from("exhibitors").select("id").in("event_id", eventIds)).data?.map((e) => e.id) ?? []
+        )
+      : Promise.resolve({ data: [] }),
+    eventIds.length > 0
+      ? supabase.from("event_registrations").select("id", { count: "exact", head: true }).in("event_id", eventIds)
+      : Promise.resolve({ count: 0 }),
+  ]);
+
+  const uniqueVisitors = new Set((leads ?? []).map((r) => r.visitor_id)).size;
 
   return (
     <OrganizerDashboard
       profile={profile}
-      events={myEvents ?? []}
+      events={myEvents}
       stats={{
-        eventCount: eventCount ?? 0,
-        exhibitorCount: myExhibitors?.length ?? 0,
-        paidCount,
-        totalRevenueCents,
-        leadCount: leadRows?.length ?? 0,
-        visitorCount: uniqueVisitors,
+        eventCount: myEvents.length,
+        exhibitorCount: exhibitors?.length ?? 0,
+        leadCount: leads?.length ?? 0,
+        visitorCount: visitorCount ?? uniqueVisitors,
       }}
     />
   );

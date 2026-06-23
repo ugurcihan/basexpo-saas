@@ -42,22 +42,7 @@ import {
 import { createEvent, updateEvent, deleteEvent } from "@/features/events/actions";
 import type { ExpoEvent, EventStatus } from "@/types";
 import { useRouter } from "next/navigation";
-
-const NAV_ITEMS = [
-  { label: "Panel",               href: "/organizer",                          icon: LayoutDashboard },
-  { label: "Fuarlar",             href: "/organizer/events",                   icon: CalendarDays },
-  { label: "Katılım Talepleri",   href: "/organizer/participation-requests",   icon: ClipboardList },
-  { label: "Ziyaretçilerim",      href: "/organizer/visitors",                 icon: Users },
-  { label: "Görevler",            href: "/organizer/tasks",                    icon: Trophy },
-  { label: "Standlar",            href: "/organizer/booths",                   icon: Store },
-  { label: "Stand Takip",         href: "/organizer/booth-tracking",           icon: Activity },
-  { label: "Mesajlar",            href: "/organizer/messages",                 icon: MessageSquare },
-  { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
-  { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
-  { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
-  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
-  { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
-];
+import { ORGANIZER_NAV } from "../_nav";
 
 const STATUS_MAP: Record<EventStatus, { label: string; variant: "default" | "cyan" | "violet" | "gold" | "outline" }> = {
   draft: { label: "Taslak", variant: "outline" },
@@ -143,7 +128,7 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
   const isFormValid = form.name && form.start_date && form.end_date && form.location;
 
   return (
-    <DashboardShell role="organizer" userName="" navItems={NAV_ITEMS}>
+    <DashboardShell role="organizer" userName="" navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div
