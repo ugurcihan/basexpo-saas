@@ -52,7 +52,8 @@ import {
   ImagePlus,
   X as XIcon,
   Award,
-  FileBarChart
+  FileBarChart,
+  Map,
 } from "lucide-react";
 import {
   createHall,
@@ -449,6 +450,11 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                       <span className="text-xs text-muted-foreground">Kat {hall.floor} · {hall.booths.length} stand</span>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Link href={`/organizer/halls/${hall.id}/map-editor`}>
+                        <Button variant="ghost" size="sm" className="text-xs h-8 gap-1 text-brand-cyan/70 hover:text-brand-cyan">
+                          <Map className="w-3.5 h-3.5" /> Harita
+                        </Button>
+                      </Link>
                       <Button
                         variant="ghost" size="sm" className="text-xs h-8"
                         onClick={() => { setError(null); setBoothCode(""); setBoothModal({ hallId: hall.id, hallName: hall.name }); }}
