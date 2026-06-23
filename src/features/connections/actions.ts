@@ -243,5 +243,92 @@ export async function respondToMeeting(meetingId: string, status: "accepted" | "
 
   if (error) return { error: error.message };
   revalidatePath("/visitor/meetings");
+  revalidatePath("/exhibitor/meeting-requests");
   return { error: null };
+}
+
+// ─── VISITOR → FIRM MEETINGS ──────────────────────────────────
+
+export async function requestMeetingWithFirm(input: {
+  exhibitorId: string;
+  subject: string;
+  note?: string;
+  proposedAt: string;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  // Firma sahibini bul
+  const { data: exhibitor } = await supabase
+    .from("exhibitors")
+    .select("id, owner_id, company_name")
+    .eq("id", input.exhibitorId)
+    .single();
+
+  if (!exhibitor) return { error: "Firma bulunamadı" };
+  if (exhibitor.owner_id === user.id) return { error: "Kendinize randevu talep edemezsiniz" };
+
+  const { error } = await supabase.from("meetings").insert({
+    from_user: user.id,
+    to_user: exhibitor.owner_id,
+    proposed_at: input.proposedAt,
+    location: "Fuar Standı",
+    note: input.note ?? null,
+    meeting_type: "visitor_to_firm",
+    exhibitor_id: input.exhibitorId,
+    subject: input.subject,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/visitor/meetings");
+  revalidatePath("/exhibitor/meeting-requests");
+  return { error: null };
+}
+
+export interface FirmMeetingRequest {
+  id: string;
+  from_user: string;
+  proposed_at: string;
+  subject: string | null;
+  note: string | null;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  visitor: VisitorProfile;
+}
+
+export async function getExhibitorMeetingRequests(): Promise<FirmMeetingRequest[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("meetings")
+    .select(`
+      id, from_user, proposed_at, subject, note, status, created_at,
+      from_profile:profiles!meetings_from_user_fkey(id, full_name, email, interests, avatar_url)
+    `)
+    .eq("to_user", user.id)
+    .eq("meeting_type", "visitor_to_firm")
+    .order("proposed_at", { ascending: true });
+
+  const normalize = (v: VisitorProfile | VisitorProfile[]): VisitorProfile =>
+    Array.isArray(v) ? v[0] : v;
+
+  return (data ?? []).map((row: {
+    id: string; from_user: string; proposed_at: string;
+    subject: string | null; note: string | null;
+    status: "pending" | "accepted" | "declined"; created_at: string;
+    from_profile: VisitorProfile | VisitorProfile[];
+  }) => ({
+    id: row.id,
+    from_user: row.from_user,
+    proposed_at: row.proposed_at,
+    subject: row.subject,
+    note: row.note,
+    status: row.status,
+    created_at: row.created_at,
+    visitor: normalize(row.from_profile),
+  }));
 }

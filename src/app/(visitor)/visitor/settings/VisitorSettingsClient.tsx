@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
   { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "QR Badge'im",      href: "/visitor/badge",             icon: QrCode },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },

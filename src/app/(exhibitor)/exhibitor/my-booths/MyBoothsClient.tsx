@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { label: "Analiz AI",        href: "/exhibitor/analytics",      icon: Brain },
   { label: "Yaklaşan Fuarlar", href: "/exhibitor/upcoming-fairs", icon: CalendarClock },
   { label: "Fuar Standlarım",  href: "/exhibitor/my-booths",      icon: Store },
+  { label: "Randevu Talepleri", href: "/exhibitor/meeting-requests", icon: CalendarClock },
   { label: "Ayarlar",          href: "/exhibitor/settings",       icon: Settings },
 ];
 

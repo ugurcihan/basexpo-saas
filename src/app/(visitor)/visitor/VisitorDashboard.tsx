@@ -6,7 +6,6 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   LayoutDashboard,
   Sparkles,
-  QrCode,
   Heart,
   Users,
   CalendarClock,
@@ -22,7 +21,6 @@ const NAV_ITEMS = [
   { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
   { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "QR Badge'im",      href: "/visitor/badge",             icon: QrCode },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
@@ -53,7 +51,7 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
             Hoş Geldin!
           </h1>
           <p className="text-muted-foreground mt-1">
-            {profile.full_name || "Ziyaretçi"} — QR badge ve lead takibini kullanmaya başlayabilirsin.
+            {profile.full_name || "Ziyaretçi"} — Fuarları keşfet, firmalarla eşleş, kişisel biletini al.
           </p>
         </motion.div>
 
@@ -115,7 +113,7 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
           </div>
         </motion.div>
 
-        {/* QR Badge teaser */}
+        {/* Biletlerim teaser */}
         <motion.div
           initial={{ y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -123,17 +121,17 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
           className="glass rounded-2xl border border-brand-cyan/20 p-8 flex flex-col items-center text-center"
         >
           <div className="w-14 h-14 rounded-2xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center mb-4">
-            <QrCode className="w-7 h-7 text-brand-cyan" />
+            <Ticket className="w-7 h-7 text-brand-cyan" />
           </div>
           <h3 className="font-display text-lg font-semibold text-white mb-2">
-            QR Badge&apos;in Hazır Olacak
+            Kişisel QR Biletlerim
           </h3>
           <p className="text-sm text-muted-foreground max-w-sm mb-4">
-            Faz 4&apos;te kişisel QR badge&apos;ini al. Firma standlarında tara, anında lead oluştur.
+            Kayıt olduğun fuarların kişisel QR biletlerini gör. Girişte okutman yeterli.
           </p>
           <Button variant="gradient" size="sm" asChild>
-            <Link href="/visitor/badge">
-              <QrCode className="w-4 h-4" /> Badge&apos;ini Gör
+            <Link href="/visitor/tickets">
+              <Ticket className="w-4 h-4" /> Biletlerimi Gör
             </Link>
           </Button>
         </motion.div>

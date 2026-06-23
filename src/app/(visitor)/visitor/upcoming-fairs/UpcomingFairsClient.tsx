@@ -2,14 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  LayoutDashboard, Sparkles, QrCode, Heart, Users,
+  LayoutDashboard, Sparkles, Heart, Users,
   CalendarClock, Settings, CalendarDays, Ticket,
-  MapPin, Calendar, Clock, CheckCircle2, Users2, ChevronRight,
+  MapPin, Calendar, Clock, CheckCircle2, Users2, AlertCircle,
+  FileCheck,
 } from "lucide-react";
 import { registerForEvent, joinWaitlist } from "@/features/events/registrationActions";
 import type { Profile } from "@/types";
@@ -19,7 +19,6 @@ const NAV_ITEMS = [
   { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
   { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "QR Badge'im",      href: "/visitor/badge",             icon: QrCode },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
@@ -34,6 +33,7 @@ interface FairEvent {
   end_date: string;
   status: string;
   capacity: number | null;
+  requires_approval: boolean;
   organizer_id: string;
 }
 
@@ -57,7 +57,7 @@ function formatDate(dateStr: string) {
 
 export function UpcomingFairsClient({ profile, events, myRegistrations }: Props) {
   const [pending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState<Record<string, { msg: string; type: "success" | "error" }>>({});
 
   const regMap = Object.fromEntries(myRegistrations.map((r) => [r.event_id, r]));
 
@@ -67,12 +67,18 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
       const result = await action(eventId);
       const errMsg = (result as { error?: string } | undefined)?.error;
       if (errMsg) {
-        setFeedback((prev) => ({ ...prev, [eventId]: errMsg }));
+        setFeedback((prev) => ({ ...prev, [eventId]: { msg: errMsg, type: "error" } }));
       } else {
-        setFeedback((prev) => ({ ...prev, [eventId]: isFull ? "Bekleme listesine alındınız!" : "Kayıt başarılı! Biletiniz oluşturuldu." }));
+        const status = (result as { status?: string } | undefined)?.status;
+        let msg = "Kayıt başarılı! Biletiniz oluşturuldu.";
+        if (status === "pending_approval") msg = "Başvurunuz alındı! Organizatör onayı bekleniyor.";
+        else if (status === "waitlisted") msg = "Bekleme listesine alındınız!";
+        setFeedback((prev) => ({ ...prev, [eventId]: { msg, type: "success" } }));
       }
     });
   }
+
+  const isProfileComplete = !!(profile.full_name && profile.phone_number);
 
   return (
     <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
@@ -85,9 +91,27 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
             <h1 className="font-display text-2xl font-bold text-white">Yaklaşan Fuarlar</h1>
           </div>
           <p className="text-muted-foreground">
-            Yaklaşan fuarlara kayıt olun ve fuar biletinizi alın.
+            Yaklaşan fuarlara kayıt olun ve kişisel QR biletinizi alın.
           </p>
         </motion.div>
+
+        {/* Profile incomplete warning */}
+        {!isProfileComplete && (
+          <motion.div
+            initial={{ y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/8 border border-amber-500/20"
+          >
+            <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-amber-300 font-medium">Profilinizi tamamlayın</p>
+              <p className="text-amber-200/70 text-xs mt-0.5">
+                Bilet QR kodu için telefon numaranızın kayıtlı olması gerekiyor.{" "}
+                <a href="/visitor/settings" className="underline hover:text-white">Ayarlar</a>&apos;dan güncelleyebilirsiniz.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {events.length === 0 ? (
           <motion.div
@@ -108,7 +132,9 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
               const reg = regMap[event.id];
               const isRegistered = reg?.status === "confirmed";
               const isWaitlisted = reg?.status === "waitlisted";
+              const isPendingApproval = reg?.status === "pending_approval";
               const isFull = event.capacity !== null && event.capacity <= 0;
+              const fb = feedback[event.id];
 
               return (
                 <motion.div
@@ -130,6 +156,16 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
                         {isWaitlisted && (
                           <Badge variant="gold" className="text-xs">
                             <Clock className="w-3 h-3 mr-1" /> Bekleme Listesi
+                          </Badge>
+                        )}
+                        {isPendingApproval && (
+                          <Badge className="text-xs bg-amber-500/15 border-amber-500/25 text-amber-400">
+                            <FileCheck className="w-3 h-3 mr-1" /> Onay Bekleniyor
+                          </Badge>
+                        )}
+                        {event.requires_approval && !reg && (
+                          <Badge className="text-xs bg-brand-indigo/15 border-brand-indigo/25 text-brand-indigo-light">
+                            Başvuru Gerekli
                           </Badge>
                         )}
                       </div>
@@ -154,15 +190,17 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
                         )}
                       </div>
 
-                      {feedback[event.id] && (
-                        <p className="text-sm text-brand-violet-light mb-3">{feedback[event.id]}</p>
+                      {fb && (
+                        <p className={`text-sm mb-3 ${fb.type === "success" ? "text-brand-violet-light" : "text-red-400"}`}>
+                          {fb.msg}
+                        </p>
                       )}
                     </div>
 
                     <div className="flex-shrink-0">
                       {isRegistered ? (
                         <Button variant="outline" size="sm" asChild>
-                          <a href={`/visitor/tickets`}>
+                          <a href="/visitor/tickets">
                             <Ticket className="w-4 h-4" /> Biletim
                           </a>
                         </Button>
@@ -170,14 +208,20 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
                         <Button variant="outline" size="sm" disabled>
                           <Clock className="w-4 h-4" /> Bekliyorsunuz
                         </Button>
+                      ) : isPendingApproval ? (
+                        <Button variant="outline" size="sm" disabled>
+                          <AlertCircle className="w-4 h-4" /> İnceleniyor
+                        </Button>
                       ) : (
                         <Button
-                          variant={isFull ? "outline" : "gradient"}
+                          variant={isFull && !event.requires_approval ? "outline" : "gradient"}
                           size="sm"
                           disabled={pending}
-                          onClick={() => handleRegister(event.id, isFull)}
+                          onClick={() => handleRegister(event.id, isFull && !event.requires_approval)}
                         >
-                          {isFull ? (
+                          {event.requires_approval ? (
+                            <><FileCheck className="w-4 h-4" /> Başvur</>
+                          ) : isFull ? (
                             <><Clock className="w-4 h-4" /> Bekleme Listesi</>
                           ) : (
                             <><Ticket className="w-4 h-4" /> Kayıt Ol</>

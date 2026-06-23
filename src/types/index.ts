@@ -12,6 +12,10 @@ export interface Profile {
   full_name: string;
   email: string;
   interests: string[];
+  avatar_url?: string | null;
+  phone_number?: string | null;
+  kvkk_consent?: boolean;
+  kvkk_consent_at?: string | null;
   created_at: string;
 }
 
