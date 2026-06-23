@@ -19,6 +19,7 @@ import {
   Store, Activity, MessageSquare, QrCode, BarChart2, UserCircle2,
   Settings, Plus, Trash2, Download, Copy, Check, Power, PowerOff,
   Crown, AlertCircle, Gift,
+  FileBarChart
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { createGoldenQR, deleteGoldenQR, toggleGoldenQR } from "@/features/events/goldenQRActions";
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
   { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
   { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
+  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
   { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
 ];
 

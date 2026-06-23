@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   LayoutDashboard, CalendarDays, ClipboardList, Users, Trophy,
   Store, Activity, MessageSquare, QrCode, BarChart2, UserCircle2, Settings,
+  FileBarChart
 } from "lucide-react";
 import type { Profile } from "@/types";
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
   { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
   { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
+  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
   { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
 ];
 

@@ -7,6 +7,7 @@ import {
   LayoutDashboard, CalendarDays, Building2, BarChart2,
   Settings, Plus, TrendingUp, Users, QrCode, Banknote, CheckCircle2,
   ClipboardList, Trophy, Store, Activity, MessageSquare, UserCircle2,
+  FileBarChart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
   { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
   { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
+  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
   { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
 ];
 

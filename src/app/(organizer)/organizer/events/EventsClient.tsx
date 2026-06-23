@@ -37,6 +37,7 @@ import {
   MessageSquare,
   QrCode,
   UserCircle2,
+  FileBarChart
 } from "lucide-react";
 import { createEvent, updateEvent, deleteEvent } from "@/features/events/actions";
 import type { ExpoEvent, EventStatus } from "@/types";
@@ -54,6 +55,7 @@ const NAV_ITEMS = [
   { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
   { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
   { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
+  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
   { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
 ];
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, QrCode, Zap, Users, TrendingUp } from "lucide-react";
+import { ArrowRight, QrCode, Zap, Users, TrendingUp, FileCheck } from "lucide-react";
 import Link from "next/link";
 import { InstallBadges } from "@/components/landing/AppInstallSection";
 
@@ -303,7 +303,7 @@ export function Hero() {
               className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-lg"
             >
               Organizatörler için tamamen ücretsiz — ön kayıt verisi, AI raporu ve ısı haritası karşılığında.
-              Firmalar için 13.000 TL/ay ile KVKK&apos;lı lead, markalı QR sayfa ve ROI raporu.
+              Firmalar: <span className="text-brand-cyan font-medium">KOSGEB destekli katılımın ROI belgesini otomatik üret</span> — 13.000 TL/ay.
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
@@ -393,6 +393,21 @@ export function Hero() {
               <span className="text-xs font-medium text-white">
                 +127 ziyaretçi aktif
               </span>
+            </motion.div>
+
+            {/* KOSGEB badge — bottom right */}
+            <motion.div
+              animate={{ y: [0, -7, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+              className="absolute bottom-4 right-0 lg:-right-2 glass rounded-xl px-4 py-3 flex items-center gap-3 border border-brand-cyan/25"
+            >
+              <div className="w-8 h-8 rounded-full bg-brand-cyan/20 flex items-center justify-center flex-shrink-0">
+                <FileCheck className="w-4 h-4 text-brand-cyan" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-white">KOSGEB Raporu</p>
+                <p className="text-xs text-brand-cyan">Otomatik PDF</p>
+              </div>
             </motion.div>
           </motion.div>
         </div>

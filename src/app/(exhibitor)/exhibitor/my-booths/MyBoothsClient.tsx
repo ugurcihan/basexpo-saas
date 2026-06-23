@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Building2, QrCode, Package, Users,
   MessageSquare, Brain, CalendarClock, Store, Settings,
   Grid3X3, MapPin, Calendar, ChevronRight,
+  TrendingUp
 } from "lucide-react";
 import type { Profile } from "@/types";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Yaklaşan Fuarlar", href: "/exhibitor/upcoming-fairs", icon: CalendarClock },
   { label: "Fuar Standlarım",  href: "/exhibitor/my-booths",      icon: Store },
   { label: "Randevu Talepleri", href: "/exhibitor/meeting-requests", icon: CalendarClock },
+  { label: "ROI Raporu",          href: "/exhibitor/roi-report",         icon: TrendingUp },
   { label: "Ayarlar",          href: "/exhibitor/settings",       icon: Settings },
 ];
 

@@ -52,6 +52,7 @@ import {
   ImagePlus,
   X as XIcon,
   Award,
+  FileBarChart
 } from "lucide-react";
 import {
   createHall,
@@ -75,6 +76,7 @@ const NAV_ITEMS = [
   { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
   { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
   { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
+  { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
   { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
 ];
 

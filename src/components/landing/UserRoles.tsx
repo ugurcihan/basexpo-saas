@@ -8,6 +8,10 @@ import {
   UserCircle2,
   ChevronRight,
   Check,
+  BarChart3,
+  FileDown,
+  Users2,
+  FileCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -19,13 +23,17 @@ const ROLES = [
     label: "Organizatör",
     tagline: "Fuarı Kur — Tamamen Ücretsiz",
     description:
-      "Platform organizatöre ücretsiz. Ön kayıt verisi, AI raporu ve ısı haritası karşılığında stant satışını kanıtla, fuar dolduğunda herkese kazan.",
+      "Platform organizatöre ücretsiz. Ön kayıt verisi stant satışını kanıtlar, ısı haritası fuarı analiz eder, AI raporu yatırımcıya sunulur.",
     features: [
       "Fuar & salon yönetimi",
       "Firma davet & onay sistemi",
       "Gerçek zamanlı ısı haritası",
       "Fuar sonu AI PDF raporu",
+      "Stant satışı için ön kayıt verisi kanıtı",
+      "Ziyaretçi demografisi & davranış analizi",
     ],
+    featureIcons: [null, null, null, null, BarChart3, Users2],
+    trust: "✓ Excel'den kurtul · ✓ WhatsApp grubuna gerek yok · ✓ 5 dakikada kur",
     cta: "Fuar Oluştur",
     href: "/register?role=organizer",
     gradient: "from-brand-indigo/20 via-brand-indigo/5 to-transparent",
@@ -41,15 +49,19 @@ const ROLES = [
     icon: Building2,
     color: "cyan",
     label: "Katılımcı Firma",
-    tagline: "13.000 TL/ay — ROI Garantili",
+    tagline: "13.000 TL/ay — KOSGEB ROI Belgelenmiş",
     description:
-      "KVKK onaylı lead topla, markalı QR sayfa oluştur, AI ROI raporunu indir. Rakiplerinizden önce doğru ziyaretçiyle buluş.",
+      "KVKK onaylı lead topla, KOSGEB formatında ROI raporu al, AI ile doğru ziyaretçiyle eşleş. 1 müşteri yatırımı 7.8x geri döndürür.",
     features: [
       "KVKK'lı lead toplama",
       "Markalı QR sayfa & ürün vitrini",
       "AI tabanlı ziyaretçi eşleşmesi",
       "Lead skoru & ROI dashboard",
+      "KOSGEB formatında otomatik PDF raporu",
+      "QR scan → görüşme → satış funnel takibi",
     ],
+    featureIcons: [null, null, null, null, FileCheck, FileDown],
+    trust: null,
     cta: "Firma Kaydı",
     href: "/register?role=exhibitor",
     gradient: "from-brand-cyan/20 via-brand-cyan/5 to-transparent",
@@ -75,6 +87,8 @@ const ROLES = [
       "Sadakat puanı & ücretsiz bilet",
       "Toplantı & networking",
     ],
+    featureIcons: [null, null, null, null],
+    trust: null,
     cta: "Ziyaretçi Ol",
     href: "/register?role=visitor",
     gradient: "from-brand-violet/20 via-brand-violet/5 to-transparent",
@@ -179,18 +193,24 @@ export function UserRoles() {
 
                     {/* Feature list */}
                     <ul className="space-y-2.5 mb-8">
-                      {role.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-3">
-                          <div
-                            className={`w-4 h-4 rounded-full ${role.iconBg} flex items-center justify-center flex-shrink-0`}
-                          >
-                            <Check className={`w-2.5 h-2.5 ${role.checkColor}`} />
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {feature}
-                          </span>
-                        </li>
-                      ))}
+                      {role.features.map((feature, fi) => {
+                        const FIcon = role.featureIcons?.[fi];
+                        return (
+                          <li key={feature} className="flex items-center gap-3">
+                            <div
+                              className={`w-4 h-4 rounded-full ${role.iconBg} flex items-center justify-center flex-shrink-0`}
+                            >
+                              {FIcon
+                                ? <FIcon className={`w-2.5 h-2.5 ${role.checkColor}`} />
+                                : <Check className={`w-2.5 h-2.5 ${role.checkColor}`} />
+                              }
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {feature}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
 
                     {/* CTA */}
@@ -205,9 +225,9 @@ export function UserRoles() {
                         <ChevronRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
                       </Link>
                     </Button>
-                    {role.id === "organizer" && (
+                    {role.trust && (
                       <p className="text-center text-xs text-muted-foreground/60 mt-2">
-                        ✓ Kredi kartı gerekmez · Tamamen ücretsiz
+                        {role.trust}
                       </p>
                     )}
                   </div>
