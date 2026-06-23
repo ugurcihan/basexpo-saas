@@ -9,8 +9,9 @@ import {
   LayoutDashboard, Sparkles, Heart, Users,
   CalendarClock, Settings, CalendarDays, Ticket,
   MapPin, Calendar, Clock, CheckCircle2, Users2, AlertCircle,
-  FileCheck,
+  FileCheck, Search, Tag, ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 import { registerForEvent, joinWaitlist } from "@/features/events/registrationActions";
 import type { Profile } from "@/types";
 
@@ -35,6 +36,9 @@ interface FairEvent {
   capacity: number | null;
   requires_approval: boolean;
   organizer_id: string;
+  category: string | null;
+  tags: string[] | null;
+  cover_url: string | null;
 }
 
 interface Registration {
@@ -58,6 +62,23 @@ function formatDate(dateStr: string) {
 export function UpcomingFairsClient({ profile, events, myRegistrations }: Props) {
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<Record<string, { msg: string; type: "success" | "error" }>>({});
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeMonth, setActiveMonth] = useState<string | null>(null);
+
+  const categories = Array.from(new Set(events.map((e) => e.category).filter(Boolean))) as string[];
+  const months = Array.from(new Set(events.map((e) => {
+    const d = new Date(e.start_date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }))).sort();
+
+  const filteredEvents = events.filter((ev) => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || ev.name.toLowerCase().includes(q) || ev.location.toLowerCase().includes(q);
+    const matchCat = !activeCategory || ev.category === activeCategory;
+    const matchMonth = !activeMonth || new Date(ev.start_date).toISOString().slice(0, 7) === activeMonth;
+    return matchSearch && matchCat && matchMonth;
+  });
 
   const regMap = Object.fromEntries(myRegistrations.map((r) => [r.event_id, r]));
 
@@ -95,6 +116,57 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
           </p>
         </motion.div>
 
+        {/* Arama */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Fuar adı veya konum ara..."
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-violet/40 transition-all"
+          />
+        </div>
+
+        {/* Kategori filtreleri */}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveCategory(null)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                !activeCategory ? "bg-brand-violet/20 border border-brand-violet/40 text-brand-violet-light" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-white"
+              }`}
+            >Tümü</button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  activeCategory === cat ? "bg-brand-violet/20 border border-brand-violet/40 text-brand-violet-light" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-white"
+                }`}
+              >{cat}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Ay filtreleri */}
+        {months.length > 1 && (
+          <div className="flex flex-wrap gap-2">
+            {months.map((m) => {
+              const [y, mo] = m.split("-");
+              const label = new Date(parseInt(y), parseInt(mo) - 1).toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+              return (
+                <button
+                  key={m}
+                  onClick={() => setActiveMonth(activeMonth === m ? null : m)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    activeMonth === m ? "bg-brand-cyan/20 border border-brand-cyan/40 text-brand-cyan" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-white"
+                  }`}
+                >{label}</button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Profile incomplete warning */}
         {!isProfileComplete && (
           <motion.div
@@ -113,7 +185,7 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
           </motion.div>
         )}
 
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <motion.div
             initial={{ y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -121,14 +193,14 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
             className="glass rounded-2xl border border-white/8 p-12 flex flex-col items-center text-center"
           >
             <Calendar className="w-12 h-12 text-muted-foreground mb-4" />
-            <h2 className="font-semibold text-white mb-2">Yaklaşan fuar bulunamadı</h2>
+            <h2 className="font-semibold text-white mb-2">Fuar bulunamadı</h2>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Organizatörler fuar duyurduğunda burada görünecek.
+              {search || activeCategory || activeMonth ? "Filtrelerinizi değiştirin." : "Organizatörler fuar duyurduğunda burada görünecek."}
             </p>
           </motion.div>
         ) : (
           <div className="space-y-4">
-            {events.map((event, i) => {
+            {filteredEvents.map((event, i) => {
               const reg = regMap[event.id];
               const isRegistered = reg?.status === "confirmed";
               const isWaitlisted = reg?.status === "waitlisted";
@@ -147,7 +219,7 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h2 className="font-semibold text-white text-lg">{event.name}</h2>
+                        <Link href={`/visitor/upcoming-fairs/${event.id}`} className="font-semibold text-white text-lg hover:text-brand-violet-light transition-colors">{event.name}</Link>
                         {isRegistered && (
                           <Badge variant="cyan" className="text-xs">
                             <CheckCircle2 className="w-3 h-3 mr-1" /> Kayıtlı
@@ -169,6 +241,20 @@ export function UpcomingFairsClient({ profile, events, myRegistrations }: Props)
                           </Badge>
                         )}
                       </div>
+
+                      {/* Category + tags */}
+                      {(event.category || (event.tags && event.tags.length > 0)) && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {event.category && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-indigo/15 border border-brand-indigo/25 text-brand-indigo-light">{event.category}</span>
+                          )}
+                          {event.tags?.slice(0, 3).map((tag) => (
+                            <span key={tag} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-white/8 border border-white/10 text-muted-foreground">
+                              <Tag className="w-2.5 h-2.5" /> {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
                         <span className="flex items-center gap-1.5">

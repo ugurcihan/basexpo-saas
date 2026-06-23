@@ -30,6 +30,12 @@ export interface ExpoEvent {
   cover_url: string | null;
   status: EventStatus;
   created_at: string;
+  maps_url?: string | null;
+  category?: string | null;
+  tags?: string[] | null;
+  youtube_url?: string | null;
+  social_links?: { website?: string; instagram?: string; twitter?: string; linkedin?: string } | null;
+  banner_url?: string | null;
 }
 
 export interface Hall {

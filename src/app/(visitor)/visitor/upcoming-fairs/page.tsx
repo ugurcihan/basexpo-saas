@@ -10,7 +10,7 @@ export default async function UpcomingFairsPage() {
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, location, start_date, end_date, status, capacity, requires_approval, organizer_id")
+    .select("id, name, location, start_date, end_date, status, capacity, requires_approval, organizer_id, category, tags, cover_url")
     .in("status", ["published", "active"])
     .order("start_date", { ascending: true });
 

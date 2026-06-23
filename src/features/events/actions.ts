@@ -103,6 +103,35 @@ export async function updateEventGallery(eventId: string, galleryUrls: string[])
   return { success: true };
 }
 
+export interface EventDetailsInput {
+  id: string;
+  maps_url?: string;
+  category?: string;
+  tags?: string[];
+  youtube_url?: string;
+  social_links?: { website?: string; instagram?: string; twitter?: string; linkedin?: string };
+  banner_url?: string;
+}
+
+export async function updateEventDetails(input: EventDetailsInput) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { id, ...fields } = input;
+  const { error } = await supabase
+    .from("events")
+    .update(fields)
+    .eq("id", id)
+    .eq("organizer_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/organizer/events");
+  revalidatePath(`/organizer/events/${id}`);
+  return { success: true };
+}
+
 export async function getEventWithHalls(eventId: string) {
   const supabase = await createSupabaseServerClient();
 

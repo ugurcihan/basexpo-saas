@@ -37,9 +37,16 @@ import {
   MessageSquare,
   QrCode,
   UserCircle2,
-  FileBarChart
+  FileBarChart,
+  Globe,
+  Instagram,
+  Twitter,
+  Linkedin,
+  Tag,
+  Youtube,
+  ChevronDown,
 } from "lucide-react";
-import { createEvent, updateEvent, deleteEvent } from "@/features/events/actions";
+import { createEvent, updateEvent, deleteEvent, updateEventDetails } from "@/features/events/actions";
 import type { ExpoEvent, EventStatus } from "@/types";
 import { useRouter } from "next/navigation";
 import { ORGANIZER_NAV } from "../_nav";
@@ -57,6 +64,14 @@ interface EventFormData {
   start_date: string;
   end_date: string;
   location: string;
+  maps_url: string;
+  category: string;
+  tags_input: string;
+  youtube_url: string;
+  social_website: string;
+  social_instagram: string;
+  social_twitter: string;
+  social_linkedin: string;
 }
 
 const emptyForm: EventFormData = {
@@ -65,6 +80,14 @@ const emptyForm: EventFormData = {
   start_date: "",
   end_date: "",
   location: "",
+  maps_url: "",
+  category: "",
+  tags_input: "",
+  youtube_url: "",
+  social_website: "",
+  social_instagram: "",
+  social_twitter: "",
+  social_linkedin: "",
 };
 
 export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] }) {
@@ -90,6 +113,14 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
       start_date: event.start_date,
       end_date: event.end_date,
       location: event.location,
+      maps_url: event.maps_url ?? "",
+      category: event.category ?? "",
+      tags_input: (event.tags ?? []).join(", "),
+      youtube_url: event.youtube_url ?? "",
+      social_website: event.social_links?.website ?? "",
+      social_instagram: event.social_links?.instagram ?? "",
+      social_twitter: event.social_links?.twitter ?? "",
+      social_linkedin: event.social_links?.linkedin ?? "",
     });
     setError(null);
     setEditTarget(event);
@@ -109,8 +140,29 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
     if (!editTarget) return;
     setError(null);
     startTransition(async () => {
-      const result = await updateEvent({ ...form, id: editTarget.id });
+      const result = await updateEvent({
+        name: form.name, description: form.description,
+        start_date: form.start_date, end_date: form.end_date, location: form.location,
+        id: editTarget.id,
+      });
       if (result.error) { setError(result.error); return; }
+
+      const tags = form.tags_input.split(",").map((t) => t.trim()).filter(Boolean);
+      const hasSocialLinks = form.social_website || form.social_instagram || form.social_twitter || form.social_linkedin;
+      await updateEventDetails({
+        id: editTarget.id,
+        maps_url: form.maps_url || undefined,
+        category: form.category || undefined,
+        tags: tags.length ? tags : undefined,
+        youtube_url: form.youtube_url || undefined,
+        social_links: hasSocialLinks ? {
+          website: form.social_website || undefined,
+          instagram: form.social_instagram || undefined,
+          twitter: form.social_twitter || undefined,
+          linkedin: form.social_linkedin || undefined,
+        } : undefined,
+      });
+
       setEditTarget(null);
       router.refresh();
     });
@@ -315,8 +367,9 @@ function EventForm({
   setForm: React.Dispatch<React.SetStateAction<EventFormData>>;
   error: string | null;
 }) {
+  const [showExtra, setShowExtra] = useState(false);
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
       {error && (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -328,7 +381,7 @@ function EventForm({
         <Label htmlFor="ev-name">Fuar Adı *</Label>
         <Input
           id="ev-name"
-          placeholder="İstanbul Tech Expo 2025"
+          placeholder="İstanbul Tech Expo 2026"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         />
@@ -375,6 +428,83 @@ function EventForm({
           />
         </div>
       </div>
+
+      {/* Ek Detaylar toggle */}
+      <button
+        type="button"
+        onClick={() => setShowExtra((v) => !v)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition-colors w-full pt-1"
+      >
+        <ChevronDown className={`w-4 h-4 transition-transform ${showExtra ? "rotate-180" : ""}`} />
+        {showExtra ? "Ek detayları gizle" : "Ek detayları göster (harita, video, sosyal medya...)"}
+      </button>
+
+      {showExtra && (
+        <div className="space-y-4 pt-1 border-t border-white/8">
+          <div className="space-y-2">
+            <Label htmlFor="ev-maps" className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> Google Maps Linki</Label>
+            <Input
+              id="ev-maps"
+              placeholder="https://maps.google.com/..."
+              value={form.maps_url}
+              onChange={(e) => setForm((f) => ({ ...f, maps_url: e.target.value }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="ev-cat" className="flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" /> Kategori</Label>
+              <Input
+                id="ev-cat"
+                placeholder="Teknoloji, Sağlık..."
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ev-tags">Etiketler (virgülle)</Label>
+              <Input
+                id="ev-tags"
+                placeholder="B2B, startups, AI..."
+                value={form.tags_input}
+                onChange={(e) => setForm((f) => ({ ...f, tags_input: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ev-yt" className="flex items-center gap-1.5"><Youtube className="w-3.5 h-3.5 text-red-400" /> YouTube Tanıtım Linki</Label>
+            <Input
+              id="ev-yt"
+              placeholder="https://youtube.com/watch?v=..."
+              value={form.youtube_url}
+              onChange={(e) => setForm((f) => ({ ...f, youtube_url: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground font-medium">Sosyal Medya</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1 text-xs"><Globe className="w-3 h-3" /> Web sitesi</Label>
+                <Input placeholder="https://..." value={form.social_website} onChange={(e) => setForm((f) => ({ ...f, social_website: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1 text-xs"><Instagram className="w-3 h-3" /> Instagram</Label>
+                <Input placeholder="https://instagram.com/..." value={form.social_instagram} onChange={(e) => setForm((f) => ({ ...f, social_instagram: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1 text-xs"><Twitter className="w-3 h-3" /> Twitter/X</Label>
+                <Input placeholder="https://x.com/..." value={form.social_twitter} onChange={(e) => setForm((f) => ({ ...f, social_twitter: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1 text-xs"><Linkedin className="w-3 h-3" /> LinkedIn</Label>
+                <Input placeholder="https://linkedin.com/..." value={form.social_linkedin} onChange={(e) => setForm((f) => ({ ...f, social_linkedin: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
