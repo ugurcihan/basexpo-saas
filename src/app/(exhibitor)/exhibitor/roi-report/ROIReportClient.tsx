@@ -8,6 +8,7 @@ import {
   TrendingUp, Settings, MessageSquare, Brain, CalendarClock,
   Store, FileCheck, ChevronDown, Save, Download,
   Trophy, Target, Handshake, BadgeCheck, XCircle,
+  MapPin, Phone, Globe, Briefcase, Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -172,13 +173,28 @@ function LeadRow({ conv, onUpdate }: {
   );
 }
 
+export interface ExhibitorInfo {
+  company_name: string;
+  contact_name: string;
+  job_title: string;
+  company_size: string | null;
+  industry: string | null;
+  description: string | null;
+  logo_url: string | null;
+  website: string | null;
+  phone: string | null;
+  address: string | null;
+  tags: string[];
+}
+
 interface Props {
   profile: Profile;
   roi: FairROI | null;
   conversions: LeadConversion[];
+  exhibitorInfo: ExhibitorInfo;
 }
 
-export function ROIReportClient({ profile, roi, conversions: initialConversions }: Props) {
+export function ROIReportClient({ profile, roi, conversions: initialConversions, exhibitorInfo }: Props) {
   const [conversions, setConversions] = useState(initialConversions);
 
   function handleLeadUpdate(id: string, status: LeadConversion["deal_status"], value: number | null) {
@@ -193,9 +209,63 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions 
 
   return (
     <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
-      <div className="p-6 lg:p-8 space-y-8">
-        {/* Header */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <div className="p-6 lg:p-8 space-y-8 print:p-8 print:space-y-6">
+
+        {/* ── Print-only KOSGEB Belge Başlığı ── */}
+        <div className="hidden print:block border-2 border-gray-800 rounded-xl p-6 mb-4">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">BasExpo</h1>
+              <p className="text-sm text-gray-500">AI Destekli Fuar İşletim Sistemi</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">KOSGEB Fuar Katılım ROI Belgesi</p>
+              <p className="text-sm font-semibold text-gray-700">{new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</p>
+            </div>
+          </div>
+          <div className="h-px bg-gray-200 mb-4" />
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">Firma Adı</p>
+              <p className="font-semibold text-gray-800">{exhibitorInfo.company_name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">Yetkili Kişi</p>
+              <p className="font-semibold text-gray-800">{exhibitorInfo.contact_name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">Görev / Unvan</p>
+              <p className="text-gray-700">{exhibitorInfo.job_title}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">Sektör</p>
+              <p className="text-gray-700">{exhibitorInfo.industry ?? "—"}</p>
+            </div>
+            {exhibitorInfo.company_size && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase mb-1">Firma Büyüklüğü</p>
+                <p className="text-gray-700">{exhibitorInfo.company_size} çalışan</p>
+              </div>
+            )}
+            {roi?.event_name && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase mb-1">Fuar Adı</p>
+                <p className="text-gray-700">{roi.event_name}</p>
+              </div>
+            )}
+            {exhibitorInfo.address && (
+              <div className="col-span-2">
+                <p className="text-xs text-gray-400 uppercase mb-1">Adres</p>
+                <p className="text-gray-700">{exhibitorInfo.address}</p>
+              </div>
+            )}
+          </div>
+          <div className="h-px bg-gray-200 mt-4" />
+          <p className="text-xs text-gray-400 mt-2">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir.</p>
+        </div>
+
+        {/* ── Screen Header ── */}
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="print:hidden">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center">
@@ -219,6 +289,94 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions 
               KOSGEB Formatı — PDF İndir
               <Download className="w-4 h-4" />
             </Button>
+          </div>
+        </motion.div>
+
+        {/* ── Firma Bilgileri Kartı ── */}
+        <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="print:mb-4">
+          <div className="glass rounded-2xl border border-brand-cyan/20 p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Building2 className="w-4 h-4 text-brand-cyan" />
+              <h2 className="font-semibold text-white">Firma Bilgileri</h2>
+              <span className="ml-auto text-xs text-muted-foreground bg-brand-cyan/10 border border-brand-cyan/20 px-2 py-0.5 rounded-full">KOSGEB Belgesi</span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Firma Adı</p>
+                <p className="text-sm font-semibold text-white">{exhibitorInfo.company_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Yetkili Kişi</p>
+                <p className="text-sm font-medium text-white">{exhibitorInfo.contact_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Unvan</p>
+                <p className="text-sm text-foreground">{exhibitorInfo.job_title}</p>
+              </div>
+              {exhibitorInfo.industry && (
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Sektör</p>
+                    <p className="text-sm text-foreground">{exhibitorInfo.industry}</p>
+                  </div>
+                </div>
+              )}
+              {exhibitorInfo.company_size && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Firma Büyüklüğü</p>
+                  <p className="text-sm text-foreground">{exhibitorInfo.company_size} çalışan</p>
+                </div>
+              )}
+              {exhibitorInfo.website && (
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Web Sitesi</p>
+                    <p className="text-sm text-brand-cyan truncate">{exhibitorInfo.website}</p>
+                  </div>
+                </div>
+              )}
+              {exhibitorInfo.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Telefon</p>
+                    <p className="text-sm text-foreground">{exhibitorInfo.phone}</p>
+                  </div>
+                </div>
+              )}
+              {exhibitorInfo.address && (
+                <div className="flex items-center gap-2 col-span-2 lg:col-span-3">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Adres</p>
+                    <p className="text-sm text-foreground">{exhibitorInfo.address}</p>
+                  </div>
+                </div>
+              )}
+              {exhibitorInfo.tags.length > 0 && (
+                <div className="col-span-2 lg:col-span-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Ürün / Hizmet Kategorileri</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {exhibitorInfo.tags.map((tag) => (
+                      <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-brand-indigo/15 border border-brand-indigo/25 text-brand-indigo-light">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {exhibitorInfo.description && (
+                <div className="col-span-2 lg:col-span-3">
+                  <p className="text-xs text-muted-foreground mb-1">Firma Açıklaması</p>
+                  <p className="text-sm text-foreground line-clamp-2">{exhibitorInfo.description}</p>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 

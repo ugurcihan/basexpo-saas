@@ -24,8 +24,8 @@ const NAV_ITEMS = [
   { label: "Mesajlar",            href: "/organizer/messages",                 icon: MessageSquare },
   { label: "Altın QR",            href: "/organizer/golden-qr",                icon: QrCode },
   { label: "Analiz",              href: "/organizer/analytics",                icon: BarChart2 },
-  { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
   { label: "Fuar Raporu",         href: "/organizer/fair-report",              icon: FileBarChart },
+  { label: "Marka Profilim",      href: "/organizer/profile",                  icon: UserCircle2 },
   { label: "Ayarlar",             href: "/organizer/settings",                 icon: Settings },
 ];
 
