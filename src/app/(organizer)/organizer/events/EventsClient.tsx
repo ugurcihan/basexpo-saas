@@ -235,11 +235,10 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      <Link
-                        href={`/organizer/events/${event.id}`}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-white hover:bg-white/8 transition-colors"
-                      >
-                        <ChevronRight className="w-4 h-4" />
+                      <Link href={`/organizer/events/${event.id}`}>
+                        <Button variant="outline" size="sm" className="gap-1 h-8 text-xs">
+                          Detaylar <ChevronRight className="w-3.5 h-3.5" />
+                        </Button>
                       </Link>
                     </div>
                   </div>

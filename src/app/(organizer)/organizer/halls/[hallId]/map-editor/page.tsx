@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/supabase-server";
-import { getHallWithMap } from "@/features/events/hallMapActions";
+import { getHallWithMap, getEventExhibitors } from "@/features/events/hallMapActions";
 import { MapEditorClient } from "./MapEditorClient";
 
 interface Props {
@@ -16,5 +16,7 @@ export default async function MapEditorPage({ params }: Props) {
   const { hall, error } = await getHallWithMap(hallId);
   if (error || !hall) redirect("/organizer/events");
 
-  return <MapEditorClient profile={profile} hall={hall} />;
+  const exhibitors = await getEventExhibitors(hall.event_id);
+
+  return <MapEditorClient profile={profile} hall={hall} exhibitors={exhibitors} />;
 }

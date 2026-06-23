@@ -28,6 +28,10 @@ export type HallWithMap = {
   map_width: number | null;
   map_height: number | null;
   event_id: string;
+  entrance_x: number | null;
+  entrance_y: number | null;
+  exit_x: number | null;
+  exit_y: number | null;
   booths: BoothOnMap[];
 };
 
@@ -38,6 +42,7 @@ export async function getHallWithMap(hallId: string): Promise<{ hall: HallWithMa
     .from("halls")
     .select(`
       id, name, floor, map_url, map_width, map_height, event_id,
+      entrance_x, entrance_y, exit_x, exit_y,
       booths (
         id, code, x_pct, y_pct, width_pct, height_pct, exhibitor_id,
         exhibitors ( company_name, logo_url, tags, description, owner_id )
@@ -64,6 +69,10 @@ export async function getHallWithMap(hallId: string): Promise<{ hall: HallWithMa
   return {
     hall: {
       ...data,
+      entrance_x: (data as Record<string, unknown>).entrance_x as number | null ?? null,
+      entrance_y: (data as Record<string, unknown>).entrance_y as number | null ?? null,
+      exit_x: (data as Record<string, unknown>).exit_x as number | null ?? null,
+      exit_y: (data as Record<string, unknown>).exit_y as number | null ?? null,
       booths: (data.booths ?? []).map(mapBooth),
     } as HallWithMap,
   };
@@ -76,6 +85,7 @@ export async function getEventHallsWithMaps(eventId: string): Promise<HallWithMa
     .from("halls")
     .select(`
       id, name, floor, map_url, map_width, map_height, event_id,
+      entrance_x, entrance_y, exit_x, exit_y,
       booths (
         id, code, x_pct, y_pct, width_pct, height_pct, exhibitor_id,
         exhibitors ( company_name, logo_url, tags, description, owner_id )
@@ -105,6 +115,10 @@ export async function getEventHallsWithMaps(eventId: string): Promise<HallWithMa
     map_width: h.map_width ?? null,
     map_height: h.map_height ?? null,
     event_id: h.event_id,
+    entrance_x: h.entrance_x ?? null,
+    entrance_y: h.entrance_y ?? null,
+    exit_x: h.exit_x ?? null,
+    exit_y: h.exit_y ?? null,
     booths: (h.booths ?? []).map(mapBooth2),
   })) as HallWithMap[];
 }
@@ -148,6 +162,73 @@ export async function updateBoothPositions(
   await Promise.all(updates);
 
   revalidatePath(`/organizer/events/${eventId}`);
+  revalidatePath("/exhibitor/floor-map");
+  revalidatePath("/visitor/floor-map");
+  return { success: true };
+}
+
+export type ExhibitorOption = {
+  profile_id: string;
+  company_name: string;
+  logo_url: string | null;
+};
+
+export async function getEventExhibitors(eventId: string): Promise<ExhibitorOption[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data } = await supabase
+    .from("exhibitors")
+    .select("owner_id, company_name, logo_url")
+    .eq("event_id", eventId)
+    .order("company_name");
+
+  return (data ?? []).map(e => ({
+    profile_id: e.owner_id,
+    company_name: e.company_name,
+    logo_url: e.logo_url ?? null,
+  }));
+}
+
+export async function assignExhibitorToBooth(
+  boothId: string,
+  exhibitorProfileId: string | null,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { error } = await supabase
+    .from("booths")
+    .update({ exhibitor_id: exhibitorProfileId })
+    .eq("id", boothId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/organizer/events");
+  revalidatePath("/exhibitor/floor-map");
+  revalidatePath("/visitor/floor-map");
+  return { success: true };
+}
+
+export async function updateEntranceExit(
+  hallId: string,
+  entrance_x: number | null,
+  entrance_y: number | null,
+  exit_x: number | null,
+  exit_y: number | null,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { error } = await supabase
+    .from("halls")
+    .update({ entrance_x, entrance_y, exit_x, exit_y })
+    .eq("id", hallId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/organizer/events");
   revalidatePath("/exhibitor/floor-map");
   revalidatePath("/visitor/floor-map");
   return { success: true };

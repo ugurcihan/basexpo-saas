@@ -58,18 +58,20 @@ function formatDateTime(dateStr: string) {
 }
 
 // Hydration-safe QR code component
-function TicketQR({ ticketCode, visitorName, phone, eventId, eventName, size = 140 }: {
+function TicketQR({ ticketCode, visitorName, phone, eventId, eventName, visitorId, size = 140 }: {
   ticketCode: string;
   visitorName: string;
   phone: string;
   eventId: string;
   eventName: string;
+  visitorId: string;
   size?: number;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const qrData = JSON.stringify({
+    vid: visitorId,
     tc: ticketCode,
     n: visitorName,
     p: phone,
@@ -206,6 +208,7 @@ export function TicketsClient({ profile, registrations }: Props) {
                             phone={phone}
                             eventId={reg.event?.id ?? ""}
                             eventName={reg.event?.name ?? ""}
+                            visitorId={profile.id}
                           />
                           <p className="text-xs text-muted-foreground text-center">
                             Girişte okutun

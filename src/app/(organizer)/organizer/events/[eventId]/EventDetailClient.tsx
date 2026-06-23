@@ -63,7 +63,73 @@ import {
 } from "@/features/events/hallActions";
 import { addSponsor, removeSponsor } from "@/features/events/sponsorActions";
 import { updateEventGallery } from "@/features/events/actions";
+import { getCheckins, type CheckinRecord } from "@/features/events/checkinActions";
 import type { EventStatus } from "@/types";
+
+// ── Giriş Kayıtları Bileşeni ─────────────────────────────
+function CheckinSection({ eventId }: { eventId: string }) {
+  const [checkins, setCheckins] = useState<CheckinRecord[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  async function load() {
+    if (loaded) return;
+    const data = await getCheckins(eventId);
+    setCheckins(data);
+    setLoaded(true);
+  }
+
+  function formatTime(str: string) {
+    return new Date(str).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function durationText(inAt: string, outAt: string | null) {
+    if (!outAt) return "İçeride";
+    const mins = Math.round((new Date(outAt).getTime() - new Date(inAt).getTime()) / 60000);
+    return mins < 60 ? `${mins} dk` : `${Math.floor(mins / 60)} sa ${mins % 60} dk`;
+  }
+
+  return (
+    <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+      <button
+        className="w-full flex items-center justify-between px-5 py-4 glass rounded-2xl border border-white/8 text-left"
+        onClick={() => { setOpen(o => !o); load(); }}
+      >
+        <div className="flex items-center gap-2">
+          <QrCode className="w-5 h-5 text-brand-cyan" />
+          <span className="font-semibold text-white">Giriş Kayıtları</span>
+          {loaded && <span className="text-xs text-muted-foreground ml-1">({checkins.length} kayıt)</span>}
+        </div>
+        <ChevronLeft className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "-rotate-90" : "rotate-180"}`} />
+      </button>
+      {open && (
+        <div className="glass rounded-2xl border border-white/8 border-t-0 rounded-t-none -mt-2 pt-2 overflow-hidden">
+          {checkins.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-6">Henüz giriş kaydı yok. Kapı Tarayıcı ile ziyaretçi okutun.</p>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {checkins.map(c => (
+                <div key={c.id} className="flex items-center gap-3 px-5 py-3">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.checked_out_at ? "bg-muted-foreground" : "bg-green-400"}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{c.profile?.full_name ?? c.profile?.email ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Giriş: {formatTime(c.checked_in_at)}
+                      {c.checked_out_at && <> · Çıkış: {formatTime(c.checked_out_at)}</>}
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${c.checked_out_at ? "bg-white/5 text-muted-foreground" : "bg-green-500/15 text-green-400"}`}>
+                    {durationText(c.checked_in_at, c.checked_out_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 const NAV_ITEMS = [
   { label: "Panel",               href: "/organizer",                          icon: LayoutDashboard },
@@ -276,6 +342,11 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                 </span>
               </div>
             </div>
+            <Link href={`/organizer/events/${event.id}/gate`}>
+              <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
+                <QrCode className="w-4 h-4" /> Kapı Tarayıcı
+              </Button>
+            </Link>
           </div>
         </motion.div>
 
@@ -501,6 +572,10 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
             </div>
           )}
         </motion.div>
+
+        {/* ── GİRİŞ KAYITLARI ────────────────────────────────── */}
+        <CheckinSection eventId={event.id} />
+
       </div>
 
       {/* ── ADD HALL MODAL ───────────────────────────────────── */}
