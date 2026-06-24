@@ -92,7 +92,7 @@ function ROICalculator() {
             className="w-full h-2 rounded-full appearance-none bg-white/10 accent-brand-cyan cursor-pointer"
           />
           <div className="flex justify-between text-xs text-muted-foreground/60">
-            <span>50.000 TL</span><span>2.000.000 TL</span>
+            <span>50.000 TL</span><span>1.000.000 TL</span>
           </div>
         </div>
       </div>
