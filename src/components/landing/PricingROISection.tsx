@@ -19,9 +19,9 @@ const COMPARISON = [
     traditionalOk: false,
   },
   {
-    label: "KOSGEB desteği",
-    traditional: "Belge yok — başvuru zor",
-    basexpo: "Hazır rapor — başvuruya ekle",
+    label: "Fuar ROI raporu",
+    traditional: "Kağıt kayıt — veri kaybolur",
+    basexpo: "Otomatik PDF — tek tıkla",
     traditionalOk: false,
   },
   {
@@ -83,7 +83,7 @@ const SALES_CYCLE = [
     icon: FileText,
     title: "Teklif",
     desc: "Kararın eşiğindesiniz. KOSGEB raporu güven verir, ROI belgesi süreci hızlandırır.",
-    basexpo: "KOSGEB PDF · ROI belgesi · Teklif takibi",
+    basexpo: "Fuar ROI PDF · İş değeri belgesi · Teklif takibi",
     active: true,
     color: "brand-violet",
   },
@@ -101,7 +101,7 @@ const SALES_CYCLE = [
     icon: TrendingUp,
     title: "Sözleşme & Yenileme",
     desc: "Müşteri kapandı. Sonraki fuara bu yılın datası ile daha güçlü girilir.",
-    basexpo: "ROI özeti · Sonraki fuar planı · KOSGEB başvurusu",
+    basexpo: "ROI özeti · Sonraki fuar planı · Bütçe gerekçesi",
     active: false,
     color: "brand-indigo",
   },
@@ -312,22 +312,6 @@ export function PricingROISection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.36 }}
-              className="glass rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1.5 animate-pulse" />
-                <p className="text-sm text-emerald-300 leading-relaxed">
-                  <strong className="text-emerald-200">KOSGEB desteği hesaba katılırsa</strong> — yatırım maliyeti
-                  sıfıra yaklaşır, net ROI katlanır.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.45 }}
               className="space-y-3"
             >
               <Button asChild size="xl" variant="gradient" className="w-full font-semibold">
@@ -337,7 +321,7 @@ export function PricingROISection() {
                 </Link>
               </Button>
               <p className="text-center text-xs text-muted-foreground/60">
-                ✓ İlk 14 gün ücretsiz deneyin · ✓ Kredi kartı gerekmez
+                ✓ İptal istediğin zaman · ✓ AI destekli fuar platformu
               </p>
             </motion.div>
           </div>

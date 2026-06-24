@@ -51,13 +51,13 @@ const ROLES = [
     label: "Katılımcı Firma",
     tagline: "13.000 TL/ay — 1 Müşteri Tüm Yatırımı Karşılar",
     description:
-      "KVKK onaylı lead topla, KOSGEB formatında ROI raporu al, AI ile doğru ziyaretçiyle eşleş. Platform yıl boyu çalışır — fuardan önce hazırlık, sonra takip.",
+      "KVKK onaylı lead topla, detaylı fuar ROI raporu al, AI ile doğru ziyaretçiyle eşleş. Platform yıl boyu çalışır — fuardan önce hazırlık, sonra takip.",
     features: [
       "KVKK'lı lead toplama",
       "Markalı QR sayfa & ürün vitrini",
       "AI tabanlı ziyaretçi eşleşmesi",
       "Lead skoru & ROI dashboard",
-      "KOSGEB formatında otomatik PDF raporu",
+      "Fuar ROI — tek tıkla PDF raporu",
       "Yıl boyu aktif lead CRM ve fuar hazırlık dashboard'u",
     ],
     featureIcons: [null, null, null, null, FileCheck, FileDown],

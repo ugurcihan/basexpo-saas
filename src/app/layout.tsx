@@ -16,7 +16,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://basexpo.vercel.app"),
+  metadataBase: new URL("https://basexpo.site"),
   title: "BasExpo — AI Destekli Fuar İşletim Sistemi",
   description:
     "Ziyaretçileri doğru firmalarla buluşturan, QR ile lead toplayan ve ROI gösteren akıllı fuar platformu.",

@@ -15,7 +15,7 @@ const FEATURES = [
     icon: Brain,
     title: "AI Matchmaking",
     description:
-      "pgvector ile vektör benzerliği. Ziyaretçi ilgi alanları ile firma etiketleri eşleştirilir, %90+ doğrulukla öneri üretilir.",
+      "pgvector ile vektör benzerliği. Ziyaretçi ilgi alanları ile firma etiketleri eşleştirilir, ilgi alanı ve etiket eşleştirmesiyle yüksek alaka düzeyinde öneri sunar.",
     color: "indigo",
     tag: "Yapay Zeka",
   },

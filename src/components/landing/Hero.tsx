@@ -1,57 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, QrCode, Zap, Users, TrendingUp, FileCheck } from "lucide-react";
+import { ArrowRight, QrCode, Zap, TrendingUp, FileCheck, Clock } from "lucide-react";
 import Link from "next/link";
 import { InstallBadges } from "@/components/landing/AppInstallSection";
 
-const STATS = [
-  { value: 8500, suffix: "+", label: "Ziyaretçi", icon: Users },
-  { value: 120, suffix: "+", label: "Katılımcı Firma", icon: Zap },
-  { value: 14000, suffix: "+", label: "Lead Oluşturuldu", icon: TrendingUp },
+const VALUE_PROPS = [
+  { icon: QrCode,    label: "Lead Kaybı Yok", sub: "QR ile anlık yakalama"  },
+  { icon: Clock,     label: "5 Dk'da Kur",    sub: "Organizatör kurulumu"   },
+  { icon: Zap,       label: "AI Eşleşme",     sub: "Algoritmik öneri"       },
 ];
-
-function AnimatedCounter({ target, suffix }: { target: number; suffix: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const duration = 2000;
-          const steps = 60;
-          const increment = target / steps;
-          let current = 0;
-          const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-              setCount(target);
-              clearInterval(timer);
-            } else {
-              setCount(Math.floor(current));
-            }
-          }, duration / steps);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [target]);
-
-  return (
-    <span ref={ref}>
-      {count.toLocaleString("tr-TR")}
-      {suffix}
-    </span>
-  );
-}
 
 function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -287,7 +248,7 @@ export function Hero() {
               <br />
               <span className="text-gradient-indigo">AI ile Eşleş.</span>
               <br />
-              <span className="text-white">KOSGEB&apos;e Raporla.</span>
+              <span className="text-white">ROI&apos;ını Belgele.</span>
             </motion.h1>
 
             <motion.p
@@ -296,7 +257,7 @@ export function Hero() {
             >
               Fuar kaosu bitti.{" "}
               <span className="text-white font-medium">QR ile her ziyaretçiyi lead&apos;e dönüştür</span>,
-              AI ile doğru müşteriyle eşleş, KOSGEB belgeni tek tıkla üret.
+              AI ile doğru müşteriyle eşleş, fuar ROI raporunu tek tıkla üret.
               Organizatörler ücretsiz —{" "}
               <span className="text-brand-cyan font-medium">firmalar veriyle kazanır</span>.
             </motion.p>
@@ -324,15 +285,13 @@ export function Hero() {
               variants={itemVariants}
               className="grid grid-cols-3 gap-4 pt-4 border-t border-white/8"
             >
-              {STATS.map(({ value, suffix, label, icon: Icon }) => (
+              {VALUE_PROPS.map(({ icon: Icon, label, sub }) => (
                 <div key={label} className="space-y-1">
                   <div className="flex items-center gap-1.5">
                     <Icon className="w-3.5 h-3.5 text-brand-indigo-light" />
-                    <span className="font-display text-2xl font-bold text-white">
-                      <AnimatedCounter target={value} suffix={suffix} />
-                    </span>
+                    <span className="text-sm font-semibold text-white">{label}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
                 </div>
               ))}
             </motion.div>
@@ -381,14 +340,14 @@ export function Hero() {
               className="absolute top-16 left-4 lg:left-0 glass rounded-lg px-3 py-2 flex items-center gap-2 border border-brand-violet/20"
             >
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-violet to-brand-indigo flex items-center justify-center">
-                <Users className="w-3 h-3 text-white" />
+                <Zap className="w-3 h-3 text-white" />
               </div>
               <span className="text-xs font-medium text-white">
                 +127 ziyaretçi aktif
               </span>
             </motion.div>
 
-            {/* KOSGEB badge — bottom right */}
+            {/* ROI badge — bottom right */}
             <motion.div
               animate={{ y: [0, -7, 0] }}
               transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
@@ -398,7 +357,7 @@ export function Hero() {
                 <FileCheck className="w-4 h-4 text-brand-cyan" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white">KOSGEB Raporu</p>
+                <p className="text-xs font-semibold text-white">Fuar ROI Raporu</p>
                 <p className="text-xs text-brand-cyan">Otomatik PDF</p>
               </div>
             </motion.div>

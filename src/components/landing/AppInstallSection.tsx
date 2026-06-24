@@ -43,10 +43,10 @@ function AppleBadge({ onClick, size = "lg" }: { onClick: () => void; size?: "sm"
       </svg>
       <div className="text-left">
         <p className={`text-white/60 leading-none ${size === "sm" ? "text-[9px]" : "text-[10px]"}`}>
-          Download on the
+          Ana ekrana ekle
         </p>
         <p className={`text-white font-semibold leading-tight mt-0.5 ${size === "sm" ? "text-xs" : "text-base"}`}>
-          App Store
+          iPhone / iPad
         </p>
       </div>
     </button>
@@ -74,10 +74,10 @@ function PlayBadge({ onClick, installed, size = "lg" }: { onClick: () => void; i
       )}
       <div className="text-left">
         <p className={`text-white/60 leading-none ${size === "sm" ? "text-[9px]" : "text-[10px]"}`}>
-          {installed ? "Yüklendi!" : "Get it on"}
+          {installed ? "Yüklendi!" : "Ana ekrana ekle"}
         </p>
         <p className={`text-white font-semibold leading-tight mt-0.5 ${size === "sm" ? "text-xs" : "text-base"}`}>
-          {installed ? "Ana ekranı aç" : "Google Play"}
+          {installed ? "Ana ekranı aç" : "Android"}
         </p>
       </div>
     </button>

@@ -24,8 +24,8 @@ const STEPS = [
   {
     icon: FileCheck,
     number: "03",
-    title: "Tek Tıkla PDF — KOSGEB'e Sun",
-    description: "Lead sayısı, görüşme adedi, tahmini iş değeri ve ROI hesabı — hepsi resmi formatta PDF olarak hazır.",
+    title: "Tek Tıkla PDF — Yöneticine Sun",
+    description: "Lead sayısı, görüşme adedi, tahmini iş değeri ve ROI hesabı — hepsi düzenli formatta PDF olarak hazır.",
     color: "brand-cyan",
   },
 ];
@@ -36,7 +36,7 @@ function formatTL(val: number) {
 
 function ROICalculator() {
   const [cost, setCost] = useState(80000);
-  const [avgDeal, setAvgDeal] = useState(500000);
+  const [avgDeal, setAvgDeal] = useState(150000);
 
   const leads = Math.round(cost / 2000);
   const estimatedWon = Math.max(1, Math.round(leads * 0.05));
@@ -85,7 +85,7 @@ function ROICalculator() {
           <input
             type="range"
             min={50000}
-            max={2000000}
+            max={1000000}
             step={25000}
             value={avgDeal}
             onChange={(e) => setAvgDeal(Number(e.target.value))}
@@ -154,16 +154,16 @@ export function KOSGEBSection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-cyan/10 border border-brand-cyan/25 text-sm text-brand-cyan mb-4">
             <FileCheck className="w-3.5 h-3.5" />
-            KOSGEB Uyumlu Belgelendirme
+            Fuar ROI Belgelendirme
           </div>
           <h2 className="font-display text-4xl lg:text-5xl font-bold text-white mb-4">
-            KOSGEB Desteğini{" "}
-            <span className="text-gradient-cyan">Hak Edin</span>
+            Fuarın Getirisini{" "}
+            <span className="text-gradient-cyan">Belgele</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Fuara harcadığınız paranın devlet tarafından desteklenmesi için ROI belgesi gerekiyor.
+            Fuar bittikten sonra gelen soruya veriyle cevap ver: &ldquo;Bu fuardan ne kazandık?&rdquo;
             <br />
-            <strong className="text-white">BasExpo bunu otomatik üretir.</strong>
+            <strong className="text-white">Platform bunu otomatik hesaplar ve özetler.</strong>
           </p>
         </motion.div>
 
@@ -183,10 +183,10 @@ export function KOSGEBSection() {
                   <TrendingUp className="w-5 h-5 text-brand-cyan" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white mb-1">Türkiye'deki Fuar Gerçeği</p>
+                  <p className="text-sm font-semibold text-white mb-1">Fuar Bitti — Asıl Soru Şimdi Geliyor</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Firma fuara katılıyor → KOSGEB&apos;den destek alıyor → masrafını justify etmek zorunda →
-                    <span className="text-brand-cyan font-medium"> ROI belgesi gerekiyor → BasExpo tam bu belgeyi üretiyor.</span>
+                    Fuar bittiğinde yönetici sorar: &ldquo;Bu fuardan ne kazandık?&rdquo;
+                    <span className="text-brand-cyan font-medium"> Lead sayısı, görüşme adedi ve tahmini iş değeri tek ekranda — platforma sormak yeterli.</span>
                   </p>
                 </div>
               </div>
