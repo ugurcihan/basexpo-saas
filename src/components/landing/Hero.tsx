@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, QrCode, Zap, Users, TrendingUp, FileCheck } from "lucide-react";
+import { ArrowRight, Users, Zap, TrendingUp, FileCheck } from "lucide-react";
 import Link from "next/link";
 import { InstallBadges } from "@/components/landing/AppInstallSection";
 
@@ -14,7 +14,38 @@ const STATS = [
   { value: 14000, suffix: "+", label: "Lead Oluşturuldu", icon: TrendingUp },
 ];
 
-const HEADLINE_WORDS = ["Akıllı", "Fuar", "Deneyimi", "Başlıyor"];
+const PHONE_NOTIFICATIONS = [
+  {
+    id: 0,
+    emoji: "📅",
+    app: "BasExpo",
+    time: "şimdi",
+    title: "Etkinlik Hatırlatıcı",
+    body: "Saat 15:00 · B Salonu — CEO Konuşması",
+    expand: "47 katılımcı B Salonunda. Oturumun başlamasına 5 dakika kaldı.",
+    colorClass: "bg-brand-indigo/25 border-brand-indigo/40",
+  },
+  {
+    id: 1,
+    emoji: "🤝",
+    app: "BasExpo",
+    time: "2 dk önce",
+    title: "AI Eşleşme Bulundu",
+    body: "TechVision A.Ş. — Uyum Skoru: %94",
+    expand: "Profilinize göre en yüksek uyum. Stand C-12'ye gidin ve QR'ı tarayın.",
+    colorClass: "bg-brand-cyan/20 border-brand-cyan/35",
+  },
+  {
+    id: 2,
+    emoji: "🏆",
+    app: "BasExpo",
+    time: "8 dk önce",
+    title: "Rozet Kazandınız!",
+    body: "Ağ Kurucusu · +50 puan eklendi",
+    expand: "Toplamda 50 puanınız var. 200 puana ulaşınca şarj aleti hediye çeki kazanırsınız.",
+    colorClass: "bg-brand-gold/20 border-brand-gold/35",
+  },
+];
 
 function AnimatedCounter({ target, suffix }: { target: number; suffix: string }) {
   const [count, setCount] = useState(0);
@@ -109,7 +140,6 @@ function ParticleCanvas() {
         ctx.fill();
       });
 
-      // Draw connections
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -145,87 +175,132 @@ function ParticleCanvas() {
   );
 }
 
-function FloatingQRCard() {
+function InteractivePhoneMockup() {
+  const [activeCard, setActiveCard] = useState<number | null>(null);
+
   return (
     <motion.div
-      animate={{
-        y: [0, -18, 0],
-        rotate: [0, 1, -1, 0],
-      }}
-      transition={{
-        duration: 5,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      className="relative"
+      initial={{ x: 40 }}
+      animate={{ x: 0 }}
+      transition={{ duration: 0.7, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="relative flex items-center justify-center h-96 lg:h-[560px]"
     >
-      <div className="glass-strong rounded-2xl p-5 border-gradient w-56">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 rounded-full bg-brand-cyan animate-pulse-glow" />
-          <span className="text-xs text-muted-foreground font-medium">Canlı QR Takip</span>
+      {/* Glow behind phone */}
+      <div className="absolute inset-0 bg-gradient-radial from-brand-indigo/15 via-transparent to-transparent rounded-full pointer-events-none" />
+
+      {/* iOS Phone frame */}
+      <div className="relative z-10 w-[260px] lg:w-[280px] h-[520px] lg:h-[560px] rounded-[42px] bg-[#08081a] border-2 border-white/15 shadow-2xl shadow-black/60 overflow-hidden flex flex-col">
+
+        {/* Dynamic Island */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-28 h-7 bg-black rounded-full" />
         </div>
-        <div className="bg-white rounded-xl p-3 mb-3">
-          <QrCode className="w-full h-24 text-brand-dark" strokeWidth={1.5} />
+
+        {/* Status bar */}
+        <div className="flex items-center justify-between px-5 py-1 flex-shrink-0">
+          <span className="text-white text-[11px] font-semibold">9:41</span>
+          <div className="flex items-center gap-1.5">
+            <div className="flex gap-0.5">
+              {[3, 4, 4, 4].map((h, i) => (
+                <div key={i} className="w-0.5 rounded-sm bg-white" style={{ height: h * 2 + "px" }} />
+              ))}
+            </div>
+            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M1.5 8.5c2.7-2.7 6.4-4.4 10.5-4.4s7.8 1.7 10.5 4.4l-2.1 2.1c-2.2-2.2-5.2-3.5-8.4-3.5s-6.2 1.3-8.4 3.5L1.5 8.5z"/>
+              <path d="M5.5 12.5c1.6-1.6 3.9-2.6 6.5-2.6s4.9 1 6.5 2.6l-2.1 2.1c-1.1-1.1-2.7-1.7-4.4-1.7s-3.3.6-4.4 1.7L5.5 12.5z"/>
+              <circle cx="12" cy="18" r="2"/>
+            </svg>
+            <svg className="w-6 h-3.5 text-white" viewBox="0 0 24 12" fill="none">
+              <rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" strokeOpacity="0.35"/>
+              <rect x="1" y="1" width="16" height="10" rx="3" fill="currentColor"/>
+              <path d="M23 4v4a2 2 0 000-4z" fill="currentColor" fillOpacity="0.4"/>
+            </svg>
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Firma</span>
-            <span className="text-xs font-semibold text-brand-indigo-light">TechVision A.Ş.</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Lead Sayısı</span>
-            <span className="text-xs font-semibold text-brand-cyan">+47 bugün</span>
-          </div>
+
+        {/* Lock screen time area */}
+        <div className="text-center py-4 flex-shrink-0">
+          <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">Bildirimler</p>
+        </div>
+
+        {/* Notification cards */}
+        <div className="flex-1 px-3 space-y-2 overflow-hidden">
+          {PHONE_NOTIFICATIONS.map((notif) => (
+            <motion.div
+              key={notif.id}
+              onClick={() => setActiveCard(activeCard === notif.id ? null : notif.id)}
+              layout
+              className={`rounded-2xl border px-3 py-2.5 cursor-pointer transition-all duration-300 ${notif.colorClass} ${
+                activeCard === notif.id ? "bg-white/14" : "hover:bg-white/10"
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[15px] leading-none">{notif.emoji}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <span className="text-white text-[10px] font-bold truncate">{notif.title}</span>
+                    <span className="text-white/30 text-[9px] shrink-0">{notif.time}</span>
+                  </div>
+                  <p className="text-white/75 text-[11px] leading-snug">{notif.body}</p>
+                  <AnimatePresence>
+                    {activeCard === notif.id && (
+                      <motion.p
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-white/50 text-[10px] mt-1.5 leading-relaxed overflow-hidden"
+                      >
+                        {notif.expand}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Demo hint */}
+        <div className="text-center py-3 flex-shrink-0">
+          <p className="text-white/20 text-[9px] uppercase tracking-wider">
+            {activeCard !== null ? "Tekrar tıkla kapatmak için" : "Bildirimlere tıkla"}
+          </p>
+        </div>
+
+        {/* Home bar */}
+        <div className="flex justify-center pb-3 flex-shrink-0">
+          <div className="w-28 h-1 rounded-full bg-white/25" />
         </div>
       </div>
 
-      {/* Ping effects */}
+      {/* Floating badges around phone */}
       <motion.div
-        animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0, 0.6] }}
-        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-        className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-brand-cyan/60"
-      />
-      <motion.div
-        animate={{ scale: [1, 1.8, 1], opacity: [0.4, 0, 0.4] }}
-        transition={{ duration: 2.5, repeat: Infinity }}
-        className="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-brand-indigo/60"
-      />
-    </motion.div>
-  );
-}
-
-function MatchCard() {
-  return (
-    <motion.div
-      animate={{
-        y: [0, 12, 0],
-        rotate: [0, -0.5, 0.5, 0],
-      }}
-      transition={{
-        duration: 6,
-        repeat: Infinity,
-        ease: "easeInOut",
-        delay: 1,
-      }}
-      className="glass rounded-xl p-4 w-48 border-gradient"
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-6 h-6 rounded-full bg-brand-indigo/20 flex items-center justify-center">
-          <Zap className="w-3 h-3 text-brand-indigo-light" />
+        animate={{ y: [0, -8, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute top-12 -left-2 lg:-left-8 glass rounded-xl px-3 py-2 flex items-center gap-2 border border-brand-violet/20"
+      >
+        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-violet to-brand-indigo flex items-center justify-center">
+          <Users className="w-3 h-3 text-white" />
         </div>
-        <span className="text-xs font-medium">AI Eşleşme</span>
-      </div>
-      <div className="space-y-1.5">
-        {["SaaS Yazılım", "Lojistik Tech", "FinTech"].map((tag, i) => (
-          <div key={tag} className="flex items-center gap-2">
-            <div
-              className="h-1.5 rounded-full bg-gradient-to-r from-brand-indigo to-brand-cyan"
-              style={{ width: `${85 - i * 15}%` }}
-            />
-            <span className="text-xs text-muted-foreground">{85 - i * 15}%</span>
-          </div>
-        ))}
-      </div>
+        <span className="text-xs font-medium text-white">+127 aktif ziyaretçi</span>
+      </motion.div>
+
+      <motion.div
+        animate={{ y: [0, -7, 0] }}
+        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute bottom-16 -right-2 lg:-right-6 glass rounded-xl px-3 py-2.5 flex items-center gap-2.5 border border-brand-cyan/25"
+      >
+        <div className="w-7 h-7 rounded-full bg-brand-cyan/20 flex items-center justify-center flex-shrink-0">
+          <FileCheck className="w-3.5 h-3.5 text-brand-cyan" />
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-white leading-tight">KOSGEB Raporu</p>
+          <p className="text-[10px] text-brand-cyan">Otomatik PDF</p>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -253,13 +328,8 @@ export function Hero() {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-brand-dark">
-      {/* Animated particle background */}
       <ParticleCanvas />
-
-      {/* Radial glow */}
       <div className="absolute inset-0 bg-hero-glow pointer-events-none" />
-
-      {/* Grid overlay */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
@@ -273,7 +343,7 @@ export function Hero() {
         className="relative z-10 w-full max-w-7xl mx-auto px-6 py-24 lg:py-32"
       >
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left column — content */}
+          {/* Left column */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -283,7 +353,7 @@ export function Hero() {
             <motion.div variants={itemVariants}>
               <Badge className="mb-4 px-4 py-1.5 text-sm bg-brand-indigo/15 border border-brand-indigo/30 text-brand-indigo-light">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan inline-block mr-2 animate-pulse" />
-                Türkiye&apos;nin Akıllı Fuar Platformu
+                Türkiye&apos;nin Fuar Yönetim Platformu
               </Badge>
             </motion.div>
 
@@ -291,42 +361,42 @@ export function Hero() {
               variants={itemVariants}
               className="font-display text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight"
             >
-              <span className="text-white">Fuarı Kur.</span>
+              <span className="text-white">Fuarda Lead Topla.</span>
               <br />
-              <span className="text-gradient-indigo">Ücretsiz.</span>
+              <span className="text-gradient-indigo">AI ile Eşleş.</span>
               <br />
-              <span className="text-white">Firmalar Gelsin.</span>
+              <span className="text-white">KOSGEB&apos;e Raporla.</span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
               className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-lg"
             >
-              Organizatörler için tamamen ücretsiz — ön kayıt verisi, AI raporu ve ısı haritası karşılığında.
-              Firmalar: <span className="text-brand-cyan font-medium">KOSGEB destekli katılımın ROI belgesini otomatik üret</span> — 13.000 TL/ay.
+              Organizatörler için{" "}
+              <span className="text-white font-medium">tamamen ücretsiz</span> — ön kayıt verisi, ısı haritası ve AI raporu karşılığında.
+              Firmalar:{" "}
+              <span className="text-brand-cyan font-medium">KVKK onaylı lead, KOSGEB belgesi ve AI eşleşme</span> — 13.000 TL/ay.
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
               <Button asChild size="xl" variant="gradient" className="font-semibold shadow-xl shadow-indigo-500/20">
                 <Link href="/register?role=organizer">
-                  Fuarını Kur — Ücretsiz
+                  Fuarını Oluştur — Ücretsiz
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
               <Button asChild size="xl" variant="outline" className="border-white/15 hover:border-white/25">
-                <Link href="#fair-game">
-                  Fuarı Gez
+                <Link href="/register?role=exhibitor">
+                  Firmalar için Kaydol
                 </Link>
               </Button>
             </motion.div>
 
-            {/* App install badges */}
             <motion.div variants={itemVariants} className="space-y-2">
               <p className="text-xs text-muted-foreground">Uygulamayı indir:</p>
               <InstallBadges size="sm" />
             </motion.div>
 
-            {/* Animated stats */}
             <motion.div
               variants={itemVariants}
               className="grid grid-cols-3 gap-4 pt-4 border-t border-white/8"
@@ -345,71 +415,8 @@ export function Hero() {
             </motion.div>
           </motion.div>
 
-          {/* Right column — floating visual cards */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="relative flex items-center justify-center h-96 lg:h-[520px]"
-          >
-            {/* Central glow */}
-            <div className="absolute inset-0 bg-gradient-radial from-brand-indigo/20 via-transparent to-transparent rounded-full" />
-
-            {/* QR card — center */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-              <FloatingQRCard />
-            </div>
-
-            {/* AI match card — top right */}
-            <div className="absolute top-8 right-0 lg:-right-4">
-              <MatchCard />
-            </div>
-
-            {/* Lead notification — bottom left */}
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-              className="absolute bottom-12 left-0 lg:-left-4 glass rounded-xl px-4 py-3 flex items-center gap-3 border border-brand-cyan/20"
-            >
-              <div className="w-8 h-8 rounded-full bg-brand-cyan/20 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-4 h-4 text-brand-cyan" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white">Rozet Kazandı!</p>
-                <p className="text-xs text-muted-foreground">+10 puan · Networker</p>
-              </div>
-              <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse flex-shrink-0" />
-            </motion.div>
-
-            {/* Visitor badge — top left */}
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              className="absolute top-16 left-4 lg:left-0 glass rounded-lg px-3 py-2 flex items-center gap-2 border border-brand-violet/20"
-            >
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-violet to-brand-indigo flex items-center justify-center">
-                <Users className="w-3 h-3 text-white" />
-              </div>
-              <span className="text-xs font-medium text-white">
-                +127 ziyaretçi aktif
-              </span>
-            </motion.div>
-
-            {/* KOSGEB badge — bottom right */}
-            <motion.div
-              animate={{ y: [0, -7, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-              className="absolute bottom-4 right-0 lg:-right-2 glass rounded-xl px-4 py-3 flex items-center gap-3 border border-brand-cyan/25"
-            >
-              <div className="w-8 h-8 rounded-full bg-brand-cyan/20 flex items-center justify-center flex-shrink-0">
-                <FileCheck className="w-4 h-4 text-brand-cyan" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white">KOSGEB Raporu</p>
-                <p className="text-xs text-brand-cyan">Otomatik PDF</p>
-              </div>
-            </motion.div>
-          </motion.div>
+          {/* Right column — interactive phone mockup */}
+          <InteractivePhoneMockup />
         </div>
       </motion.div>
 
@@ -420,7 +427,7 @@ export function Hero() {
         transition={{ delay: 0.8 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
       >
-        <span className="text-xs text-muted-foreground">Fuarı Gez ↓</span>
+        <span className="text-xs text-muted-foreground">Daha fazla ↓</span>
         <motion.div
           animate={{ y: [0, 6, 0] }}
           transition={{ duration: 1.5, repeat: Infinity }}

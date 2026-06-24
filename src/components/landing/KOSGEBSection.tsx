@@ -38,8 +38,8 @@ function ROICalculator() {
   const [cost, setCost] = useState(80000);
   const [avgDeal, setAvgDeal] = useState(500000);
 
-  const leads = Math.round(cost / 800);
-  const estimatedWon = Math.max(1, Math.round(leads * 0.08));
+  const leads = Math.round(cost / 2000);
+  const estimatedWon = Math.max(1, Math.round(leads * 0.05));
   const revenue = estimatedWon * avgDeal;
   const roiPct = Math.round(((revenue - cost) / cost) * 100);
 
@@ -123,7 +123,7 @@ function ROICalculator() {
 
       <div className="text-center space-y-3">
         <p className="text-xs text-muted-foreground/70">
-          Bu rakamı KOSGEB formatında belgeleyin → devlet desteği başvurunuza ekleyin
+          Türkiye B2B fuar sektörü ortalamalarına dayalı tahmin. Sektörünüze göre değişiklik gösterebilir.
         </p>
         <Button asChild variant="gradient" size="lg" className="w-full">
           <Link href="/register?role=exhibitor">

@@ -28,8 +28,8 @@ const STEPS = [
     color: "violet",
     title: "Bağlan, Ödül Kazan",
     description:
-      "Firmalar seni hatırlar, sana özel teklifler gönderir. 500 puan biriktir, bir sonraki fuara ücretsiz gir. Networking kalıcı hale gelir.",
-    highlight: "500 puan = ücretsiz bilet",
+      "Firmalar seni hatırlar, sana özel teklifler gönderir. 500 puan biriktir — kahve, şarj aleti veya hediye çekine dönüştür. Networking kalıcı hale gelir.",
+    highlight: "500 puan = Hediye Çeki",
   },
 ];
 
@@ -87,7 +87,7 @@ export function HowItWorks() {
             <span className="text-gradient-indigo">Bağlan</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Kayıttan rozete, rozetten ücretsiz bilete kadar her adım otomatik ve akıllı.
+            Kayıttan rozete, rozetten hediye çekine kadar her adım otomatik ve akıllı.
           </p>
         </motion.div>
 

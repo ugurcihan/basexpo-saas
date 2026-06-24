@@ -47,7 +47,7 @@ const FEATURES = [
     icon: Trophy,
     title: "Rozet & Sadakat Sistemi",
     description:
-      "Stant ziyaretleri, bağlantılar ve toplantılar puana dönüşür. 500 puan biriktir, bir sonraki fuara ücretsiz gir.",
+      "Stant ziyaretleri, bağlantılar ve toplantılar puana dönüşür. 500 puan biriktir — kahve, şarj aleti veya hediye çekine dönüştür.",
     color: "gold",
     tag: "Ödül",
   },

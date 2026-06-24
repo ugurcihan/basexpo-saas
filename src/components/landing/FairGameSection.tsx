@@ -259,11 +259,11 @@ export function FairGameSection() {
             Demo Fuar Alanı
           </div>
           <h2 className="font-display text-3xl lg:text-5xl font-bold text-white mb-3">
-            Fuarı Şimdiden{" "}
-            <span className="text-gradient-indigo">Keşfet</span>
+            Fuarı Keşfet,{" "}
+            <span className="text-gradient-indigo">Ödüller Kazan</span>
           </h2>
           <p className="text-base lg:text-lg text-muted-foreground max-w-xl mx-auto">
-            Stantları gez, rozet kazan. Merkezdeki özel alanlarda sürprizler var!
+            Her stant ziyaretinde puan kazan. Partner kafeler ve mağazalarda kullan.
             <span className="hidden lg:inline"> (WASD veya ↑↓←→)</span>
           </p>
         </motion.div>
@@ -492,7 +492,7 @@ export function FairGameSection() {
             </div>
 
             <p className="text-center text-xs text-muted-foreground/40 mt-2.5 hidden xl:block">
-              ↑ ↓ ← → veya W A S D ile gez · Altın alanlarda sürpriz ödüller!
+              ↑ ↓ ← → veya W A S D ile gez · ☕ Kahve · 🔌 Şarj Aleti · 👜 Çanta
             </p>
           </motion.div>
 
@@ -595,7 +595,7 @@ export function FairGameSection() {
                     Bir standa gir — firma bilgileri ve eşleşme skoru burada görünür.
                   </p>
                   <p className="text-xs text-brand-gold/60 mt-1.5">
-                    ⭐ Ortadaki altın alanlarda sürpriz var!
+                    ☕ 50p Kahve · 🔌 200p Şarj Aleti · 👜 500p Çanta
                   </p>
                 </motion.div>
               )}
@@ -651,7 +651,7 @@ export function FairGameSection() {
                 <p className="text-2xl mb-2">🎉</p>
                 <p className="text-sm font-bold text-white mb-1">Tebrikler, Efsane!</p>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                  Gerçek platformda 500 puana bir sonraki fuara ücretsiz girersin.
+                  Gerçek platformda puanlarını kahve, şarj aleti veya hediye çekine dönüştür. Her fuarda birikir!
                 </p>
                 <a
                   href="/register?role=visitor"
