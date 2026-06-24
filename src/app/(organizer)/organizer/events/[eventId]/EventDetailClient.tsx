@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -54,6 +54,10 @@ import {
   Award,
   FileBarChart,
   Map,
+  GripVertical,
+  GripHorizontal,
+  Upload,
+  Save,
 } from "lucide-react";
 import {
   createHall,
@@ -61,7 +65,8 @@ import {
   createBooth,
   deleteBooth,
 } from "@/features/events/hallActions";
-import { addSponsor, removeSponsor } from "@/features/events/sponsorActions";
+import { addSponsor, removeSponsor, updateSponsorLayouts, updateSponsorLogo } from "@/features/events/sponsorActions";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { updateEventGallery } from "@/features/events/actions";
 import { getCheckins, type CheckinRecord } from "@/features/events/checkinActions";
 import type { EventStatus } from "@/types";
@@ -161,8 +166,14 @@ interface SponsorRow {
   id: string;
   tier: number;
   tier_name: string;
+  width_pct: number;
+  height_px: number;
+  sort_order: number;
+  custom_logo_url: string | null;
   exhibitor: { id: string; company_name: string; logo_url: string | null; tags: string[] } | null;
 }
+
+type SponsorLayout = { width_pct: number; height_px: number; sort_order: number };
 
 interface EventWithHalls {
   id: string;
@@ -185,6 +196,7 @@ interface Props {
 
 export function EventDetailClient({ event: initialEvent, sponsors: initialSponsors, eventExhibitors }: Props) {
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
   const [isPending, startTransition] = useTransition();
   const [event, setEvent] = useState(initialEvent);
   const [sponsors, setSponsors] = useState(initialSponsors);
@@ -200,6 +212,26 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   const [selectedExhibitorId, setSelectedExhibitorId] = useState("");
   const [selectedTier, setSelectedTier]               = useState("1");
   const [customTierName, setCustomTierName]           = useState("");
+
+  // Sponsor layout state (drag/resize)
+  const [sponsorLayouts, setSponsorLayouts] = useState<Record<string, SponsorLayout>>(() => {
+    const init: Record<string, SponsorLayout> = {};
+    initialSponsors.forEach(s => { init[s.id] = { width_pct: s.width_pct, height_px: s.height_px, sort_order: s.sort_order }; });
+    return init;
+  });
+  const [layoutDirty, setLayoutDirty] = useState(false);
+  const [layoutSaving, setLayoutSaving] = useState(false);
+  const [dragId, setDragId]           = useState<string | null>(null);
+  const pyramidRef                    = useRef<HTMLDivElement>(null);
+
+  // Sync layouts when sponsors refresh from server
+  useEffect(() => {
+    setSponsorLayouts(prev => {
+      const next = { ...prev };
+      sponsors.forEach(s => { if (!next[s.id]) next[s.id] = { width_pct: s.width_pct, height_px: s.height_px, sort_order: s.sort_order }; });
+      return next;
+    });
+  }, [sponsors]);
 
   // Gallery state
   const [galleryUrls, setGalleryUrls]   = useState<string[]>(initialEvent.gallery_urls ?? []);
@@ -272,6 +304,84 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
     startTransition(async () => {
       await removeSponsor(sponsorId, event.id);
       setSponsors((prev) => prev.filter((s) => s.id !== sponsorId));
+      setSponsorLayouts(prev => { const n = { ...prev }; delete n[sponsorId]; return n; });
+    });
+  }
+
+  function handleDrop(targetId: string) {
+    if (!dragId || dragId === targetId) { setDragId(null); return; }
+    setSponsorLayouts(prev => {
+      const fromOrder = prev[dragId]?.sort_order ?? 0;
+      const toOrder   = prev[targetId]?.sort_order ?? 0;
+      return { ...prev, [dragId]: { ...prev[dragId], sort_order: toOrder }, [targetId]: { ...prev[targetId], sort_order: fromOrder } };
+    });
+    setLayoutDirty(true);
+    setDragId(null);
+  }
+
+  const handleResizeWidth = useCallback((e: React.MouseEvent, sponsorId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX    = e.clientX;
+    const startPct  = sponsorLayouts[sponsorId]?.width_pct ?? 100;
+    const containerW = pyramidRef.current?.offsetWidth ?? 1;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ((ev.clientX - startX) / containerW) * 100;
+      setSponsorLayouts(prev => ({
+        ...prev, [sponsorId]: { ...prev[sponsorId], width_pct: Math.max(15, Math.min(100, startPct + delta)) },
+      }));
+      setLayoutDirty(true);
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [sponsorLayouts]);
+
+  const handleResizeHeight = useCallback((e: React.MouseEvent, sponsorId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startH = sponsorLayouts[sponsorId]?.height_px ?? 80;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientY - startY;
+      setSponsorLayouts(prev => ({
+        ...prev, [sponsorId]: { ...prev[sponsorId], height_px: Math.max(60, Math.min(320, startH + delta)) },
+      }));
+      setLayoutDirty(true);
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [sponsorLayouts]);
+
+  async function handleSaveLayout() {
+    setLayoutSaving(true);
+    const updates = sponsors.map(s => ({
+      id: s.id,
+      width_pct: sponsorLayouts[s.id]?.width_pct ?? 100,
+      height_px:  sponsorLayouts[s.id]?.height_px ?? 80,
+      sort_order: sponsorLayouts[s.id]?.sort_order ?? 0,
+    }));
+    const res = await updateSponsorLayouts(updates, event.id);
+    if (res.error) setError(res.error);
+    else { setLayoutDirty(false); router.refresh(); }
+    setLayoutSaving(false);
+  }
+
+  async function handleLogoUpload(sponsorId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext  = file.name.split(".").pop();
+    const path = `sponsor-logos/${sponsorId}.${ext}`;
+    const { data, error: upErr } = await supabase.storage
+      .from("sponsor-logos")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { setError("Logo yüklenemedi: " + upErr.message); return; }
+    const { data: urlData } = supabase.storage.from("sponsor-logos").getPublicUrl(data.path);
+    startTransition(async () => {
+      const res = await updateSponsorLogo(sponsorId, urlData.publicUrl, event.id);
+      if (res.error) setError(res.error);
+      else router.refresh();
     });
   }
 
@@ -369,15 +479,32 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
               <Crown className="w-5 h-5 text-brand-gold" />
               <h2 className="font-semibold text-white">Sponsor Piramidi</h2>
               <span className="text-xs text-muted-foreground">({sponsors.length} sponsor)</span>
+              {layoutDirty && (
+                <span className="text-xs text-brand-cyan animate-pulse">• değişiklik var</span>
+              )}
             </div>
-            <Button
-              variant="gradient"
-              size="sm"
-              onClick={() => { setError(null); setSponsorModalOpen(true); }}
-              disabled={availableExhibitors.length === 0}
-            >
-              <Plus className="w-4 h-4" /> Sponsor Ekle
-            </Button>
+            <div className="flex items-center gap-2">
+              {layoutDirty && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveLayout}
+                  disabled={layoutSaving}
+                  className="gap-1.5 border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {layoutSaving ? "Kaydediliyor..." : "Düzeni Kaydet"}
+                </Button>
+              )}
+              <Button
+                variant="gradient"
+                size="sm"
+                onClick={() => { setError(null); setSponsorModalOpen(true); }}
+                disabled={availableExhibitors.length === 0}
+              >
+                <Plus className="w-4 h-4" /> Sponsor Ekle
+              </Button>
+            </div>
           </div>
 
           {sponsors.length === 0 ? (
@@ -387,57 +514,106 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
               <p className="text-muted-foreground/60 text-xs mt-1">Katılımcı firmalar arasından sponsor seçin.</p>
             </div>
           ) : (() => {
-            const maxTier = Math.max(...sponsors.map((s) => s.tier), 1);
-            function getTierCols(tier: number): string {
-              const ratio = 1 - (tier - 1) / Math.max(maxTier, 1);
-              if (ratio >= 0.9) return "col-span-12";
-              if (ratio >= 0.7) return "col-span-8";
-              if (ratio >= 0.5) return "col-span-6";
-              if (ratio >= 0.35) return "col-span-4";
-              return "col-span-3";
-            }
-            const TIER_COLORS = [
-              "text-slate-200 border-slate-400/30 bg-slate-400/10",
-              "text-brand-gold border-brand-gold/30 bg-brand-gold/10",
-              "text-brand-cyan border-brand-cyan/25 bg-brand-cyan/8",
-              "text-orange-400 border-orange-500/25 bg-orange-500/8",
-            ];
+            const TIER_COLORS: Record<number, { text: string; border: string; bg: string }> = {
+              1: { text: "text-slate-200",   border: "border-slate-400/40",   bg: "bg-slate-400/10"  },
+              2: { text: "text-brand-gold",   border: "border-brand-gold/35",  bg: "bg-brand-gold/10" },
+              3: { text: "text-brand-cyan",   border: "border-brand-cyan/30",  bg: "bg-brand-cyan/8"  },
+              4: { text: "text-orange-400",   border: "border-orange-500/30",  bg: "bg-orange-500/8"  },
+            };
+            const getColor = (tier: number) => TIER_COLORS[Math.min(tier, 4)] ?? TIER_COLORS[4];
+
             return (
-              <div className="space-y-3">
+              <div className="space-y-4" ref={pyramidRef}>
                 {Object.keys(sponsorsByTier).map(Number).sort((a, b) => a - b).map((tier) => {
-                  const tierSponsors = sponsorsByTier[tier];
-                  const colorCls = TIER_COLORS[Math.min(tier - 1, TIER_COLORS.length - 1)];
+                  const tierSponsors = [...sponsorsByTier[tier]].sort(
+                    (a, b) => (sponsorLayouts[a.id]?.sort_order ?? 0) - (sponsorLayouts[b.id]?.sort_order ?? 0)
+                  );
                   const tierName = tierSponsors[0]?.tier_name ?? `Seviye ${tier}`;
-                  const [textCls] = colorCls.split(" ");
+                  const { text: textCls } = getColor(tier);
                   return (
                     <div key={tier} className="space-y-2">
                       <div className="flex items-center gap-1.5">
                         <Crown className={`w-3.5 h-3.5 ${textCls}`} />
                         <span className={`text-xs font-semibold ${textCls}`}>{tierName}</span>
+                        <span className="text-xs text-muted-foreground/50">— sürükle/bırak sıralamak için, kenara tutup çek boyutu ayarla</span>
                       </div>
-                      <div className="grid grid-cols-12 gap-3">
-                        {tierSponsors.map((sponsor) => (
-                          <div
-                            key={sponsor.id}
-                            className={`${getTierCols(tier)} glass rounded-xl border ${colorCls} p-4 flex items-center justify-between gap-3 group`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                                <Building2 className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <p className={`font-semibold truncate ${textCls}`}>
-                                {sponsor.exhibitor?.company_name ?? "—"}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveSponsor(sponsor.id)}
-                              disabled={isPending}
-                              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      <div className="flex flex-row flex-wrap gap-3 items-stretch">
+                        {tierSponsors.map((sponsor) => {
+                          const layout  = sponsorLayouts[sponsor.id] ?? { width_pct: 100, height_px: 80, sort_order: 0 };
+                          const logoSrc = sponsor.custom_logo_url ?? sponsor.exhibitor?.logo_url ?? null;
+                          const { text: tc, border: bc, bg: bgc } = getColor(tier);
+                          const isDraggingThis = dragId === sponsor.id;
+                          return (
+                            <div
+                              key={sponsor.id}
+                              draggable
+                              onDragStart={() => setDragId(sponsor.id)}
+                              onDragOver={e => e.preventDefault()}
+                              onDrop={() => handleDrop(sponsor.id)}
+                              onDragEnd={() => setDragId(null)}
+                              style={{
+                                flexBasis: `calc(${layout.width_pct}% - 12px)`,
+                                minWidth: 120,
+                                height: layout.height_px,
+                              }}
+                              className={`relative glass rounded-xl border ${bc} ${bgc} flex flex-col items-center justify-center overflow-hidden group cursor-grab active:cursor-grabbing select-none transition-opacity ${isDraggingThis ? "opacity-40" : ""}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
+                              {/* Logo veya firma adı */}
+                              <div className="flex flex-col items-center justify-center w-full h-full px-6 pb-4 pt-2 pointer-events-none">
+                                {logoSrc ? (
+                                  <img
+                                    src={logoSrc}
+                                    alt={sponsor.exhibitor?.company_name ?? ""}
+                                    className="max-h-[65%] max-w-[85%] object-contain"
+                                  />
+                                ) : (
+                                  <span className={`font-bold text-sm text-center leading-tight ${tc}`}>
+                                    {sponsor.exhibitor?.company_name ?? "—"}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Logo yükle overlay (hover) */}
+                              <label className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity z-10">
+                                <Upload className="w-4 h-4 text-white" />
+                                <span className="text-[10px] text-white/80">Logo Yükle</span>
+                                <input
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                  className="hidden"
+                                  onChange={ev => { ev.stopPropagation(); handleLogoUpload(sponsor.id, ev); }}
+                                />
+                              </label>
+
+                              {/* Silme butonu */}
+                              <button
+                                onClick={e => { e.stopPropagation(); handleRemoveSponsor(sponsor.id); }}
+                                disabled={isPending}
+                                className="absolute top-1.5 right-7 z-20 opacity-0 group-hover:opacity-100 p-1 rounded text-red-400 hover:bg-red-500/20 transition-opacity"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+
+                              {/* Sağ kenar — genişlik resize */}
+                              <div
+                                className="absolute right-0 top-0 bottom-4 w-4 cursor-col-resize flex items-center justify-center hover:bg-white/15 z-20 rounded-r-xl"
+                                onMouseDown={e => handleResizeWidth(e, sponsor.id)}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <GripVertical className="w-3 h-3 text-white/30" />
+                              </div>
+
+                              {/* Alt kenar — yükseklik resize */}
+                              <div
+                                className="absolute bottom-0 left-4 right-4 h-4 cursor-row-resize flex items-center justify-center hover:bg-white/15 z-20 rounded-b-xl"
+                                onMouseDown={e => handleResizeHeight(e, sponsor.id)}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <GripHorizontal className="w-3 h-3 text-white/30" />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

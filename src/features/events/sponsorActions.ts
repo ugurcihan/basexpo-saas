@@ -51,6 +51,10 @@ export async function getEventSponsors(eventId: string) {
       id,
       tier,
       tier_name,
+      width_pct,
+      height_px,
+      sort_order,
+      custom_logo_url,
       exhibitor:exhibitors (
         id,
         company_name,
@@ -59,7 +63,48 @@ export async function getEventSponsors(eventId: string) {
       )
     `)
     .eq("event_id", eventId)
-    .order("tier", { ascending: true });
+    .order("tier", { ascending: true })
+    .order("sort_order", { ascending: true });
 
   return data ?? [];
+}
+
+export async function updateSponsorLayouts(
+  updates: { id: string; width_pct: number; height_px: number; sort_order: number }[],
+  eventId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  for (const u of updates) {
+    const { error } = await supabase
+      .from("event_sponsors")
+      .update({ width_pct: u.width_pct, height_px: u.height_px, sort_order: u.sort_order })
+      .eq("id", u.id);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath(`/organizer/events/${eventId}`);
+  return {};
+}
+
+export async function updateSponsorLogo(
+  sponsorId: string,
+  logoUrl: string | null,
+  eventId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { error } = await supabase
+    .from("event_sponsors")
+    .update({ custom_logo_url: logoUrl })
+    .eq("id", sponsorId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/organizer/events/${eventId}`);
+  return {};
 }
