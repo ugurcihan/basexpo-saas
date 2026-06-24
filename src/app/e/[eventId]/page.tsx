@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getProfile } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import { EventLandingClient } from "./EventLandingClient";
+import { getEventHallsWithMaps } from "@/features/events/hallMapActions";
 
 interface PageProps { params: Promise<{ eventId: string }> }
 
@@ -18,10 +19,15 @@ export default async function EventLandingPage({ params }: PageProps) {
 
   if (!event) notFound();
 
-  const { data: sponsors } = await supabase
-    .from("event_sponsors")
-    .select("id, tier, tier_name, exhibitor:exhibitors(id, company_name, logo_url)")
-    .eq("event_id", eventId);
+  const [{ data: sponsors }, halls] = await Promise.all([
+    supabase
+      .from("event_sponsors")
+      .select("id, tier, tier_name, width_pct, height_px, sort_order, custom_logo_url, exhibitor:exhibitors(id, company_name, logo_url)")
+      .eq("event_id", eventId)
+      .order("tier", { ascending: true })
+      .order("sort_order", { ascending: true }),
+    getEventHallsWithMaps(eventId),
+  ]);
 
   const profile = await getProfile().catch(() => null);
 
@@ -40,6 +46,7 @@ export default async function EventLandingPage({ params }: PageProps) {
     <EventLandingClient
       event={event as Parameters<typeof EventLandingClient>[0]["event"]}
       sponsors={(sponsors ?? []) as unknown as Parameters<typeof EventLandingClient>[0]["sponsors"]}
+      halls={halls}
       profile={profile}
       registration={registration}
     />

@@ -5,21 +5,26 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   MapPin, Calendar, Users, Tag, Globe, Instagram, Twitter, Linkedin,
-  Crown, Building2, CheckCircle2, Clock, QrCode, ExternalLink, Youtube,
+  Crown, CheckCircle2, Clock, QrCode, ExternalLink, Navigation,
   Ticket, ChevronRight, AlertCircle, Mail, Lock,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { registerForEvent } from "@/features/events/registrationActions";
+import { FloorMapViewer } from "@/components/map/FloorMapViewer";
+import type { HallWithMap } from "@/features/events/hallMapActions";
 import type { Profile } from "@/types";
 
 interface SponsorRow {
   id: string;
   tier: number;
   tier_name: string;
+  width_pct: number | null;
+  height_px: number | null;
+  sort_order: number | null;
+  custom_logo_url: string | null;
   exhibitor: { id: string; company_name: string; logo_url: string | null } | null;
 }
 
@@ -35,6 +40,7 @@ interface EventData {
 interface Props {
   event: EventData;
   sponsors: SponsorRow[];
+  halls: HallWithMap[];
   profile: Profile | null;
   registration: { status: string; ticket_code: string | null } | null;
 }
@@ -46,16 +52,7 @@ function QRDisplay({ value, size }: { value: string; size: number }) {
   return <QRCodeSVG value={value} size={size} level="M" fgColor="#1a1a2e" />;
 }
 
-function getTierCols(tier: number, maxTier: number): string {
-  if (maxTier <= 1 || tier === 1) return "col-span-12";
-  const ratio = 1 - (tier - 1) / maxTier;
-  if (ratio >= 0.7) return "col-span-8";
-  if (ratio >= 0.5) return "col-span-6";
-  if (ratio >= 0.35) return "col-span-4";
-  return "col-span-3";
-}
-
-export function EventLandingClient({ event, sponsors, profile, registration }: Props) {
+export function EventLandingClient({ event, sponsors, halls, profile, registration }: Props) {
   const supabase = createSupabaseBrowserClient();
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -74,7 +71,6 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
       const result = await registerForEvent(event.id);
       if (result?.error) { setMsg({ type: "err", text: result.error }); return; }
       setMsg({ type: "ok", text: result.status === "pending_approval" ? "Başvurunuz alındı, onay bekleniyor." : "Kayıt başarılı! Biletiniz oluşturuldu." });
-      // Re-fetch registration status
       const { data: reg } = await supabase
         .from("event_registrations").select("status, ticket_code")
         .eq("event_id", event.id).eq("visitor_id", currentProfile!.id).maybeSingle();
@@ -103,7 +99,6 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
 
       if (!userId) { setMsg({ type: "err", text: "Kimlik doğrulama başarısız." }); return; }
 
-      // Reload so server component picks up the new session and auth trigger has time to create profile
       setMsg({ type: "ok", text: authTab === "login" ? "Giriş başarılı! Yönlendiriliyorsunuz..." : "Kayıt başarılı! Yönlendiriliyorsunuz..." });
       setTimeout(() => { window.location.reload(); }, 800);
     });
@@ -114,7 +109,6 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
     acc[s.tier].push(s);
     return acc;
   }, {});
-  const maxTier = Math.max(...sponsors.map((s) => s.tier), 1);
   const sortedTiers = Object.keys(sponsorsByTier).map(Number).sort((a, b) => a - b);
 
   const embedUrl = event.youtube_url
@@ -123,6 +117,8 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
 
   const statusLabel = event.status === "active" ? "Aktif" : "Yayında";
   const statusColor = event.status === "active" ? "text-green-400 bg-green-500/15 border-green-500/30" : "text-brand-indigo-light bg-brand-indigo/15 border-brand-indigo/30";
+
+  const hasMap = halls.length > 0 && (halls.some(h => h.map_url) || halls.some(h => h.booths.length > 0));
 
   return (
     <div className="min-h-screen bg-brand-dark text-white">
@@ -196,15 +192,31 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
                 return (
                   <div key={tier}>
                     <p className="text-xs text-muted-foreground mb-1.5">{tierName}</p>
-                    <div className="grid grid-cols-12 gap-2">
-                      {tierSponsors.map((s) => (
-                        <div key={s.id} className={`${getTierCols(tier, maxTier)} glass rounded-xl border border-white/10 p-3 flex items-center gap-2`}>
-                          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex flex-row flex-wrap gap-3">
+                      {tierSponsors.map((s) => {
+                        const logoSrc = s.custom_logo_url || s.exhibitor?.logo_url;
+                        const bp = `calc(${s.width_pct ?? 100}% - 12px)`;
+                        const hp = s.height_px ?? 80;
+                        return (
+                          <div
+                            key={s.id}
+                            className="glass rounded-xl border border-white/10 overflow-hidden flex items-center justify-center bg-white/5"
+                            style={{ flexBasis: bp, maxWidth: bp, height: hp }}
+                          >
+                            {logoSrc ? (
+                              <img
+                                src={logoSrc}
+                                alt={s.exhibitor?.company_name ?? "Sponsor"}
+                                className="w-full h-full object-contain p-2"
+                              />
+                            ) : (
+                              <span className="text-sm font-semibold text-white px-3 text-center leading-tight">
+                                {s.exhibitor?.company_name ?? "—"}
+                              </span>
+                            )}
                           </div>
-                          <span className="text-sm font-medium text-white truncate">{s.exhibitor?.company_name ?? "—"}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -213,11 +225,35 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
           </motion.div>
         )}
 
-        {/* Social + Maps */}
-        {(event.social_links || event.maps_url) && (
+        {/* Fuar Haritası */}
+        {hasMap && (
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}
+            className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-brand-cyan" />
+              <h2 className="font-semibold text-white">Fuar Haritası</h2>
+            </div>
+            <FloorMapViewer halls={halls} />
+            {event.maps_url && (
+              <a
+                href={event.maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm hover:bg-green-500/20 transition-colors"
+              >
+                <Navigation className="w-4 h-4" />
+                Google Maps&apos;te Yol Tarifi Al
+                <ExternalLink className="w-3.5 h-3.5 ml-auto" />
+              </a>
+            )}
+          </motion.div>
+        )}
+
+        {/* Social + Maps (harita yoksa maps_url burada kalır) */}
+        {(event.social_links || (!hasMap && event.maps_url)) && (
           <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
             className="flex flex-wrap gap-2">
-            {event.maps_url && (
+            {!hasMap && event.maps_url && (
               <a href={event.maps_url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm hover:bg-green-500/20 transition-colors">
                 <MapPin className="w-3.5 h-3.5" /> Haritada Gör <ExternalLink className="w-3 h-3" />
@@ -264,7 +300,7 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
                 <QRDisplay value={currentReg.ticket_code} size={160} />
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Bu QR'ı kapıda okutun. Bilet kodunuz: <span className="font-mono text-white">{currentReg.ticket_code}</span>
+                Bu QR&apos;ı kapıda okutun. Bilet kodunuz: <span className="font-mono text-white">{currentReg.ticket_code}</span>
               </p>
             </div>
           )}

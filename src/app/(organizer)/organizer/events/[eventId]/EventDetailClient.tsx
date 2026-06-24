@@ -577,6 +577,9 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                               <label className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity z-10">
                                 <Upload className="w-4 h-4 text-white" />
                                 <span className="text-[10px] text-white/80">Logo Yükle</span>
+                                <span className="text-[9px] text-white/50 text-center leading-tight">
+                                  Önerilen: {Math.round((layout.width_pct / 100) * 800)}×{layout.height_px}px
+                                </span>
                                 <input
                                   type="file"
                                   accept="image/png,image/jpeg,image/webp,image/svg+xml"
