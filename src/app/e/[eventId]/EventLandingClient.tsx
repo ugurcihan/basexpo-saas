@@ -94,23 +94,18 @@ export function EventLandingClient({ event, sponsors, profile, registration }: P
       } else {
         const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role: "visitor" } } });
         if (error) { setMsg({ type: "err", text: "Kayıt başarısız: " + error.message }); return; }
+        if (data.user && !data.session) {
+          setMsg({ type: "ok", text: "E-posta onay linki gönderildi. Onayladıktan sonra tekrar giriş yapın." });
+          return;
+        }
         userId = data.user?.id ?? null;
       }
 
       if (!userId) { setMsg({ type: "err", text: "Kimlik doğrulama başarısız." }); return; }
 
-      // Fetch profile
-      const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-      setCurrentProfile(p as Profile | null);
-
-      // Register for the event
-      const result = await registerForEvent(event.id);
-      if (result?.error) { setMsg({ type: "err", text: result.error }); return; }
-      setMsg({ type: "ok", text: "Kayıt başarılı! Biletiniz oluşturuldu." });
-      const { data: reg } = await supabase
-        .from("event_registrations").select("status, ticket_code")
-        .eq("event_id", event.id).eq("visitor_id", userId).maybeSingle();
-      setCurrentReg(reg ?? null);
+      // Reload so server component picks up the new session and auth trigger has time to create profile
+      setMsg({ type: "ok", text: authTab === "login" ? "Giriş başarılı! Yönlendiriliyorsunuz..." : "Kayıt başarılı! Yönlendiriliyorsunuz..." });
+      setTimeout(() => { window.location.reload(); }, 800);
     });
   }
 

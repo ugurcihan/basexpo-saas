@@ -24,7 +24,7 @@ export default async function EventDetailPage({ params }: Props) {
     supabase
       .from("exhibitors")
       .select("id, company_name")
-      .eq("event_id", eventId),
+      .order("company_name"),
   ]);
 
   return (

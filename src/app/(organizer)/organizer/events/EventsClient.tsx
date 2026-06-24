@@ -337,9 +337,10 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
                           {/* Actions */}
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             <button
-                              onClick={() => openQr(event)}
-                              title="Kapı QR Kodu"
-                              className="p-2 rounded-lg text-muted-foreground hover:text-brand-indigo-light hover:bg-brand-indigo/10 transition-colors"
+                              onClick={() => (event.status === "published" || event.status === "active") ? openQr(event) : undefined}
+                              title={event.status === "published" || event.status === "active" ? "Kapı QR Kodu" : "QR yalnızca yayında/aktif fuarlar için kullanılabilir"}
+                              disabled={event.status !== "published" && event.status !== "active"}
+                              className="p-2 rounded-lg text-muted-foreground hover:text-brand-indigo-light hover:bg-brand-indigo/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <QrCode className="w-4 h-4" />
                             </button>
