@@ -13,12 +13,12 @@ const LINKS = {
   Şirket: [
     { label: "Hakkımızda", href: "#" },
     { label: "Blog", href: "#" },
-    { label: "İletişim", href: "#" },
+    { label: "İletişim", href: "/contact" },
   ],
   Hukuki: [
-    { label: "Gizlilik Politikası", href: "#" },
-    { label: "Kullanım Şartları", href: "#" },
-    { label: "KVKK", href: "#" },
+    { label: "Gizlilik Politikası", href: "/privacy" },
+    { label: "Kullanım Şartları", href: "/terms" },
+    { label: "KVKK", href: "/kvkk" },
   ],
 };
 

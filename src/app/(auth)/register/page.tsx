@@ -84,6 +84,7 @@ function RegisterForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [kvkkConsent, setKvkkConsent] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [kvkkOpen, setKvkkOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +93,10 @@ function RegisterForm() {
     e.preventDefault();
     if (!kvkkConsent) {
       setError("Devam etmek için KVKK Aydınlatma Metnini onaylamalısınız.");
+      return;
+    }
+    if (!termsAccepted) {
+      setError("Devam etmek için Kullanım Şartları ve Gizlilik Politikasını onaylamalısınız.");
       return;
     }
     setError(null);
@@ -393,7 +398,51 @@ function RegisterForm() {
                         >
                           KVKK Aydınlatma Metni
                         </button>
-                        &apos;ni okudum ve kişisel verilerimin işlenmesini kabul ediyorum. *
+                        &apos;ni{" "}
+                        <Link
+                          href="/kvkk"
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand-cyan/70 hover:text-brand-cyan underline underline-offset-2 transition-colors text-xs"
+                        >
+                          (tam metin)
+                        </Link>
+                        {" "}okudum ve kişisel verilerimin işlenmesini kabul ediyorum. *
+                      </span>
+                    </label>
+
+                    {/* Terms + Privacy checkbox */}
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <div className="relative flex-shrink-0 mt-0.5">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                        />
+                        <div className="w-5 h-5 rounded border-2 border-white/25 peer-checked:border-brand-indigo peer-checked:bg-brand-indigo/20 transition-all flex items-center justify-center">
+                          {termsAccepted && <Check className="w-3 h-3 text-brand-indigo-light" />}
+                        </div>
+                      </div>
+                      <span className="text-sm text-muted-foreground leading-relaxed">
+                        <Link
+                          href="/terms"
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand-indigo-light hover:text-white underline underline-offset-2 transition-colors font-medium"
+                        >
+                          Kullanım Şartları
+                        </Link>
+                        {" "}ve{" "}
+                        <Link
+                          href="/privacy"
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand-indigo-light hover:text-white underline underline-offset-2 transition-colors font-medium"
+                        >
+                          Gizlilik Politikası
+                        </Link>
+                        &apos;nı okudum ve kabul ediyorum. *
                       </span>
                     </label>
 
@@ -408,7 +457,7 @@ function RegisterForm() {
                     variant="gradient"
                     size="lg"
                     className="w-full"
-                    disabled={loading || !kvkkConsent}
+                    disabled={loading || !kvkkConsent || !termsAccepted}
                   >
                     {loading ? (
                       <span className="flex items-center gap-2">
