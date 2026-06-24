@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, X, ArrowRight, BarChart3, Calendar, Sparkles, FileCheck } from "lucide-react";
+import { Check, X, ArrowRight, QrCode, Bell, FileText, Handshake, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -59,34 +59,51 @@ const ROI_PROOF = [
   },
 ];
 
-const YEAR_TIMELINE = [
+const SALES_CYCLE = [
   {
-    period: "Oca – Mar",
-    icon: BarChart3,
-    title: "Lead Takibi & CRM",
-    desc: "Önceki fuarın lead'lerini takip et, teklif dönüşümlerini kaydet, pipeline'ı kapat.",
+    period: "Gün 1–5",
+    icon: QrCode,
+    title: "Fuar",
+    desc: "QR ile lead topla, AI eşleşme çalışsın, ilk temas kurulsun.",
+    basexpo: "QR lead yakalama · AI eşleşme · Anlık bildirim",
+    active: true,
     color: "brand-indigo",
   },
   {
-    period: "Nis – May",
-    icon: Calendar,
-    title: "Ön Kayıt & Hazırlık",
-    desc: "Gelecek fuar ön kaydı açılır. Hangi firmalar rakip stantta? Rekabet analizi hazır.",
+    period: "Hafta 1–3",
+    icon: Bell,
+    title: "Takip",
+    desc: "Fuar bitti — asıl iş şimdi başlıyor. Lead'leri ısıt, demo talep et.",
+    basexpo: "Otomatik hatırlatıcı · Demo takvimi · Lead skoru",
+    active: true,
     color: "brand-cyan",
   },
   {
-    period: "Haz – Tem",
-    icon: Sparkles,
-    title: "AI Profil & Eşleşme",
-    desc: "AI eşleşme motoru güncellenip fuara 3 ay kala potansiyel müşteri listeni sunar.",
+    period: "Ay 1–3",
+    icon: FileText,
+    title: "Teklif",
+    desc: "Kararın eşiğindesiniz. KOSGEB raporu güven verir, ROI belgesi süreci hızlandırır.",
+    basexpo: "KOSGEB PDF · ROI belgesi · Teklif takibi",
+    active: true,
     color: "brand-violet",
   },
   {
-    period: "Ağu – Eki",
-    icon: FileCheck,
-    title: "Fuar Hazırlık Dashboard",
-    desc: "Stand planlaması, materyal listesi, KOSGEB rapor taslağı — hepsi tek ekranda.",
+    period: "Ay 3–6",
+    icon: Handshake,
+    title: "Karar",
+    desc: "Müşteri karar veriyor. Pipeline'daki tüm data burada.",
+    basexpo: "CRM takip · Geçmiş konuşmalar · İlerleme skoru",
+    active: false,
     color: "brand-gold",
+  },
+  {
+    period: "Ay 6–12",
+    icon: TrendingUp,
+    title: "Sözleşme & Yenileme",
+    desc: "Müşteri kapandı. Sonraki fuara bu yılın datası ile daha güçlü girilir.",
+    basexpo: "ROI özeti · Sonraki fuar planı · KOSGEB başvurusu",
+    active: false,
+    color: "brand-indigo",
   },
 ];
 
@@ -106,18 +123,18 @@ export function PricingROISection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-indigo/10 border border-brand-indigo/25 text-sm text-brand-indigo-light mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse" />
-            Neden 13.000 TL/ay Mantıklı?
+            Yatırımın Anatomisi
           </div>
           <h2 className="font-display text-4xl lg:text-5xl font-bold text-white mb-4">
-            13.000 TL/ay —{" "}
-            <span className="text-gradient-indigo">Karşılığında Ne Kazanırsınız?</span>
+            Karşılığında{" "}
+            <span className="text-gradient-indigo">Ne Kazanırsınız?</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Geleneksel yöntemle karşılaştırın. Rakamlar konuşsun.
           </p>
         </motion.div>
 
-        {/* "Neden aylık?" answer block */}
+        {/* B2B Sales Cycle Block */}
         <motion.div
           initial={{ y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -125,54 +142,101 @@ export function PricingROISection() {
           transition={{ duration: 0.7 }}
           className="mb-16"
         >
-          <div className="glass-strong rounded-2xl border border-brand-gold/20 overflow-hidden">
-            <div className="px-6 py-5 border-b border-white/8 bg-brand-gold/5">
-              <p className="font-display text-xl font-bold text-white">
-                &ldquo;Yılda 1 fuara katılan firma neden aylık ödeme yapsın?&rdquo;
+          <div className="glass-strong rounded-2xl border border-white/10 overflow-hidden">
+            {/* Header */}
+            <div className="px-6 lg:px-10 pt-8 pb-6 text-center border-b border-white/8">
+              <p className="text-xs font-semibold text-brand-gold uppercase tracking-widest mb-3">
+                &ldquo;1 haftalık fuar için neden yıl boyunca ödeme yapayım?&rdquo;
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Çünkü platform fuar haftasında değil, yıl boyunca değer üretir.
+              <h3 className="font-display text-2xl lg:text-3xl font-bold text-white mb-2">
+                Fuar <span className="text-brand-cyan">5 gün.</span> Sözleşme{" "}
+                <span className="text-brand-violet-light">6 ay sonra.</span>
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+                B2B satışta karar anı fuarda değil, aylar sonradır. Fuarda tanıştınız — ödeme emrine{" "}
+                <strong className="text-white">ortalama 4–8 ay sonra</strong> imza atılır.
+                Platform bu yolculuğun tamamını yönetir.
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/8">
-              {YEAR_TIMELINE.map((item, i) => {
-                const Icon = item.icon;
-                const colorTextMap: Record<string, string> = {
-                  "brand-indigo": "text-brand-indigo-light",
-                  "brand-cyan": "text-brand-cyan",
-                  "brand-violet": "text-brand-violet-light",
-                  "brand-gold": "text-brand-gold",
-                };
-                const colorBgMap: Record<string, string> = {
-                  "brand-indigo": "bg-brand-indigo/15",
-                  "brand-cyan": "bg-brand-cyan/15",
-                  "brand-violet": "bg-brand-violet/15",
-                  "brand-gold": "bg-brand-gold/15",
-                };
-                return (
-                  <motion.div
-                    key={item.period}
-                    initial={{ y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: i * 0.1 }}
-                    className="px-5 py-5"
-                  >
-                    <div className={`w-8 h-8 rounded-lg ${colorBgMap[item.color]} flex items-center justify-center mb-3`}>
-                      <Icon className={`w-4 h-4 ${colorTextMap[item.color]}`} />
-                    </div>
-                    <p className={`text-xs font-bold mb-1 ${colorTextMap[item.color]}`}>{item.period}</p>
-                    <p className="text-sm font-semibold text-white mb-1">{item.title}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                  </motion.div>
-                );
-              })}
+
+            {/* Timeline */}
+            <div className="px-4 lg:px-8 py-8">
+              {/* Connector line (desktop) */}
+              <div className="hidden lg:block relative mb-6">
+                <div className="absolute top-5 left-[10%] right-[10%] h-px bg-gradient-to-r from-brand-indigo/40 via-brand-cyan/40 to-brand-indigo/40" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {SALES_CYCLE.map((step, i) => {
+                  const Icon = step.icon;
+                  const colorTextMap: Record<string, string> = {
+                    "brand-indigo": "text-brand-indigo-light",
+                    "brand-cyan": "text-brand-cyan",
+                    "brand-violet": "text-brand-violet-light",
+                    "brand-gold": "text-brand-gold",
+                  };
+                  const colorBgMap: Record<string, string> = {
+                    "brand-indigo": "bg-brand-indigo/15",
+                    "brand-cyan": "bg-brand-cyan/15",
+                    "brand-violet": "bg-brand-violet/15",
+                    "brand-gold": "bg-brand-gold/15",
+                  };
+                  const colorBorderMap: Record<string, string> = {
+                    "brand-indigo": "border-brand-indigo/25",
+                    "brand-cyan": "border-brand-cyan/25",
+                    "brand-violet": "border-brand-violet/25",
+                    "brand-gold": "border-brand-gold/25",
+                  };
+
+                  return (
+                    <motion.div
+                      key={step.period}
+                      initial={{ y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: i * 0.1 }}
+                      className={`relative rounded-xl border p-4 ${colorBorderMap[step.color]} ${step.active ? colorBgMap[step.color] : "bg-white/2"}`}
+                    >
+                      {step.active && (
+                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2">
+                          <span className="text-[8px] font-bold bg-brand-cyan text-brand-dark px-2 py-0.5 rounded-full whitespace-nowrap">
+                            BasExpo aktif
+                          </span>
+                        </div>
+                      )}
+                      <div className={`w-8 h-8 rounded-lg ${colorBgMap[step.color]} flex items-center justify-center mb-3`}>
+                        <Icon className={`w-4 h-4 ${colorTextMap[step.color]}`} />
+                      </div>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${colorTextMap[step.color]}`}>
+                        {step.period}
+                      </p>
+                      <p className="text-sm font-bold text-white mb-1">{step.title}</p>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">{step.desc}</p>
+                      <div className={`text-[9px] font-medium ${step.active ? colorTextMap[step.color] : "text-muted-foreground/50"} leading-relaxed`}>
+                        {step.basexpo}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="px-6 py-4 border-t border-white/8 bg-white/2">
-              <p className="text-xs text-muted-foreground/70 text-center">
-                Yılda sadece fuar döneminde kullanmak isterseniz:{" "}
-                <span className="text-white font-medium">3 aylık paket — fuar öncesi, fuar ayı, fuar sonrası.</span>
-              </p>
+
+            {/* Bottom insight */}
+            <div className="px-6 lg:px-10 pb-6 pt-2">
+              <div className="glass rounded-xl border border-brand-cyan/20 bg-brand-cyan/5 p-5 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-brand-cyan/20 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-5 h-5 text-brand-cyan" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white mb-1">
+                    Bir B2B müşteri kararını ortalama 4–8 ayda verir.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Bu 4–8 ayı Excel ile yönetirseniz lead&apos;ler soğur, fırsat kaybolur.
+                    BasExpo her adımda sizi hatırlatır, belgeler, izler — sözleşme imzalanana kadar.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>

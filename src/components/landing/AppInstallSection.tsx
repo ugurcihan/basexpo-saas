@@ -164,30 +164,71 @@ function IOSModal({ onClose }: { onClose: () => void }) {
 
 // ─── Telefon mockup ────────────────────────────────────────────────────────────
 
+const PHONE_NOTIFICATIONS = [
+  {
+    id: 0,
+    emoji: "📅",
+    title: "Etkinlik Hatırlatıcı",
+    body: "Saat 15:00 · B Salonu — CEO Konuşması",
+    detail: "Ana sahne konuşması 15 dakika içinde başlıyor. Salon B, 3. kat.",
+    colorBg: "bg-brand-indigo/20",
+    colorBorder: "border-brand-indigo/30",
+    colorText: "text-brand-indigo-light",
+  },
+  {
+    id: 1,
+    emoji: "🤝",
+    title: "AI Eşleşme Bulundu",
+    body: "TechVision A.Ş. — Uyum Skoru: %94",
+    detail: "Ortak hedef kitle ve ürün kategorisi. Standı: C-14. Toplantı ayarla?",
+    colorBg: "bg-brand-cyan/20",
+    colorBorder: "border-brand-cyan/30",
+    colorText: "text-brand-cyan",
+  },
+  {
+    id: 2,
+    emoji: "🏆",
+    title: "Rozet Kazandınız!",
+    body: "Ağ Kurucusu · +50 puan eklendi",
+    detail: "5 farklı stant ziyaret ettiniz. Toplam puan: 280. Bir sonraki ödül 20 puan uzakta.",
+    colorBg: "bg-brand-violet/20",
+    colorBorder: "border-brand-violet/30",
+    colorText: "text-brand-violet-light",
+  },
+];
+
 function PhoneMockup() {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
   return (
-    <div className="relative mx-auto w-[220px]">
+    <div className="relative mx-auto w-[240px]">
       {/* Glow */}
       <div className="absolute -inset-8 bg-brand-indigo/20 rounded-full blur-3xl" />
       {/* Phone frame */}
-      <div className="relative rounded-[36px] bg-zinc-900 border-2 border-white/10 shadow-2xl overflow-hidden" style={{ aspectRatio: "9/19" }}>
-        {/* Notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-zinc-900 rounded-b-2xl z-10" />
+      <div
+        className="relative rounded-[36px] bg-zinc-900 border-2 border-white/10 shadow-2xl overflow-hidden"
+        style={{ aspectRatio: "9/19" }}
+      >
+        {/* Dynamic Island notch */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-10 flex items-center justify-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-zinc-700" />
+          <div className="w-3 h-3 rounded-full bg-zinc-800 border border-zinc-600" />
+        </div>
         {/* Screen content */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0F1E] to-[#060912] flex flex-col">
           {/* Status bar */}
-          <div className="flex justify-between items-center px-5 pt-7 pb-2">
+          <div className="flex justify-between items-center px-5 pt-3 pb-1">
             <span className="text-[9px] text-white/50">9:41</span>
             <div className="flex gap-1 items-center">
               <Wifi className="w-2.5 h-2.5 text-white/50" />
               <div className="w-4 h-2 rounded-sm border border-white/40 relative">
-                <div className="absolute left-0.5 top-0.5 bottom-0.5 w-2 bg-white/60 rounded-sm" />
+                <div className="absolute left-0.5 top-0.5 bottom-0.5 w-2.5 bg-white/60 rounded-sm" />
               </div>
             </div>
           </div>
 
           {/* App header */}
-          <div className="px-4 py-2 flex items-center gap-2">
+          <div className="px-4 pt-7 pb-2 flex items-center gap-2">
             <img src="/icons/icon-192x192.png" alt="" className="w-6 h-6 rounded-lg" />
             <span className="text-white text-xs font-bold">BasExpo</span>
             <div className="ml-auto w-5 h-5 rounded-full bg-brand-indigo/20 flex items-center justify-center">
@@ -195,31 +236,43 @@ function PhoneMockup() {
             </div>
           </div>
 
-          {/* Notification badge */}
-          <div className="mx-3 mt-1 px-3 py-2 rounded-xl bg-brand-indigo/20 border border-brand-indigo/30 flex items-center gap-2">
-            <Zap className="w-3 h-3 text-brand-cyan flex-shrink-0" />
-            <p className="text-[9px] text-white leading-tight">CEO Konuşması başlıyor! Salon B&apos;ye gel.</p>
+          {/* Notification cards */}
+          <div className="px-3 space-y-2 flex-1 overflow-hidden">
+            {PHONE_NOTIFICATIONS.map((n) => {
+              const isOpen = expanded === n.id;
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => setExpanded(isOpen ? null : n.id)}
+                  className={`w-full text-left rounded-xl ${n.colorBg} border ${n.colorBorder} px-3 py-2.5 transition-all duration-300`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm leading-none mt-0.5">{n.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[9px] font-bold ${n.colorText} mb-0.5`}>{n.title}</p>
+                      <p className="text-[9px] text-white/70 leading-tight">{n.body}</p>
+                      {isOpen && (
+                        <p className="text-[8px] text-white/50 leading-tight mt-1.5 border-t border-white/10 pt-1.5">
+                          {n.detail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-2 px-3 mt-3">
-            {[
-              { label: "Aktif Fuar", value: "3" },
-              { label: "Lead", value: "47" },
-              { label: "Puan", value: "280" },
-              { label: "Rozet", value: "2" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl bg-white/4 border border-white/6 p-2 text-center">
-                <p className="text-white font-bold text-xs">{s.value}</p>
-                <p className="text-white/40 text-[8px] mt-0.5">{s.label}</p>
-              </div>
-            ))}
+          {/* Hint */}
+          <div className="px-3 pb-2 pt-1">
+            <p className="text-[7px] text-white/25 text-center">
+              {expanded !== null ? "Tekrar tıkla kapatmak için" : "Bildirimlere tıkla"}
+            </p>
           </div>
 
-          {/* QR button */}
-          <div className="mx-3 mt-3 py-2 rounded-xl bg-brand-indigo/80 flex items-center justify-center gap-1.5">
-            <Shield className="w-3 h-3 text-white" />
-            <span className="text-white text-[9px] font-medium">QR Badge&apos;imi Göster</span>
+          {/* Home bar */}
+          <div className="flex justify-center pb-2">
+            <div className="w-16 h-1 rounded-full bg-white/20" />
           </div>
         </div>
       </div>
