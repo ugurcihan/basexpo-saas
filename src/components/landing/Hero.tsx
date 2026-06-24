@@ -236,7 +236,7 @@ export function Hero() {
             <motion.div variants={itemVariants}>
               <Badge className="mb-4 px-4 py-1.5 text-sm bg-brand-indigo/15 border border-brand-indigo/30 text-brand-indigo-light">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan inline-block mr-2 animate-pulse" />
-                Türkiye&apos;nin Fuar Yönetim Platformu
+                AI Destekli Fuar Yönetim Platformu
               </Badge>
             </motion.div>
 

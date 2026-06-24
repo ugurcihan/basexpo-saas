@@ -428,7 +428,7 @@ export function AppInstallSection() {
                   <PlayBadge onClick={onAndroid} installed={androidDone} size="lg" />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  iOS 16.4+ · Android 8+ · Her iki platformda da ücretsiz
+                  iOS 16.4+ · Android 8+ · Tarayıcıdan, mağazasız, ücretsiz
                 </p>
               </div>
             </motion.div>
