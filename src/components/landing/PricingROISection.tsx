@@ -15,19 +15,13 @@ const COMPARISON = [
   {
     label: "ROI belgesi",
     traditional: "Hazırlanamaz — veri dağınık",
-    basexpo: "Otomatik PDF — 1 tıkla",
-    traditionalOk: false,
-  },
-  {
-    label: "Fuar ROI raporu",
-    traditional: "Kağıt kayıt — veri kaybolur",
     basexpo: "Otomatik PDF — tek tıkla",
     traditionalOk: false,
   },
   {
     label: "Ziyaretçi eşleşmesi",
     traditional: "Rastgele — düşük dönüşüm",
-    basexpo: "AI %90+ doğruluk",
+    basexpo: "AI eşleşme — yüksek alaka",
     traditionalOk: false,
   },
   {
@@ -82,7 +76,7 @@ const SALES_CYCLE = [
     period: "Ay 1–3",
     icon: FileText,
     title: "Teklif",
-    desc: "Kararın eşiğindesiniz. KOSGEB raporu güven verir, ROI belgesi süreci hızlandırır.",
+    desc: "Kararın eşiğindesiniz. Fuar ROI raporu güven verir, somut iş değeri süreci hızlandırır.",
     basexpo: "Fuar ROI PDF · İş değeri belgesi · Teklif takibi",
     active: true,
     color: "brand-violet",
@@ -145,17 +139,16 @@ export function PricingROISection() {
           <div className="glass-strong rounded-2xl border border-white/10 overflow-hidden">
             {/* Header */}
             <div className="px-6 lg:px-10 pt-8 pb-6 text-center border-b border-white/8">
-              <p className="text-xs font-semibold text-brand-gold uppercase tracking-widest mb-3">
-                &ldquo;1 haftalık fuar için neden yıl boyunca ödeme yapayım?&rdquo;
-              </p>
-              <h3 className="font-display text-2xl lg:text-3xl font-bold text-white mb-2">
-                Fuar <span className="text-brand-cyan">5 gün.</span> Sözleşme{" "}
-                <span className="text-brand-violet-light">6 ay sonra.</span>
+              <h3 className="font-display text-2xl lg:text-3xl font-bold text-white mb-3">
+                12 ayı tek fuara değil,{" "}
+                <span className="text-brand-cyan">tüm fuar yılına</span>{" "}
+                ödüyorsun.
               </h3>
               <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                B2B satışta karar anı fuarda değil, aylar sonradır. Fuarda tanıştınız — ödeme emrine{" "}
-                <strong className="text-white">ortalama 4–8 ay sonra</strong> imza atılır.
-                Platform bu yolculuğun tamamını yönetir.
+                13.000 TL/ay = 156.000 TL/yıl.{" "}
+                <strong className="text-white">Kapanan tek B2B işi bu maliyetin tamamını çıkarır.</strong>{" "}
+                Fuarda tanıştığınız müşterinin imzası aylar sonra gelir —
+                platform bu yolculuğun tamamını yönetir.
               </p>
             </div>
 
@@ -229,10 +222,10 @@ export function PricingROISection() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white mb-1">
-                    Bir B2B müşteri kararını ortalama 4–8 ayda verir.
+                    B2B satışta karar anı fuarda değil, aylar sonradır.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Bu 4–8 ayı Excel ile yönetirseniz lead&apos;ler soğur, fırsat kaybolur.
+                    Bu süreyi Excel ile yönetirseniz lead&apos;ler soğur, fırsat kaybolur.
                     BasExpo her adımda sizi hatırlatır, belgeler, izler — sözleşme imzalanana kadar.
                   </p>
                 </div>
