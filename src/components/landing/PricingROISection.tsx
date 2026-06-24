@@ -10,25 +10,21 @@ const COMPARISON = [
     label: "Lead toplama",
     traditional: "Kağıt form — saatler harcanır",
     basexpo: "Anlık QR — sıfır kayıp",
-    traditionalOk: false,
   },
   {
     label: "ROI belgesi",
     traditional: "Hazırlanamaz — veri dağınık",
     basexpo: "Otomatik PDF — tek tıkla",
-    traditionalOk: false,
   },
   {
     label: "Ziyaretçi eşleşmesi",
     traditional: "Rastgele — düşük dönüşüm",
     basexpo: "AI eşleşme — yüksek alaka",
-    traditionalOk: false,
   },
   {
     label: "Fuar sonrası takip",
     traditional: "Excel listesi — unutulur",
     basexpo: "CRM entegre — otomatik",
-    traditionalOk: false,
   },
 ];
 
@@ -37,19 +33,22 @@ const ROI_PROOF = [
     label: "1 B2B müşteri",
     value: "150K – 1M TL",
     sub: "sektöre göre sözleşme değeri",
-    color: "brand-cyan",
+    textClass: "text-brand-cyan",
+    borderClass: "border-brand-cyan/20",
   },
   {
     label: "BasExpo maliyeti",
     value: "156K TL/yıl",
     sub: "13.000 TL × 12 ay",
-    color: "brand-indigo",
+    textClass: "text-brand-indigo-light",
+    borderClass: "border-brand-indigo/20",
   },
   {
     label: "Tahmini ROI",
     value: "2.5x – 6x",
     sub: "Türkiye B2B fuar ortalaması",
-    color: "brand-violet",
+    textClass: "text-brand-violet-light",
+    borderClass: "border-brand-violet/20",
   },
 ];
 
@@ -60,7 +59,6 @@ const SALES_CYCLE = [
     title: "Fuar",
     desc: "QR ile lead topla, AI eşleşme çalışsın, ilk temas kurulsun.",
     basexpo: "QR lead yakalama · AI eşleşme · Anlık bildirim",
-    active: true,
     color: "brand-indigo",
   },
   {
@@ -69,7 +67,6 @@ const SALES_CYCLE = [
     title: "Takip",
     desc: "Fuar bitti — asıl iş şimdi başlıyor. Lead'leri ısıt, demo talep et.",
     basexpo: "Otomatik hatırlatıcı · Demo takvimi · Lead skoru",
-    active: true,
     color: "brand-cyan",
   },
   {
@@ -78,7 +75,6 @@ const SALES_CYCLE = [
     title: "Teklif",
     desc: "Kararın eşiğindesiniz. Fuar ROI raporu güven verir, somut iş değeri süreci hızlandırır.",
     basexpo: "Fuar ROI PDF · İş değeri belgesi · Teklif takibi",
-    active: true,
     color: "brand-violet",
   },
   {
@@ -86,8 +82,7 @@ const SALES_CYCLE = [
     icon: Handshake,
     title: "Karar",
     desc: "Müşteri karar veriyor. Pipeline'daki tüm data burada.",
-    basexpo: "CRM takip · Geçmiş konuşmalar · İlerleme skoru",
-    active: false,
+    basexpo: "CRM takip · Toplantı geçmişi · İlerleme skoru",
     color: "brand-gold",
   },
   {
@@ -96,9 +91,34 @@ const SALES_CYCLE = [
     title: "Sözleşme & Yenileme",
     desc: "Müşteri kapandı. Sonraki fuara bu yılın datası ile daha güçlü girilir.",
     basexpo: "ROI özeti · Sonraki fuar planı · Bütçe gerekçesi",
-    active: false,
     color: "brand-indigo",
   },
+];
+
+const colorTextMap: Record<string, string> = {
+  "brand-indigo": "text-brand-indigo-light",
+  "brand-cyan": "text-brand-cyan",
+  "brand-violet": "text-brand-violet-light",
+  "brand-gold": "text-brand-gold",
+};
+const colorBgMap: Record<string, string> = {
+  "brand-indigo": "bg-brand-indigo/15",
+  "brand-cyan": "bg-brand-cyan/15",
+  "brand-violet": "bg-brand-violet/15",
+  "brand-gold": "bg-brand-gold/15",
+};
+const colorBorderMap: Record<string, string> = {
+  "brand-indigo": "border-brand-indigo/25",
+  "brand-cyan": "border-brand-cyan/25",
+  "brand-violet": "border-brand-violet/25",
+  "brand-gold": "border-brand-gold/25",
+};
+
+const CTA_FEATURES = [
+  "QR lead + AI eşleşme",
+  "Fuar ROI PDF raporu",
+  "Fuar sonrası otomatik takip",
+  "Yıl boyu aktif platform",
 ];
 
 export function PricingROISection() {
@@ -107,7 +127,7 @@ export function PricingROISection() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-indigo/3 to-transparent pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-6">
-        {/* Header */}
+        {/* Section header */}
         <motion.div
           initial={{ y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -140,21 +160,46 @@ export function PricingROISection() {
             {/* Header */}
             <div className="px-6 lg:px-10 pt-8 pb-6 text-center border-b border-white/8">
               <h3 className="font-display text-2xl lg:text-3xl font-bold text-white mb-3">
-                12 ayı tek fuara değil,{" "}
-                <span className="text-brand-cyan">tüm fuar yılına</span>{" "}
-                ödüyorsun.
+                Bir kapanan iş,{" "}
+                <span className="text-brand-cyan">yıllık ücretin tamamını çıkarır.</span>
               </h3>
-              <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                13.000 TL/ay = 156.000 TL/yıl.{" "}
-                <strong className="text-white">Kapanan tek B2B işi bu maliyetin tamamını çıkarır.</strong>{" "}
-                Fuarda tanıştığınız müşterinin imzası aylar sonra gelir —
-                platform bu yolculuğun tamamını yönetir.
+              <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+                13.000 TL/ay = 156.000 TL/yıl. Sektörüne göre tek bir B2B sözleşmesi
+                150.000 – 1.000.000 TL —{" "}
+                <strong className="text-white">
+                  yani kapanan ilk iş bütün yılın maliyetini çıkarır; gerisi kârdır.
+                </strong>{" "}
+                Peki neden aylık? Çünkü fuarda tanıştığın lead o gün satın almaz. Asıl
+                risk fuarı kaçırmak değil,{" "}
+                <strong className="text-white">fuardan sonra lead&apos;in soğuması.</strong>{" "}
+                BasExpo o teması kayıt altına alır ve sonraki aylarda hatırlatır.
               </p>
+            </div>
+
+            {/* ROI Proof strip — fiyat çıpası, timeline'dan önce */}
+            <div className="px-6 lg:px-10 py-5 border-b border-white/8">
+              <div className="grid grid-cols-3 gap-3">
+                {ROI_PROOF.map((item, i) => (
+                  <motion.div
+                    key={item.label}
+                    initial={{ y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                    className={`glass rounded-xl border ${item.borderClass} p-4 text-center`}
+                  >
+                    <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+                    <p className={`font-display text-xl lg:text-2xl font-bold ${item.textClass}`}>
+                      {item.value}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">{item.sub}</p>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
             {/* Timeline */}
             <div className="px-4 lg:px-8 py-8">
-              {/* Connector line (desktop) */}
               <div className="hidden lg:block relative mb-6">
                 <div className="absolute top-5 left-[10%] right-[10%] h-px bg-gradient-to-r from-brand-indigo/40 via-brand-cyan/40 to-brand-indigo/40" />
               </div>
@@ -162,25 +207,6 @@ export function PricingROISection() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {SALES_CYCLE.map((step, i) => {
                   const Icon = step.icon;
-                  const colorTextMap: Record<string, string> = {
-                    "brand-indigo": "text-brand-indigo-light",
-                    "brand-cyan": "text-brand-cyan",
-                    "brand-violet": "text-brand-violet-light",
-                    "brand-gold": "text-brand-gold",
-                  };
-                  const colorBgMap: Record<string, string> = {
-                    "brand-indigo": "bg-brand-indigo/15",
-                    "brand-cyan": "bg-brand-cyan/15",
-                    "brand-violet": "bg-brand-violet/15",
-                    "brand-gold": "bg-brand-gold/15",
-                  };
-                  const colorBorderMap: Record<string, string> = {
-                    "brand-indigo": "border-brand-indigo/25",
-                    "brand-cyan": "border-brand-cyan/25",
-                    "brand-violet": "border-brand-violet/25",
-                    "brand-gold": "border-brand-gold/25",
-                  };
-
                   return (
                     <motion.div
                       key={step.period}
@@ -188,15 +214,13 @@ export function PricingROISection() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: i * 0.1 }}
-                      className={`relative rounded-xl border p-4 ${colorBorderMap[step.color]} ${step.active ? colorBgMap[step.color] : "bg-white/2"}`}
+                      className={`relative rounded-xl border p-4 ${colorBorderMap[step.color]} ${colorBgMap[step.color]}`}
                     >
-                      {step.active && (
-                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2">
-                          <span className="text-[8px] font-bold bg-brand-cyan text-brand-dark px-2 py-0.5 rounded-full whitespace-nowrap">
-                            BasExpo aktif
-                          </span>
-                        </div>
-                      )}
+                      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2">
+                        <span className="text-[8px] font-bold bg-brand-cyan text-brand-dark px-2 py-0.5 rounded-full whitespace-nowrap">
+                          BasExpo aktif
+                        </span>
+                      </div>
                       <div className={`w-8 h-8 rounded-lg ${colorBgMap[step.color]} flex items-center justify-center mb-3`}>
                         <Icon className={`w-4 h-4 ${colorTextMap[step.color]}`} />
                       </div>
@@ -205,7 +229,7 @@ export function PricingROISection() {
                       </p>
                       <p className="text-sm font-bold text-white mb-1">{step.title}</p>
                       <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">{step.desc}</p>
-                      <div className={`text-[9px] font-medium ${step.active ? colorTextMap[step.color] : "text-muted-foreground/50"} leading-relaxed`}>
+                      <div className={`text-[9px] font-medium ${colorTextMap[step.color]} leading-relaxed`}>
                         {step.basexpo}
                       </div>
                     </motion.div>
@@ -222,11 +246,10 @@ export function PricingROISection() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white mb-1">
-                    B2B satışta karar anı fuarda değil, aylar sonradır.
+                    Fuar günü topladığın lead&apos;i Excel&apos;e atarsan, aylar içinde soğur ve kaybolur.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Bu süreyi Excel ile yönetirseniz lead&apos;ler soğur, fırsat kaybolur.
-                    BasExpo her adımda sizi hatırlatır, belgeler, izler — sözleşme imzalanana kadar.
+                    BasExpo o günü kayba uğratmaz — her adımda hatırlatır, belgeler, izler.
                   </p>
                 </div>
               </div>
@@ -234,6 +257,7 @@ export function PricingROISection() {
           </div>
         </motion.div>
 
+        {/* Bottom: Comparison + Pricing CTA */}
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Comparison table */}
           <motion.div
@@ -277,36 +301,35 @@ export function PricingROISection() {
             ))}
           </motion.div>
 
-          {/* ROI proof + CTA */}
-          <div className="space-y-6">
-            {ROI_PROOF.map((item, i) => (
-              <motion.div
-                key={item.label}
-                initial={{ y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.6, delay: i * 0.12 }}
-                className={`glass rounded-xl border border-${item.color}/20 p-6`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">{item.label}</p>
-                    <p className={`font-display text-3xl font-bold text-${item.color === "brand-cyan" ? "brand-cyan" : item.color === "brand-indigo" ? "brand-indigo-light" : "brand-violet-light"}`}>
-                      {item.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">{item.sub}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+          {/* Pricing CTA card */}
+          <motion.div
+            initial={{ y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="glass-strong rounded-2xl border border-brand-indigo/25 p-8 space-y-6"
+          >
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Aylık abonelik</p>
+              <div className="flex items-end gap-1">
+                <p className="font-display text-5xl font-bold text-white">13.000</p>
+                <p className="text-2xl text-muted-foreground font-normal mb-1">TL</p>
+              </div>
+              <p className="text-sm text-muted-foreground/60 mt-1">/ ay &nbsp;·&nbsp; 156.000 TL / yıl</p>
+            </div>
 
-            <motion.div
-              initial={{ y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.36 }}
-              className="space-y-3"
-            >
+            <ul className="space-y-3">
+              {CTA_FEATURES.map((feat) => (
+                <li key={feat} className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="w-5 h-5 rounded-full bg-brand-indigo/20 border border-brand-indigo/30 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-brand-indigo-light" />
+                  </span>
+                  {feat}
+                </li>
+              ))}
+            </ul>
+
+            <div className="space-y-3">
               <Button asChild size="xl" variant="gradient" className="w-full font-semibold">
                 <Link href="/register?role=exhibitor">
                   Firma Olarak Başla — 13.000 TL/ay
@@ -316,8 +339,8 @@ export function PricingROISection() {
               <p className="text-center text-xs text-muted-foreground/60">
                 ✓ İptal istediğin zaman · ✓ AI destekli fuar platformu
               </p>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>
