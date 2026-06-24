@@ -6,20 +6,26 @@ import { getEventHallsWithMaps } from "@/features/events/hallMapActions";
 
 interface PageProps { params: Promise<{ eventId: string }> }
 
+export type OrganizerInfo = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+};
+
 export default async function EventLandingPage({ params }: PageProps) {
   const { eventId } = await params;
   const supabase = await createSupabaseServerClient();
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, name, description, location, start_date, end_date, capacity, cover_url, gallery_urls, maps_url, youtube_url, social_links, tags, category, requires_approval, status")
+    .select("id, name, description, location, start_date, end_date, capacity, cover_url, gallery_urls, maps_url, youtube_url, social_links, tags, category, requires_approval, status, organizer_id")
     .eq("id", eventId)
     .in("status", ["published", "active"])
     .maybeSingle();
 
   if (!event) notFound();
 
-  const [{ data: sponsors }, halls] = await Promise.all([
+  const [{ data: sponsors }, halls, { data: organizerData }] = await Promise.all([
     supabase
       .from("event_sponsors")
       .select("id, tier, tier_name, width_pct, height_px, sort_order, custom_logo_url, exhibitor:exhibitors(id, company_name, logo_url)")
@@ -27,6 +33,11 @@ export default async function EventLandingPage({ params }: PageProps) {
       .order("tier", { ascending: true })
       .order("sort_order", { ascending: true }),
     getEventHallsWithMaps(eventId),
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .eq("id", event.organizer_id)
+      .maybeSingle(),
   ]);
 
   const profile = await getProfile().catch(() => null);
@@ -42,11 +53,16 @@ export default async function EventLandingPage({ params }: PageProps) {
     registration = reg ?? null;
   }
 
+  const organizer: OrganizerInfo | null = organizerData
+    ? { id: organizerData.id, full_name: organizerData.full_name, avatar_url: organizerData.avatar_url ?? null }
+    : null;
+
   return (
     <EventLandingClient
       event={event as Parameters<typeof EventLandingClient>[0]["event"]}
       sponsors={(sponsors ?? []) as unknown as Parameters<typeof EventLandingClient>[0]["sponsors"]}
       halls={halls}
+      organizer={organizer}
       profile={profile}
       registration={registration}
     />

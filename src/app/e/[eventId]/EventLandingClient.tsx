@@ -2,19 +2,21 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   MapPin, Calendar, Users, Tag, Globe, Instagram, Twitter, Linkedin,
   Crown, CheckCircle2, Clock, QrCode, ExternalLink, Navigation,
-  Ticket, ChevronRight, AlertCircle, Mail, Lock,
+  Ticket, ChevronRight, AlertCircle, Mail, Lock, Building2, UserPlus,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { registerForEvent } from "@/features/events/registrationActions";
 import { FloorMapViewer } from "@/components/map/FloorMapViewer";
 import type { HallWithMap } from "@/features/events/hallMapActions";
+import type { OrganizerInfo } from "./page";
 import type { Profile } from "@/types";
 
 interface SponsorRow {
@@ -35,12 +37,14 @@ interface EventData {
   maps_url: string | null; youtube_url: string | null;
   social_links: { website?: string; instagram?: string; twitter?: string; linkedin?: string } | null;
   tags: string[] | null; category: string | null; requires_approval: boolean | null; status: string;
+  organizer_id: string;
 }
 
 interface Props {
   event: EventData;
   sponsors: SponsorRow[];
   halls: HallWithMap[];
+  organizer: OrganizerInfo | null;
   profile: Profile | null;
   registration: { status: string; ticket_code: string | null } | null;
 }
@@ -52,14 +56,13 @@ function QRDisplay({ value, size }: { value: string; size: number }) {
   return <QRCodeSVG value={value} size={size} level="M" fgColor="#1a1a2e" />;
 }
 
-export function EventLandingClient({ event, sponsors, halls, profile, registration }: Props) {
+export function EventLandingClient({ event, sponsors, halls, organizer, profile, registration }: Props) {
   const supabase = createSupabaseBrowserClient();
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [currentReg, setCurrentReg] = useState(registration);
   const [currentProfile, setCurrentProfile] = useState(profile);
 
-  // Auth form state
   const [authTab, setAuthTab] = useState<"login" | "register">("register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -118,6 +121,9 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
   const statusLabel = event.status === "active" ? "Aktif" : "Yayında";
   const statusColor = event.status === "active" ? "text-green-400 bg-green-500/15 border-green-500/30" : "text-brand-indigo-light bg-brand-indigo/15 border-brand-indigo/30";
 
+  const hasSocialLinks = event.social_links?.website || event.social_links?.instagram ||
+    event.social_links?.twitter || event.social_links?.linkedin || event.maps_url;
+
   const hasMap = halls.length > 0 && (halls.some(h => h.map_url) || halls.some(h => h.booths.length > 0));
 
   return (
@@ -130,7 +136,8 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+
         {/* Header */}
         <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-start gap-3 mb-3">
@@ -161,9 +168,77 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
           )}
         </motion.div>
 
+        {/* Organizer card */}
+        {organizer && (
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}>
+            <Link
+              href={`/o/${organizer.id}`}
+              className="flex items-center gap-3 glass rounded-xl border border-white/8 px-4 py-3 hover:border-brand-indigo/30 transition-colors group"
+            >
+              {organizer.avatar_url ? (
+                <img
+                  src={organizer.avatar_url}
+                  alt={organizer.full_name}
+                  className="w-9 h-9 rounded-xl object-cover border border-white/15 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-brand-indigo/20 border border-brand-indigo/25 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-4 h-4 text-brand-indigo-light" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Organizatör</p>
+                <p className="text-sm font-semibold text-white group-hover:text-brand-indigo-light transition-colors truncate">{organizer.full_name}</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-brand-indigo-light transition-colors">
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Takip Et</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+          </motion.div>
+        )}
+
+        {/* Social links + maps_url — üstte */}
+        {hasSocialLinks && (
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className="flex flex-wrap gap-2">
+            {event.maps_url && (
+              <a href={event.maps_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm hover:bg-green-500/20 transition-colors">
+                <MapPin className="w-3.5 h-3.5" /> Haritada Gör <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {event.social_links?.website && (
+              <a href={event.social_links.website} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
+                <Globe className="w-3.5 h-3.5" /> Web
+              </a>
+            )}
+            {event.social_links?.instagram && (
+              <a href={event.social_links.instagram} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
+                <Instagram className="w-3.5 h-3.5" /> Instagram
+              </a>
+            )}
+            {event.social_links?.twitter && (
+              <a href={event.social_links.twitter} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
+                <Twitter className="w-3.5 h-3.5" /> X (Twitter)
+              </a>
+            )}
+            {event.social_links?.linkedin && (
+              <a href={event.social_links.linkedin} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
+                <Linkedin className="w-3.5 h-3.5" /> LinkedIn
+              </a>
+            )}
+          </motion.div>
+        )}
+
         {/* Description */}
         {event.description && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
             className="glass rounded-2xl border border-white/8 p-6">
             <p className="text-muted-foreground leading-relaxed">{event.description}</p>
           </motion.div>
@@ -171,7 +246,7 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
 
         {/* YouTube */}
         {embedUrl && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }}>
             <div className="aspect-video rounded-2xl overflow-hidden border border-white/8">
               <iframe src={embedUrl} title="Tanıtım Videosu" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
             </div>
@@ -180,7 +255,7 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
 
         {/* Sponsor pyramid */}
         {sponsors.length > 0 && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}>
             <div className="flex items-center gap-2 mb-4">
               <Crown className="w-5 h-5 text-brand-gold" />
               <h2 className="font-semibold text-white">Sponsorlar</h2>
@@ -227,7 +302,7 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
 
         {/* Fuar Haritası */}
         {hasMap && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}
+          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}
             className="space-y-3">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-brand-cyan" />
@@ -249,45 +324,8 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
           </motion.div>
         )}
 
-        {/* Social + Maps (harita yoksa maps_url burada kalır) */}
-        {(event.social_links || (!hasMap && event.maps_url)) && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
-            className="flex flex-wrap gap-2">
-            {!hasMap && event.maps_url && (
-              <a href={event.maps_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm hover:bg-green-500/20 transition-colors">
-                <MapPin className="w-3.5 h-3.5" /> Haritada Gör <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-            {event.social_links?.website && (
-              <a href={event.social_links.website} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
-                <Globe className="w-3.5 h-3.5" /> Web
-              </a>
-            )}
-            {event.social_links?.instagram && (
-              <a href={event.social_links.instagram} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
-                <Instagram className="w-3.5 h-3.5" /> Instagram
-              </a>
-            )}
-            {event.social_links?.twitter && (
-              <a href={event.social_links.twitter} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
-                <Twitter className="w-3.5 h-3.5" /> X (Twitter)
-              </a>
-            )}
-            {event.social_links?.linkedin && (
-              <a href={event.social_links.linkedin} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 text-muted-foreground text-sm hover:text-white transition-colors">
-                <Linkedin className="w-3.5 h-3.5" /> LinkedIn
-              </a>
-            )}
-          </motion.div>
-        )}
-
         {/* ── CTA BÖLÜMÜ ──────────────────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }}>
 
           {/* STATE 3: Kayıtlı — bilet göster */}
           {currentReg?.status === "confirmed" && currentReg.ticket_code && (
@@ -343,7 +381,6 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
                 <h3 className="font-semibold text-white">Fuara Katılmak İster Misiniz?</h3>
               </div>
 
-              {/* Tab selector */}
               <div className="flex rounded-xl bg-white/5 p-1 gap-1">
                 {(["register", "login"] as const).map((tab) => (
                   <button
@@ -397,7 +434,6 @@ export function EventLandingClient({ event, sponsors, halls, profile, registrati
           )}
         </motion.div>
 
-        {/* Footer */}
         <div className="text-center text-xs text-muted-foreground/50 pb-8">
           <span className="font-display font-bold text-white/30">BasExpo</span> · Fuar Yönetim Platformu
         </div>
