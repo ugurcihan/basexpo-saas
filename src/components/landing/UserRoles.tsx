@@ -21,7 +21,7 @@ const ROLES = [
     icon: Settings2,
     color: "indigo",
     label: "Organizatör",
-    tagline: "Fuarı Kur — Tamamen Ücretsiz",
+    tagline: "Fuarı Kur — Platforma Sahip Ol",
     description:
       "Platform organizatöre ücretsiz. Ön kayıt verisi stant satışını kanıtlar, ısı haritası fuarı analiz eder, AI raporu yatırımcıya sunulur.",
     features: [
@@ -80,11 +80,11 @@ const ROLES = [
     label: "Ziyaretçi",
     tagline: "Gez, Rozet Kazan, Hediye Kazan",
     description:
-      "AI sana uygun firmaları önerir. Stantları gez, rozet kazan, puan biriktir. Kahve, şarj aleti veya hediye çekine dönüştür.",
+      "AI sana uygun firmaları önerir. Stantları gez, rozet kazan, puan biriktir. Organizasyona özel ödüllere dönüştür.",
     features: [
       "Kişisel QR bilet & rozet",
       "AI firma önerileri",
-      "Kahve, şarj, hediye çeki ödül sistemi",
+      "Organizasyona özel ödül sistemi",
       "Toplantı & networking",
     ],
     featureIcons: [null, null, null, null],
@@ -108,7 +108,7 @@ export function UserRoles() {
         {/* Header */}
         <motion.div
           initial={{ y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
           className="text-center mb-20"
@@ -134,7 +134,7 @@ export function UserRoles() {
               <motion.div
                 key={role.id}
                 initial={{ y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                whileInView={{ y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{
                   duration: 0.7,

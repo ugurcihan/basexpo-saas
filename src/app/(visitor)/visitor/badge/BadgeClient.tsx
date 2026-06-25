@@ -19,6 +19,7 @@ import {
   Info,
   CalendarDays,
   Ticket,
+  Trophy,
 } from "lucide-react";
 import type { Profile } from "@/types";
 
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { label: "QR Badge'im",      href: "/visitor/badge",             icon: QrCode },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
 ];

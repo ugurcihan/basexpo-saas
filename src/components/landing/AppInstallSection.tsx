@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Share, Plus, CheckCircle2, Bell, Wifi, Zap, Shield } from "lucide-react";
+import { X, Share, Plus, CheckCircle2, Bell, Wifi, Smartphone, Zap, Shield } from "lucide-react";
 
 // ─── BeforeInstallPrompt (Android Chrome) ───────────────────────────────────
 interface BeforeInstallPromptEvent extends Event {
@@ -155,7 +155,7 @@ function IOSModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6 pt-4 border-t border-white/8">
-          iOS 16.4+ · Tamamen ücretsiz · Otomatik güncellenir
+          iOS 16.4+ · Otomatik güncellenir · Mağaza gerekmez
         </p>
       </motion.div>
     </div>
@@ -190,7 +190,7 @@ const PHONE_NOTIFICATIONS = [
     emoji: "🏆",
     title: "Rozet Kazandınız!",
     body: "Ağ Kurucusu · +50 puan eklendi",
-    detail: "5 farklı stant ziyaret ettiniz. Toplam puan: 280. Bir sonraki ödül 20 puan uzakta.",
+    detail: "5 farklı stant ziyaret ettiniz. Toplam puan: 280. Puanların birikmeye devam ediyor.",
     colorBg: "bg-brand-violet/20",
     colorBorder: "border-brand-violet/30",
     colorText: "text-brand-violet-light",
@@ -374,7 +374,7 @@ export function AppInstallSection() {
             {/* Sol: metin + rozetler */}
             <motion.div
               initial={{ y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               className="space-y-8"
@@ -382,7 +382,7 @@ export function AppInstallSection() {
               {/* Tag */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-indigo/12 border border-brand-indigo/25 text-brand-indigo-light text-xs font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-pulse" />
-                Ücretsiz · App Store Gerekmez
+                Mağaza Gerekmez · Anında Kur
               </div>
 
               <div className="space-y-4">
@@ -404,7 +404,7 @@ export function AppInstallSection() {
                   { icon: Bell, label: "Anlık Bildirimler", desc: "CEO konuşması, stant haberleri" },
                   { icon: Shield, label: "QR Badge", desc: "Tek dokunuşla kimliğini göster" },
                   { icon: Zap, label: "AI Eşleşme", desc: "Sana uygun firmaları bul" },
-                  { icon: Wifi, label: "Çevrimdışı Çalışır", desc: "İnternet kesilse devam eder" },
+                  { icon: Smartphone, label: "Anında Açılır", desc: "Ana ekrandan bir tıkla, uygulama gibi" },
                 ].map(({ icon: Icon, label, desc }) => (
                   <div key={label} className="flex gap-3 items-start p-3 rounded-xl bg-white/3 border border-white/6">
                     <div className="w-8 h-8 rounded-lg bg-brand-indigo/15 flex items-center justify-center flex-shrink-0">
@@ -436,7 +436,7 @@ export function AppInstallSection() {
             {/* Sağ: telefon mockup */}
             <motion.div
               initial={{ y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.15 }}
               className="flex justify-center lg:justify-end"

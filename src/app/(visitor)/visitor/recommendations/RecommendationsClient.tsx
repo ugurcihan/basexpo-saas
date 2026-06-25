@@ -15,6 +15,7 @@ import {
   Brain, ArrowRight, CalendarDays, Ticket,
   Calendar, Clock, CheckCircle2, CalendarPlus,
   FileCheck,
+  Trophy,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
 ];

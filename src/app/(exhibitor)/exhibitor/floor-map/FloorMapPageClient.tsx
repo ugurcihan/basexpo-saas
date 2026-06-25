@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Package, QrCode, Users, TrendingUp,
   Settings, MessageSquare, Brain, CalendarClock,
   Store, FileCheck, Map,
+  Workflow,
 } from "lucide-react";
 import type { Profile } from "@/types";
 import type { HallWithMap } from "@/features/events/hallMapActions";
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { label: "Fuar Standlarım",    href: "/exhibitor/my-booths",        icon: FileCheck },
   { label: "Fuar Haritası",      href: "/exhibitor/floor-map",        icon: Map },
   { label: "Randevu Talepleri",  href: "/exhibitor/meeting-requests", icon: Users },
+  { label: "Satış Pipeline'ı", href: "/exhibitor/pipeline",       icon: Workflow },
   { label: "ROI Raporu",         href: "/exhibitor/roi-report",       icon: TrendingUp },
   { label: "Ayarlar",            href: "/exhibitor/settings",         icon: Settings },
 ];

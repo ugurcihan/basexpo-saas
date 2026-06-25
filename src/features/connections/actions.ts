@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
+import { earnPoints } from "@/features/loyalty/actions";
 
 export interface VisitorProfile {
   id: string;
@@ -235,6 +236,13 @@ export async function respondToMeeting(meetingId: string, status: "accepted" | "
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Giriş yapmalısın" };
 
+  // Toplantı bilgisini al (puan için)
+  const { data: meeting } = await supabase
+    .from("meetings")
+    .select("id, from_user, exhibitor_id, meeting_type")
+    .eq("id", meetingId)
+    .single();
+
   const { error } = await supabase
     .from("meetings")
     .update({ status })
@@ -242,6 +250,31 @@ export async function respondToMeeting(meetingId: string, status: "accepted" | "
     .eq("to_user", user.id);
 
   if (error) return { error: error.message };
+
+  // Toplantı kabul edildi → ziyaretçiye puan (exhibitor'ın fuarı bazında)
+  if (status === "accepted" && meeting?.exhibitor_id) {
+    const { data: exhibitor } = await supabase
+      .from("exhibitors")
+      .select("event_id")
+      .eq("id", meeting.exhibitor_id)
+      .single();
+
+    if (exhibitor?.event_id) {
+      // Toplantıyı talep eden ziyaretçiye puan ver
+      const targetVisitorId = meeting.from_user !== user.id ? meeting.from_user : null;
+      if (targetVisitorId) {
+        // Geçici supabase client ile from_user'a puan ver
+        await supabase.from("loyalty_points").insert({
+          event_id: exhibitor.event_id,
+          visitor_id: targetVisitorId,
+          points: 100,
+          reason: "meeting",
+          exhibitor_id: meeting.exhibitor_id,
+        });
+      }
+    }
+  }
+
   revalidatePath("/visitor/meetings");
   revalidatePath("/exhibitor/meeting-requests");
   return { error: null };

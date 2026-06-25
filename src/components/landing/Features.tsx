@@ -47,7 +47,7 @@ const FEATURES = [
     icon: Trophy,
     title: "Rozet & Sadakat Sistemi",
     description:
-      "Stant ziyaretleri, bağlantılar ve toplantılar puana dönüşür. 500 puan biriktir — kahve, şarj aleti veya hediye çekine dönüştür.",
+      "Stant ziyaretleri, bağlantılar ve toplantılar puana dönüşür. Biriktirdiğin puanları organizatörün belirlediği ödüllerle değerlendir.",
     color: "gold",
     tag: "Ödül",
   },
@@ -101,7 +101,7 @@ export function Features() {
         {/* Header */}
         <motion.div
           initial={{ y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
           className="text-center mb-20"
@@ -129,7 +129,7 @@ export function Features() {
               <motion.div
                 key={feature.title}
                 initial={{ y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                whileInView={{ y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{
                   duration: 0.6,

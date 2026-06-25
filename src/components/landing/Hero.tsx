@@ -258,14 +258,14 @@ export function Hero() {
               Fuar kaosu bitti.{" "}
               <span className="text-white font-medium">QR ile her ziyaretçiyi lead&apos;e dönüştür</span>,
               AI ile doğru müşteriyle eşleş, fuar ROI raporunu tek tıkla üret.
-              Organizatörler ücretsiz —{" "}
+              Organizatörlere özel —{" "}
               <span className="text-brand-cyan font-medium">firmalar veriyle kazanır</span>.
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
               <Button asChild size="xl" variant="gradient" className="font-semibold shadow-xl shadow-indigo-500/20">
                 <Link href="/register?role=organizer">
-                  Fuarını Oluştur — Ücretsiz
+                  Fuarını Oluştur — Hemen Başla
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>

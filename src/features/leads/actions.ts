@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
+import { earnPoints } from "@/features/loyalty/actions";
 
 export async function getExhibitorByToken(token: string) {
   const supabase = await createSupabaseServerClient();
@@ -71,6 +72,11 @@ export async function createLeadFromScan(exhibitorId: string) {
       visitor_id: user.id,
       event_id: exhibitor.event_id,
     });
+
+    // Puan: her unique exhibitor ziyaretine +20 (duplicate index ile korunuyor)
+    if (exhibitor.event_id) {
+      await earnPoints(exhibitor.event_id, "booth_visit", 20, exhibitorId);
+    }
   }
 
   revalidatePath("/visitor");

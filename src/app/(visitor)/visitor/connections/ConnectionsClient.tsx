@@ -11,6 +11,7 @@ import {
   CalendarClock, Settings, UserCircle2, UserPlus, Check,
   X, Clock, Search, CalendarCheck, MessageCircle,
   CalendarDays, Ticket,
+  Trophy,
 } from "lucide-react";
 import {
   sendConnectionRequest,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
 ];

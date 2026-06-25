@@ -10,6 +10,7 @@ import {
   CalendarClock, Settings, CalendarDays, Ticket,
   MapPin, Calendar, Clock, CheckCircle2, Users2, AlertCircle,
   FileCheck, Search, Tag, ChevronRight,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { registerForEvent, joinWaitlist } from "@/features/events/registrationActions";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
 ];

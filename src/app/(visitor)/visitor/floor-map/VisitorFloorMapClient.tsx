@@ -6,6 +6,7 @@ import { FloorMapViewer } from "@/components/map/FloorMapViewer";
 import {
   LayoutDashboard, CalendarDays, Ticket, Sparkles, Heart,
   Users, CalendarClock, Settings, Map,
+  Trophy,
 } from "lucide-react";
 import type { Profile } from "@/types";
 import type { HallWithMap } from "@/features/events/hallMapActions";
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { label: "Favorilerim",      href: "/visitor/favorites",        icon: Heart },
   { label: "Fuar Haritası",    href: "/visitor/floor-map",        icon: Map },
   { label: "Bağlantılarım",    href: "/visitor/connections",      icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",         icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",         icon: Settings },
 ];

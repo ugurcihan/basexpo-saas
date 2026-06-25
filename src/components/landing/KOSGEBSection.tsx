@@ -46,7 +46,7 @@ function ROICalculator() {
   return (
     <motion.div
       initial={{ y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      whileInView={{ y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.7, delay: 0.2 }}
       className="glass-strong rounded-2xl border border-brand-cyan/20 p-8 lg:p-10 space-y-8"
@@ -127,7 +127,7 @@ function ROICalculator() {
         </p>
         <Button asChild variant="gradient" size="lg" className="w-full">
           <Link href="/register?role=exhibitor">
-            Ücretsiz Başla — ROI&apos;ını Ölç
+            Hemen Başla — ROI&apos;ını Ölç
             <ArrowRight className="w-4 h-4" />
           </Link>
         </Button>
@@ -147,7 +147,7 @@ export function KOSGEBSection() {
         {/* Header */}
         <motion.div
           initial={{ y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
           className="text-center mb-16"
@@ -173,7 +173,7 @@ export function KOSGEBSection() {
             {/* Key insight box */}
             <motion.div
               initial={{ y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               className="glass rounded-xl border border-brand-cyan/20 p-5"
@@ -200,7 +200,7 @@ export function KOSGEBSection() {
                   <motion.div
                     key={step.number}
                     initial={{ y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
+                    whileInView={{ y: 0 }}
                     viewport={{ once: true, margin: "-40px" }}
                     transition={{ duration: 0.6, delay: i * 0.12 }}
                     className="glass rounded-xl border border-white/8 p-5 flex items-start gap-5 group hover:border-brand-cyan/20 transition-colors"
@@ -225,7 +225,7 @@ export function KOSGEBSection() {
             {/* Stats */}
             <motion.div
               initial={{ y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.35 }}
               className="grid grid-cols-3 gap-3"

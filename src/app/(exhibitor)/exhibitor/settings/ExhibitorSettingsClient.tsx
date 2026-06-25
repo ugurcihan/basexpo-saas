@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Building2, QrCode, Package, Users,
   MessageSquare, Brain, CalendarClock, Store, Settings,
   TrendingUp, User, Lock, AlertTriangle, CheckCircle2,
+  Workflow,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { label: "Yaklaşan Fuarlar",  href: "/exhibitor/upcoming-fairs",    icon: CalendarClock },
   { label: "Fuar Standlarım",   href: "/exhibitor/my-booths",         icon: Store },
   { label: "Randevu Talepleri", href: "/exhibitor/meeting-requests",  icon: CalendarClock },
+  { label: "Satış Pipeline'ı", href: "/exhibitor/pipeline",       icon: Workflow },
   { label: "ROI Raporu",        href: "/exhibitor/roi-report",        icon: TrendingUp },
   { label: "Ayarlar",           href: "/exhibitor/settings",          icon: Settings },
 ];

@@ -30,7 +30,7 @@ export function Footer() {
           {/* Brand column */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            whileInView={{ y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
             className="col-span-2 md:col-span-1 space-y-4"
@@ -57,7 +57,7 @@ export function Footer() {
             <motion.div
               key={category}
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: (colIndex + 1) * 0.1 }}
               className="space-y-4"

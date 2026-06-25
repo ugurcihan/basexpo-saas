@@ -248,8 +248,8 @@ export function FairGameSection() {
 
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ y: 24 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.65 }}
           className="text-center mb-10"
@@ -263,7 +263,7 @@ export function FairGameSection() {
             <span className="text-gradient-indigo">Ödüller Kazan</span>
           </h2>
           <p className="text-base lg:text-lg text-muted-foreground max-w-xl mx-auto">
-            Her stant ziyaretinde puan kazan. Partner kafeler ve mağazalarda kullan.
+            Her stant ziyaretinde puan kazan. Organizatörün belirlediği ödüllerle kullan.
             <span className="hidden lg:inline"> (WASD veya ↑↓←→)</span>
           </p>
         </motion.div>
@@ -273,8 +273,8 @@ export function FairGameSection() {
 
           {/* ─── Oyun Alanı ─────────────────────────────────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ scale: 0.97 }}
+            whileInView={{ scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
             className="w-full xl:flex-1 max-w-2xl mx-auto xl:mx-0"
@@ -498,8 +498,8 @@ export function FairGameSection() {
 
           {/* ─── Sağ Panel ──────────────────────────────────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, x: 16 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ x: 16 }}
+            whileInView={{ x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.25 }}
             className="w-full xl:w-72 space-y-3"
@@ -651,13 +651,13 @@ export function FairGameSection() {
                 <p className="text-2xl mb-2">🎉</p>
                 <p className="text-sm font-bold text-white mb-1">Tebrikler, Efsane!</p>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                  Gerçek platformda puanlarını kahve, şarj aleti veya hediye çekine dönüştür. Her fuarda birikir!
+                  Gerçek platformda puanlarını organizatörün belirlediği ödüllere dönüştür. Her fuarda birikir!
                 </p>
                 <a
                   href="/register?role=visitor"
                   className="block w-full py-2 px-3 rounded-xl bg-brand-gold/20 border border-brand-gold/40 text-brand-gold text-sm font-semibold hover:bg-brand-gold/30 transition-colors"
                 >
-                  Ziyaretçi Ol — Ücretsiz
+                  Ziyaretçi Ol — Hemen Katıl
                 </a>
               </motion.div>
             )}

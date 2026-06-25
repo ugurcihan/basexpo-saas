@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
+import { earnPoints } from "@/features/loyalty/actions";
 
 export type CheckinRecord = {
   id: string;
@@ -62,6 +63,9 @@ export async function checkinOrCheckout(
       event_id: eventId,
       visitor_id: visitorId,
     });
+
+    // Puan: check-in başına 1 kez (duplicate index ile korunuyor)
+    await earnPoints(eventId, "checkin", 50);
 
     revalidatePath(`/organizer/events/${eventId}`);
     return { status: "checked_in", visitor: visitorProfile };

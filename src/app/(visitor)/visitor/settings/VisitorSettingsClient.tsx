@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Sparkles, Heart, Users,
   CalendarClock, Settings, CalendarDays, Ticket,
   User, Lock, AlertTriangle, CheckCircle2, Phone,
+  Trophy,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
 ];

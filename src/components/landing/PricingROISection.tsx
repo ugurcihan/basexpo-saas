@@ -130,7 +130,7 @@ export function PricingROISection() {
         {/* Section header */}
         <motion.div
           initial={{ y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
           className="text-center mb-16"
@@ -151,7 +151,7 @@ export function PricingROISection() {
         {/* B2B Sales Cycle Block */}
         <motion.div
           initial={{ y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.7 }}
           className="mb-16"
@@ -183,7 +183,7 @@ export function PricingROISection() {
                   <motion.div
                     key={item.label}
                     initial={{ y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
+                    whileInView={{ y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: i * 0.1 }}
                     className={`glass rounded-xl border ${item.borderClass} p-4 text-center`}
@@ -211,7 +211,7 @@ export function PricingROISection() {
                     <motion.div
                       key={step.period}
                       initial={{ y: 16 }}
-                      whileInView={{ opacity: 1, y: 0 }}
+                      whileInView={{ y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: i * 0.1 }}
                       className={`relative rounded-xl border p-4 ${colorBorderMap[step.color]} ${colorBgMap[step.color]}`}
@@ -262,7 +262,7 @@ export function PricingROISection() {
           {/* Comparison table */}
           <motion.div
             initial={{ y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            whileInView={{ y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.7 }}
             className="glass-strong rounded-2xl border border-white/8 overflow-hidden"
@@ -277,7 +277,7 @@ export function PricingROISection() {
               <motion.div
                 key={row.label}
                 initial={{ opacity: 0, x: -16 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                whileInView={{ x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
                 className="grid grid-cols-[1fr,auto,auto] gap-0 px-6 py-4 border-b border-white/5 last:border-0 items-start"
@@ -304,7 +304,7 @@ export function PricingROISection() {
           {/* Pricing CTA card */}
           <motion.div
             initial={{ y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            whileInView={{ y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.7, delay: 0.1 }}
             className="glass-strong rounded-2xl border border-brand-indigo/25 p-8 space-y-6"

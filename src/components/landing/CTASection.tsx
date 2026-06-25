@@ -18,7 +18,7 @@ export function CTASection() {
       <div className="relative max-w-4xl mx-auto px-6 text-center">
         <motion.div
           initial={{ y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.8 }}
           className="space-y-8"
@@ -30,7 +30,7 @@ export function CTASection() {
 
           <h2 className="font-display text-4xl lg:text-6xl font-bold text-white leading-tight">
             Fuarını Bugün Kur —{" "}
-            <span className="text-gradient-indigo">Tamamen Ücretsiz</span>
+            <span className="text-gradient-indigo">Organizatör Planı</span>
           </h2>
 
           <p className="text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -46,7 +46,7 @@ export function CTASection() {
               className="font-semibold shadow-2xl shadow-indigo-500/25 px-10"
             >
               <Link href="/register?role=organizer">
-                Fuarını Kur — Ücretsiz
+                Fuarını Kur — Hemen Başla
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
@@ -67,7 +67,7 @@ export function CTASection() {
             {[
               "Kredi kartı gerekmez",
               "5 dakikada kurulum",
-              "Organizatöre tam ücretsiz",
+              "Organizatör hesabı — kurulum 2 dk",
             ].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan" />

@@ -21,6 +21,7 @@ import {
   Brain,
   CalendarClock,
   Store,
+  Workflow,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { label: "Yaklaşan Fuarlar", href: "/exhibitor/upcoming-fairs", icon: CalendarClock },
   { label: "Fuar Standlarım",  href: "/exhibitor/my-booths",      icon: Store },
   { label: "Randevu Talepleri", href: "/exhibitor/meeting-requests", icon: CalendarClock },
+  { label: "Satış Pipeline'ı", href: "/exhibitor/pipeline",       icon: Workflow },
   { label: "ROI Raporu",          href: "/exhibitor/roi-report",         icon: TrendingUp },
   { label: "Ayarlar",          href: "/exhibitor/settings",       icon: Settings },
 ];

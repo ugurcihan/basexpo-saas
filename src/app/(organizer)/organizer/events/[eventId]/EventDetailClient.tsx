@@ -69,8 +69,320 @@ import { addSponsor, removeSponsor, updateSponsorLayouts, updateSponsorLogo } fr
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { updateEventGallery } from "@/features/events/actions";
 import { getCheckins, type CheckinRecord } from "@/features/events/checkinActions";
+import {
+  getEventRewardTiers,
+  getRewardTierWinners,
+  upsertRewardTier,
+  deleteRewardTier,
+  getEventLoyaltySummary,
+  type RewardWinnerRow,
+} from "@/features/loyalty/organizerActions";
+import type { RewardTierWithStats } from "@/features/loyalty/actions";
 import type { EventStatus } from "@/types";
 import { ORGANIZER_NAV } from "../../_nav";
+
+// ── Ödül Yönetimi Bileşeni ───────────────────────────────
+function RewardManagementSection({ eventId }: { eventId: string }) {
+  const [tiers, setTiers] = useState<RewardTierWithStats[]>([]);
+  const [summary, setSummary] = useState<{ totalParticipants: number; totalPointsAwarded: number } | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [newPoints, setNewPoints] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [isLimited, setIsLimited] = useState(false);
+  const [newMaxWinners, setNewMaxWinners] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [expandedTier, setExpandedTier] = useState<string | null>(null);
+  const [tierWinners, setTierWinners] = useState<Record<string, RewardWinnerRow[]>>({});
+
+  async function load() {
+    if (loaded) return;
+    try {
+      const [tierData, summaryData] = await Promise.all([
+        getEventRewardTiers(eventId),
+        getEventLoyaltySummary(eventId),
+      ]);
+      setTiers(tierData);
+      setSummary({ totalParticipants: summaryData.totalParticipants, totalPointsAwarded: summaryData.totalPointsAwarded });
+      setLoaded(true);
+    } catch {
+      setFormError("Veriler yüklenemedi. Sayfayı yenileyiniz.");
+    }
+  }
+
+  async function toggleWinners(tierId: string) {
+    if (expandedTier === tierId) { setExpandedTier(null); return; }
+    if (!tierWinners[tierId]) {
+      const winners = await getRewardTierWinners(tierId);
+      setTierWinners((prev) => ({ ...prev, [tierId]: winners }));
+    }
+    setExpandedTier(tierId);
+  }
+
+  function handleAdd() {
+    const pts = parseInt(newPoints);
+    if (!pts || pts < 1) { setFormError("Geçerli bir puan eşiği girin."); return; }
+    if (!newTitle.trim()) { setFormError("Ödül adı boş olamaz."); return; }
+    if (isLimited) {
+      const mw = parseInt(newMaxWinners);
+      if (!mw || mw < 1) { setFormError("Geçerli bir kontenjan sayısı girin."); return; }
+    }
+    setFormError(null);
+    startTransition(async () => {
+      const { error } = await upsertRewardTier(eventId, {
+        points_required: pts,
+        reward_title: newTitle.trim(),
+        reward_description: newDesc.trim() || undefined,
+        max_winners: isLimited ? parseInt(newMaxWinners) : null,
+      });
+      if (error) { setFormError(error); return; }
+      const updated = await getEventRewardTiers(eventId);
+      setTiers(updated);
+      setNewPoints(""); setNewTitle(""); setNewDesc(""); setNewMaxWinners(""); setIsLimited(false);
+    });
+  }
+
+  function handleDelete(tierId: string) {
+    startTransition(async () => {
+      await deleteRewardTier(tierId);
+      setTiers((prev) => prev.filter((t) => t.id !== tierId));
+    });
+  }
+
+  function formatClaimed(s: string) {
+    return new Date(s).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  return (
+    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.4 }}>
+      <button
+        className="w-full flex items-center justify-between px-5 py-4 glass rounded-2xl border border-white/8 text-left"
+        onClick={() => { setOpen(o => !o); load(); }}
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-brand-gold" />
+          <span className="font-semibold text-white">Ödül Yönetimi</span>
+          {loaded && tiers.length > 0 && (
+            <span className="text-xs text-muted-foreground ml-1">({tiers.length} ödül eşiği)</span>
+          )}
+        </div>
+        <ChevronLeft className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "-rotate-90" : "rotate-180"}`} />
+      </button>
+
+      {open && (
+        <div className="glass rounded-2xl border border-white/8 border-t-0 rounded-t-none -mt-2 pt-4 px-5 pb-5 space-y-4 overflow-hidden">
+          {/* Özet */}
+          {summary && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="glass rounded-xl border border-white/8 p-3 text-center">
+                <p className="font-display text-xl font-bold text-brand-cyan">{summary.totalParticipants}</p>
+                <p className="text-xs text-muted-foreground">Puan Kazanan</p>
+              </div>
+              <div className="glass rounded-xl border border-white/8 p-3 text-center">
+                <p className="font-display text-xl font-bold text-brand-gold">{summary.totalPointsAwarded}</p>
+                <p className="text-xs text-muted-foreground">Dağıtılan Puan</p>
+              </div>
+            </div>
+          )}
+
+          {/* Mevcut ödül eşikleri */}
+          {tiers.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              Henüz ödül eşiği yok. Aşağıdan ekle.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {tiers.map((tier) => {
+                const hasLimit = tier.max_winners !== null;
+                const pct = hasLimit ? Math.min((tier.winner_count / tier.max_winners!) * 100, 100) : 0;
+                const winnerList = tierWinners[tier.id] ?? [];
+                const isExpanded = expandedTier === tier.id;
+
+                return (
+                  <div key={tier.id} className="glass rounded-xl border border-white/8">
+                    <div className="flex items-start gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-white">{tier.reward_title}</p>
+                          {tier.is_full && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/20">
+                              Doldu
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-brand-gold mt-0.5">{tier.points_required} puan gerekli</p>
+                        {tier.reward_description && (
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{tier.reward_description}</p>
+                        )}
+                        {hasLimit ? (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>İlk {tier.max_winners} kişi</span>
+                              <span>{tier.winner_count}/{tier.max_winners} kazandı</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${tier.is_full ? "bg-red-500" : "bg-brand-gold"}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Sınırsız · {tier.winner_count} kişi kazandı
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                        {tier.winner_count > 0 && (
+                          <button
+                            onClick={() => toggleWinners(tier.id)}
+                            className="text-[10px] px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-white transition-colors"
+                          >
+                            {isExpanded ? "Gizle" : "Kazananlar"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(tier.id)}
+                          disabled={isPending}
+                          className="text-red-400/60 hover:text-red-400 transition-colors p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Kazanan listesi */}
+                    {isExpanded && (
+                      <div className="border-t border-white/8 px-4 py-3 space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Kazananlar</p>
+                        {winnerList.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Henüz kazanan yok.</p>
+                        ) : (
+                          winnerList.map((w) => (
+                            <div key={w.visitor_id} className="flex items-center gap-2 text-xs">
+                              <span className={`font-bold w-5 text-center ${w.rank === 1 ? "text-brand-gold" : w.rank === 2 ? "text-slate-300" : w.rank === 3 ? "text-amber-700" : "text-muted-foreground"}`}>
+                                {w.rank}.
+                              </span>
+                              <span className="text-white flex-1 truncate">{w.full_name ?? "—"}</span>
+                              <span className="text-muted-foreground/60">{formatClaimed(w.claimed_at)}</span>
+                            </div>
+                          ))
+                        )}
+                        {hasLimit && winnerList.length < tier.max_winners! && (
+                          <div className="mt-1 pt-1 border-t border-white/5">
+                            {Array.from({ length: tier.max_winners! - winnerList.length }, (_, i) => (
+                              <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground/40 py-0.5">
+                                <span className="w-5 text-center">{winnerList.length + i + 1}.</span>
+                                <span>Boş slot</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Yeni ödül ekle */}
+          <div className="border-t border-white/8 pt-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Yeni Ödül Eşiği</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Puan Eşiği</label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Örn. 200"
+                  value={newPoints}
+                  onChange={(e) => setNewPoints(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-cyan/40 placeholder:text-muted-foreground/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Ödül Adı</label>
+                <input
+                  type="text"
+                  placeholder="Örn. Kahve Kuponu"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-cyan/40 placeholder:text-muted-foreground/40"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Açıklama (opsiyonel)</label>
+              <input
+                type="text"
+                placeholder="Örn. Fuarın kafesinden geçerli"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-cyan/40 placeholder:text-muted-foreground/40"
+              />
+            </div>
+
+            {/* Kontenjan seçeneği */}
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground block">Kontenjan</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLimited(false)}
+                  className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-all ${
+                    !isLimited
+                      ? "bg-brand-indigo/20 border-brand-indigo/40 text-brand-indigo-light"
+                      : "bg-white/5 border-white/10 text-muted-foreground hover:border-white/20"
+                  }`}
+                >
+                  Sınırsız
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLimited(true)}
+                  className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-all ${
+                    isLimited
+                      ? "bg-brand-gold/20 border-brand-gold/40 text-brand-gold"
+                      : "bg-white/5 border-white/10 text-muted-foreground hover:border-white/20"
+                  }`}
+                >
+                  İlk X kişi
+                </button>
+              </div>
+              {isLimited && (
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Örn. 10 (ilk 10 kişi)"
+                  value={newMaxWinners}
+                  onChange={(e) => setNewMaxWinners(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-gold/40 placeholder:text-muted-foreground/40"
+                />
+              )}
+            </div>
+
+            {formError && (
+              <p className="text-xs text-red-400 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" /> {formError}
+              </p>
+            )}
+            <button
+              onClick={handleAdd}
+              disabled={isPending}
+              className="w-full py-2.5 rounded-xl bg-brand-indigo/20 border border-brand-indigo/30 text-brand-indigo-light text-sm font-semibold hover:bg-brand-indigo/30 transition-colors disabled:opacity-50"
+            >
+              {isPending ? "Ekleniyor..." : "Ödül Eşiği Ekle"}
+            </button>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 // ── Giriş Kayıtları Bileşeni ─────────────────────────────
 function CheckinSection({ eventId }: { eventId: string }) {
@@ -96,7 +408,7 @@ function CheckinSection({ eventId }: { eventId: string }) {
   }
 
   return (
-    <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.35 }}>
       <button
         className="w-full flex items-center justify-between px-5 py-4 glass rounded-2xl border border-white/8 text-left"
         onClick={() => { setOpen(o => !o); load(); }}
@@ -419,7 +731,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* ── Header ─────────────────────────────────────────── */}
-        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
           <Link
             href="/organizer/events"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mb-4"
@@ -451,7 +763,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         {/* ── Stats ──────────────────────────────────────────── */}
         <motion.div
           initial={{ y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.1 }}
           className="grid grid-cols-3 gap-4"
         >
@@ -473,7 +785,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         </motion.div>
 
         {/* ── SPONSOR PİRAMİDİ ───────────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.15 }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Crown className="w-5 h-5 text-brand-gold" />
@@ -627,7 +939,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         </motion.div>
 
         {/* ── GALERİ YÖNETİMİ ──────────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.18 }}>
           <div className="flex items-center gap-2 mb-4">
             <Images className="w-5 h-5 text-brand-violet-light" />
             <h2 className="font-semibold text-white">Fotoğraf Galerisi</h2>
@@ -671,7 +983,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         </motion.div>
 
         {/* ── SALONLAR & STANDLAR ───────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Layers className="w-5 h-5 text-brand-indigo-light" />
@@ -694,7 +1006,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                 <motion.div
                   key={hall.id}
                   initial={{ y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  animate={{ y: 0 }}
                   transition={{ delay: 0.15 + hi * 0.07 }}
                   className="glass rounded-2xl border border-white/8 overflow-hidden"
                 >
@@ -756,6 +1068,9 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
             </div>
           )}
         </motion.div>
+
+        {/* ── ÖDÜL YÖNETİMİ ──────────────────────────────────── */}
+        <RewardManagementSection eventId={event.id} />
 
         {/* ── GİRİŞ KAYITLARI ────────────────────────────────── */}
         <CheckinSection eventId={event.id} />

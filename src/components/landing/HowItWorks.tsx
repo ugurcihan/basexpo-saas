@@ -28,8 +28,8 @@ const STEPS = [
     color: "violet",
     title: "Bağlan, Ödül Kazan",
     description:
-      "Firmalar seni hatırlar, sana özel teklifler gönderir. 500 puan biriktir — kahve, şarj aleti veya hediye çekine dönüştür. Networking kalıcı hale gelir.",
-    highlight: "500 puan = Hediye Çeki",
+      "Firmalar seni hatırlar, sana özel teklifler gönderir. Biriktirdiğin puanlar, organizatörün belirlediği ödüllere dönüşür. Networking kalıcı hale gelir.",
+    highlight: "Puan → Organizasyon Ödülü",
   },
 ];
 
@@ -73,7 +73,7 @@ export function HowItWorks() {
         {/* Header */}
         <motion.div
           initial={{ y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7 }}
           className="text-center mb-20"
@@ -87,7 +87,7 @@ export function HowItWorks() {
             <span className="text-gradient-indigo">Bağlan</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Kayıttan rozete, rozetten hediye çekine kadar her adım otomatik ve akıllı.
+            Kayıttan rozete, rozetten organizasyona özel ödüle kadar her adım otomatik ve akıllı.
           </p>
         </motion.div>
 
@@ -104,7 +104,7 @@ export function HowItWorks() {
               <motion.div
                 key={step.step}
                 initial={{ y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                whileInView={{ y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{
                   duration: 0.7,

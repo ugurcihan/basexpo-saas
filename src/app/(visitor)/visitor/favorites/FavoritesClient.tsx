@@ -9,6 +9,7 @@ import {
   LayoutDashboard, Sparkles, Heart, Users,
   CalendarClock, Settings, CalendarDays, Ticket,
   Building2, Tag, MapPin, Trash2, CalendarPlus,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { removeFavorite } from "@/features/favorites/actions";
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
   { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
   { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
+  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
   { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
   { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
 ];
