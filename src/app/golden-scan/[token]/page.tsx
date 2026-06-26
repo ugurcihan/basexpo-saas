@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient, getProfile } from "@/lib/supabase-server";
+import { earnPoints } from "@/features/loyalty/actions";
 import { GoldenScanClient } from "./GoldenScanClient";
 
 interface Props {
@@ -14,7 +15,7 @@ export default async function GoldenScanPage({ params }: Props) {
 
   const { data: qr } = await supabase
     .from("golden_qr_codes")
-    .select("id, label, prize_description, is_active, scan_limit, golden_qr_scans(count)")
+    .select("id, event_id, label, prize_description, is_active, scan_limit, golden_qr_scans(count)")
     .eq("token", token)
     .single();
 
@@ -76,6 +77,11 @@ export default async function GoldenScanPage({ params }: Props) {
     golden_qr_id: qr.id,
     visitor_id: profile.id,
   });
+
+  // Altın QR taramasına puan ver
+  if (qr.event_id) {
+    await earnPoints(qr.event_id, "booth_visit", 50);
+  }
 
   return (
     <GoldenScanClient

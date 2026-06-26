@@ -41,12 +41,16 @@ export function GateClient({ eventId, eventTitle, checkins: initialCheckins }: P
     try { await html5QrRef.current?.stop(); } catch { /* ignore */ }
     setScanning(false);
 
-    // QR içeriği: JSON { vid: visitorId, ... } veya düz UUID
+    // QR içeriği: JSON { vid: visitorId } | düz UUID | URL (.../visitor-profile/uuid)
     let visitorId = decodedText.trim();
     try {
       const parsed = JSON.parse(decodedText);
       if (parsed.vid) visitorId = parsed.vid;
-    } catch { /* düz UUID */ }
+    } catch {
+      // URL veya düz metin içinden UUID pattern'i çıkar
+      const uuidMatch = decodedText.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      if (uuidMatch) visitorId = uuidMatch[0];
+    }
 
     const res = await checkinOrCheckout(eventId, visitorId);
     setResult(res);
