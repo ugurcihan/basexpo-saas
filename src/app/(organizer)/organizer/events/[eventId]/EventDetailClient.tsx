@@ -784,6 +784,9 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
           ))}
         </motion.div>
 
+        {/* ── ÖDÜL YÖNETİMİ ──────────────────────────────────── */}
+        <RewardManagementSection eventId={event.id} />
+
         {/* ── SPONSOR PİRAMİDİ ───────────────────────────────── */}
         <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.15 }}>
           <div className="flex items-center justify-between mb-4">
@@ -981,9 +984,6 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
             )}
           </div>
         </motion.div>
-
-        {/* ── ÖDÜL YÖNETİMİ ──────────────────────────────────── */}
-        <RewardManagementSection eventId={event.id} />
 
         {/* ── SALONLAR & STANDLAR ───────────────────────────── */}
         <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.2 }}>

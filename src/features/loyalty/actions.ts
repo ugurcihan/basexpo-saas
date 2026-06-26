@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
+import { unstable_noStore as noStore } from "next/cache";
 
 export type LoyaltyReason = "checkin" | "booth_visit" | "meeting" | "connection";
 
@@ -385,14 +386,20 @@ export async function getEventLeaderboard(eventId: string): Promise<LeaderboardE
 // ─── getPublicEventRewardTiers ───────────────────────────────
 // Public — auth gerekmez. reward_tiers RLS: SELECT USING (true)
 export async function getPublicEventRewardTiers(eventId: string): Promise<RewardTierWithStats[]> {
+  noStore();
   const supabase = await createSupabaseServerClient();
 
-  const { data: tiers } = await supabase
+  const { data: tiers, error: tiersError } = await supabase
     .from("reward_tiers")
     .select("*")
     .eq("event_id", eventId)
     .eq("is_active", true)
     .order("points_required", { ascending: true });
+
+  if (tiersError) {
+    console.error("[getPublicEventRewardTiers] query error:", tiersError.message);
+    return [];
+  }
 
   if (!tiers || tiers.length === 0) return [];
 

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from "next/navigation";
 import { getExhibitorByToken, checkExistingLead } from "@/features/leads/actions";
 import { getProfile } from "@/lib/supabase-server";
