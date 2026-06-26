@@ -58,12 +58,17 @@ import {
   GripHorizontal,
   Upload,
   Save,
+  Star,
+  StarOff,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   createHall,
   deleteHall,
   createBooth,
   deleteBooth,
+  toggleBoothGolden,
 } from "@/features/events/hallActions";
 import { addSponsor, removeSponsor, updateSponsorLayouts, updateSponsorLogo } from "@/features/events/sponsorActions";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
@@ -471,7 +476,7 @@ const TIER_OPTIONS = [
   { value: "4", label: "🏅 Bronz — 4'lü sıra" },
 ];
 
-interface BoothRow { id: string; code: string; exhibitor_id: string | null }
+interface BoothRow { id: string; code: string; exhibitor_id: string | null; qr_token: string; is_golden: boolean; golden_bonus_points: number }
 interface HallRow  { id: string; name: string; floor: number; booths: BoothRow[] }
 
 interface SponsorRow {
@@ -518,6 +523,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   const [boothModal, setBoothModal]       = useState<{ hallId: string; hallName: string } | null>(null);
   const [hallName, setHallName]           = useState("");
   const [boothCode, setBoothCode]         = useState("");
+  const [copiedBoothId, setCopiedBoothId] = useState<string | null>(null);
 
   // Sponsor modal state
   const [sponsorModalOpen, setSponsorModalOpen] = useState(false);
@@ -593,6 +599,27 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
         ),
       }));
     });
+  }
+
+  async function handleToggleGolden(booth: BoothRow, hallId: string) {
+    startTransition(async () => {
+      await toggleBoothGolden(booth.id, booth.is_golden, booth.golden_bonus_points, event.id);
+      setEvent((prev) => ({
+        ...prev,
+        halls: prev.halls.map((h) =>
+          h.id === hallId
+            ? { ...h, booths: h.booths.map((b) => b.id === booth.id ? { ...b, is_golden: !b.is_golden } : b) }
+            : h
+        ),
+      }));
+    });
+  }
+
+  function handleCopyQr(booth: BoothRow) {
+    const url = `${window.location.origin}/scan/booth/${booth.qr_token}`;
+    navigator.clipboard.writeText(url);
+    setCopiedBoothId(booth.id);
+    setTimeout(() => setCopiedBoothId(null), 2000);
   }
 
   // ── Sponsor handlers ───────────────────────────────────────
@@ -1049,18 +1076,45 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                           <div
                             key={booth.id}
                             className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
-                              booth.exhibitor_id
+                              booth.is_golden
+                                ? "border-brand-gold/50 bg-brand-gold/12 text-brand-gold"
+                                : booth.exhibitor_id
                                 ? "border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan"
                                 : "border-white/10 bg-white/5 text-muted-foreground"
                             }`}
                           >
-                            <Grid3X3 className="w-3 h-3" />
+                            {booth.is_golden
+                              ? <Star className="w-3 h-3 fill-brand-gold text-brand-gold" />
+                              : <Grid3X3 className="w-3 h-3" />
+                            }
                             {booth.code}
-                            <button
-                              onClick={() => handleDeleteBooth(booth.id, hall.id)}
-                              disabled={isPending}
-                              className="hidden group-hover:flex items-center justify-center w-4 h-4 rounded text-red-400 hover:bg-red-500/20 transition-colors"
-                            >×</button>
+                            {/* Hover actions */}
+                            <div className="hidden group-hover:flex items-center gap-1 ml-1">
+                              <button
+                                onClick={() => handleToggleGolden(booth, hall.id)}
+                                disabled={isPending}
+                                title={booth.is_golden ? "Altın QR kaldır" : "Altın QR yap"}
+                                className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
+                                  booth.is_golden
+                                    ? "text-brand-gold hover:bg-brand-gold/20"
+                                    : "text-muted-foreground hover:text-brand-gold hover:bg-brand-gold/15"
+                                }`}
+                              >
+                                {booth.is_golden ? <StarOff className="w-3 h-3" /> : <Star className="w-3 h-3" />}
+                              </button>
+                              <button
+                                onClick={() => handleCopyQr(booth)}
+                                title="QR linkini kopyala"
+                                className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground hover:text-white hover:bg-white/10 transition-colors"
+                              >
+                                {copiedBoothId === booth.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBooth(booth.id, hall.id)}
+                                disabled={isPending}
+                                className="flex items-center justify-center w-5 h-5 rounded text-red-400 hover:bg-red-500/20 transition-colors"
+                              >×</button>
+                            </div>
                           </div>
                         ))}
                       </div>

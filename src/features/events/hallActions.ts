@@ -78,3 +78,24 @@ export async function deleteBooth(boothId: string, eventId: string) {
   revalidatePath(`/organizer/events/${eventId}`);
   return { success: true };
 }
+
+export async function toggleBoothGolden(
+  boothId: string,
+  currentValue: boolean,
+  bonusPoints: number,
+  eventId: string
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { error } = await supabase
+    .from("booths")
+    .update({ is_golden: !currentValue, golden_bonus_points: bonusPoints })
+    .eq("id", boothId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/organizer/events/${eventId}`);
+  return { success: true };
+}

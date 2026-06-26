@@ -85,6 +85,85 @@ export async function createLeadFromScan(exhibitorId: string) {
   return { error: null, alreadyExists: false };
 }
 
+// ─── Booth QR Scan ───────────────────────────────────────────
+export async function getBoothByQrToken(token: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("booths")
+    .select(`
+      id, code, qr_token, is_golden, golden_bonus_points,
+      hall:halls(id, name, event_id,
+        event:events(id, name, location, start_date, end_date)
+      ),
+      exhibitor:exhibitors(id, company_name, description, logo_url, tags,
+        products(id, name, description, image_url)
+      )
+    `)
+    .eq("qr_token", token)
+    .single();
+  return data;
+}
+
+export async function checkInToBoothScan(boothId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "login_required", isGolden: false, bonusPoints: 0 };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "visitor") return { error: "visitor_only", isGolden: false, bonusPoints: 0 };
+
+  const { data: booth } = await supabase
+    .from("booths")
+    .select("id, is_golden, golden_bonus_points, exhibitor_id, hall:halls(event_id)")
+    .eq("id", boothId)
+    .single();
+
+  if (!booth) return { error: "Stant bulunamadı.", isGolden: false, bonusPoints: 0 };
+
+  const isGolden = booth.is_golden as boolean;
+  const bonusPoints = (booth.golden_bonus_points as number) ?? 50;
+  const eventId = (booth.hall as unknown as { event_id: string } | null)?.event_id ?? null;
+  const exhibitorId = booth.exhibitor_id as string | null;
+
+  // Exhibitor varsa lead oluştur
+  if (exhibitorId) {
+    const { error: leadError } = await supabase.from("leads").insert({
+      exhibitor_id: exhibitorId,
+      visitor_id: user.id,
+      source: "qr",
+    });
+    if (leadError && leadError.code !== "23505") {
+      return { error: leadError.message, isGolden: false, bonusPoints: 0 };
+    }
+  }
+
+  // QR scan kaydı
+  if (eventId) {
+    await supabase.from("qr_scans").insert({
+      exhibitor_id: exhibitorId,
+      booth_id: boothId,
+      visitor_id: user.id,
+      event_id: eventId,
+    });
+
+    // Normal ziyaret puanı
+    await earnPoints(eventId, "booth_visit", 20, exhibitorId ?? undefined);
+
+    // Altın QR bonus puanı
+    if (isGolden && bonusPoints > 0) {
+      await earnPoints(eventId, "booth_visit", bonusPoints, boothId);
+    }
+  }
+
+  revalidatePath("/visitor");
+  if (exhibitorId) revalidatePath("/exhibitor/leads");
+  return { error: null, isGolden, bonusPoints };
+}
+
 export async function getExhibitorLeads(exhibitorId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
