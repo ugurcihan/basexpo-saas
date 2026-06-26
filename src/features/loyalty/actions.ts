@@ -1,8 +1,16 @@
 "use server";
 
+import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 import { unstable_noStore as noStore } from "next/cache";
+
+function createAnonClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export type LoyaltyReason = "checkin" | "booth_visit" | "meeting" | "connection";
 
@@ -387,7 +395,7 @@ export async function getEventLeaderboard(eventId: string): Promise<LeaderboardE
 // Public — auth gerekmez. reward_tiers RLS: SELECT USING (true)
 export async function getPublicEventRewardTiers(eventId: string): Promise<RewardTierWithStats[]> {
   noStore();
-  const supabase = await createSupabaseServerClient();
+  const supabase = createAnonClient();
 
   const { data: tiers, error: tiersError } = await supabase
     .from("reward_tiers")

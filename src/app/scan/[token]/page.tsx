@@ -18,11 +18,12 @@ export default async function ScanPage({ params }: Props) {
 
   const profile = await getProfile();
   const ev = Array.isArray(exhibitor.event) ? exhibitor.event[0] : exhibitor.event;
+  const eventId = ev?.id ?? (exhibitor as unknown as { event_id?: string }).event_id ?? null;
 
   const [alreadyCheckedIn, rewardTiers, visitorPoints] = await Promise.all([
     profile?.role === "visitor" ? checkExistingLead(exhibitor.id) : Promise.resolve(false),
-    ev ? getPublicEventRewardTiers(ev.id) : Promise.resolve([]),
-    profile?.role === "visitor" && ev ? getMyEventTotalPoints(ev.id) : Promise.resolve(0),
+    eventId ? getPublicEventRewardTiers(eventId) : Promise.resolve([]),
+    profile?.role === "visitor" && eventId ? getMyEventTotalPoints(eventId) : Promise.resolve(0),
   ]);
 
   return (

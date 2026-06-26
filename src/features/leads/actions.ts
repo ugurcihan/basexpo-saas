@@ -9,7 +9,7 @@ export async function getExhibitorByToken(token: string) {
   const { data } = await supabase
     .from("exhibitors")
     .select(`
-      id, company_name, description, logo_url, tags, qr_token,
+      id, company_name, description, logo_url, tags, qr_token, event_id,
       event:events(id, name, location, start_date, end_date),
       products(id, name, description, image_url)
     `)
