@@ -88,6 +88,8 @@ import type { EventStatus } from "@/types";
 import { ORGANIZER_NAV } from "../../_nav";
 import { RegistrantsSection } from "./RegistrantsSection";
 import { BadgePrintSection } from "./BadgePrintSection";
+import { QRCodesSection } from "./QRCodesSection";
+import { GoldenQRAnalyticsPanel } from "./GoldenQRAnalyticsPanel";
 
 // ── Ödül Yönetimi Bileşeni ───────────────────────────────
 function RewardManagementSection({ eventId, alwaysOpen }: { eventId: string; alwaysOpen?: boolean }) {
@@ -775,6 +777,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
     { id: "kayitlar", label: "Kayıtlar",            icon: ClipboardList   },
     { id: "sponsor",  label: "Sponsor",             icon: Crown           },
     { id: "yaka",     label: "Yaka Kartı",          icon: Printer         },
+    { id: "kodlar",   label: "QR Kodlar",            icon: QrCode          },
   ] as const;
 
   const TIER_COLORS: Record<number, { text: string; border: string; bg: string }> = {
@@ -1008,9 +1011,20 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
 
           {/* ÖDÜLLER */}
           {activeTab === "oduller" && (
-            <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
-              <RewardManagementSection eventId={event.id} alwaysOpen />
-            </motion.div>
+            <div className="space-y-6">
+              {/* Altın QR Analitik Paneli */}
+              <div className="glass rounded-2xl border border-brand-gold/20 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="w-5 h-5 text-brand-gold fill-brand-gold" />
+                  <h3 className="font-semibold text-white">Altın QR & Tarama Analitikleri</h3>
+                </div>
+                <GoldenQRAnalyticsPanel eventId={event.id} />
+              </div>
+              {/* Mevcut Ödül Eşikleri */}
+              <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
+                <RewardManagementSection eventId={event.id} alwaysOpen />
+              </motion.div>
+            </div>
           )}
 
           {/* GALERİ */}
@@ -1184,6 +1198,16 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
               eventName={initialEvent.name}
               exhibitors={eventExhibitors}
               halls={(initialEvent.halls ?? []) as { id: string; name: string; booths: { id: string; code: string; exhibitor_id: string | null }[] }[]}
+            />
+          )}
+
+          {/* QR KODLAR */}
+          {activeTab === "kodlar" && (
+            <QRCodesSection
+              eventId={initialEvent.id}
+              eventName={initialEvent.name}
+              halls={(initialEvent.halls ?? []) as { id: string; name: string; floor: number; booths: { id: string; code: string; exhibitor_id: string | null; qr_token: string; is_golden: boolean }[] }[]}
+              exhibitors={eventExhibitors}
             />
           )}
 

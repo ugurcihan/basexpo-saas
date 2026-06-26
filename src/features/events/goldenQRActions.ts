@@ -89,6 +89,74 @@ export async function getGoldenQRsForOrganizer(eventId?: string) {
   return data ?? [];
 }
 
+export async function updateGoldenQRLimit(id: string, limit: number | null) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { error } = await supabase
+    .from("golden_qr_codes")
+    .update({ scan_limit: limit })
+    .eq("id", id)
+    .eq("organizer_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/organizer/golden-qr");
+  return { success: true };
+}
+
+export async function getEventQRStats(eventId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [goldenResult, normalResult, leaderboardResult] = await Promise.all([
+    supabase
+      .from("golden_qr_codes")
+      .select("id, token, label, is_active, scan_limit, golden_qr_scans(count)")
+      .eq("event_id", eventId)
+      .eq("organizer_id", user.id)
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("qr_scans")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId),
+
+    supabase
+      .from("qr_scans")
+      .select("visitor_id, profiles!qr_scans_visitor_id_fkey(full_name, email)")
+      .eq("event_id", eventId),
+  ]);
+
+  const goldenQRs = (goldenResult.data ?? []).map(qr => ({
+    id: qr.id as string,
+    token: qr.token as string,
+    label: qr.label as string,
+    is_active: qr.is_active as boolean,
+    scan_limit: qr.scan_limit as number | null,
+    scanCount: (qr.golden_qr_scans as unknown as { count: number }[])?.[0]?.count ?? 0,
+  }));
+
+  const normalQRTotal = normalResult.count ?? 0;
+  const goldenTotal   = goldenQRs.reduce((s, q) => s + q.scanCount, 0);
+
+  // Build leaderboard from qr_scans (count per visitor)
+  const countMap: Record<string, { name: string; email: string; count: number }> = {};
+  for (const row of (leaderboardResult.data ?? [])) {
+    const vid = row.visitor_id as string;
+    const p   = row.profiles as unknown as { full_name: string; email: string } | null;
+    if (!countMap[vid]) countMap[vid] = { name: p?.full_name ?? "—", email: p?.email ?? "", count: 0 };
+    countMap[vid].count++;
+  }
+  const leaderboard = Object.values(countMap)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 50)
+    .map((v, i) => ({ rank: i + 1, visitorName: v.name, email: v.email, totalScans: v.count }));
+
+  return { goldenQRs, normalQRTotal, goldenTotal, leaderboard };
+}
+
 export async function scanGoldenQR(token: string) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
