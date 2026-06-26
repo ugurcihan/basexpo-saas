@@ -110,7 +110,7 @@ function QRDisplay({ url, size }: { url: string; size: number }) {
   return <QRCodeSVG id="event-qr-code" value={url} size={size} level="M" />;
 }
 
-export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] }) {
+export function EventsClient({ events: initialEvents, profileId }: { events: ExpoEvent[]; profileId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [events, setEvents] = useState(initialEvents);
@@ -248,9 +248,14 @@ export function EventsClient({ events: initialEvents }: { events: ExpoEvent[] })
         >
           <div>
             <h1 className="font-display text-2xl font-bold text-white">Fuarlarım</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              {events.length} fuar · {events.filter((e) => e.status === "active").length} aktif
-            </p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <p className="text-muted-foreground text-sm">
+                {events.length} fuar · {events.filter((e) => e.status === "active").length} aktif
+              </p>
+              <Link href={`/o/${profileId}`} target="_blank" className="text-xs text-brand-indigo-light hover:underline flex items-center gap-1">
+                <Globe className="w-3 h-3" /> Portfolyomu Gör
+              </Link>
+            </div>
           </div>
           <Button variant="gradient" size="sm" onClick={openCreate}>
             <Plus className="w-4 h-4" />

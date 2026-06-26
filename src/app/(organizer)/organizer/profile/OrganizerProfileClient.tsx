@@ -21,11 +21,11 @@ export function OrganizerProfileClient({ profile }: Props) {
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const [fullName, setFullName] = useState(profile.full_name ?? "");
-  const [orgName, setOrgName] = useState("");
-  const [website, setWebsite] = useState("");
+  const [orgName, setOrgName] = useState(profile.org_name ?? "");
+  const [website, setWebsite] = useState(profile.website ?? "");
   const [phone, setPhone] = useState(profile.phone_number ?? "");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
+  const [city, setCity] = useState(profile.city ?? "");
+  const [bio, setBio] = useState(profile.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? "");
 
   function handleSave() {
@@ -34,6 +34,10 @@ export function OrganizerProfileClient({ profile }: Props) {
       const updates: Record<string, string | null> = {
         full_name: fullName.trim() || null,
         phone_number: phone.trim() || null,
+        city: city.trim() || null,
+        bio: bio.trim() || null,
+        org_name: orgName.trim() || null,
+        website: website.trim() || null,
         avatar_url: avatarUrl.trim() || null,
       };
       const { error } = await supabase.from("profiles").update(updates).eq("id", profile.id);
@@ -52,7 +56,7 @@ export function OrganizerProfileClient({ profile }: Props) {
   return (
     <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
               <UserCircle2 className="w-5 h-5 text-brand-indigo-light" />
@@ -63,7 +67,7 @@ export function OrganizerProfileClient({ profile }: Props) {
         </motion.div>
 
         {/* Avatar + preview */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.06 }}>
           <div className="glass rounded-2xl border border-white/8 p-6 flex items-center gap-5">
             <div className="relative flex-shrink-0">
               {avatarUrl ? (
@@ -93,7 +97,7 @@ export function OrganizerProfileClient({ profile }: Props) {
         </motion.div>
 
         {/* Kişisel bilgiler */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.1 }}>
           <div className="glass rounded-2xl border border-white/8 overflow-hidden">
             <div className="flex items-center gap-3 px-6 py-4 border-b border-white/8">
               <div className="w-8 h-8 rounded-lg bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
@@ -125,7 +129,7 @@ export function OrganizerProfileClient({ profile }: Props) {
         </motion.div>
 
         {/* Organizasyon bilgileri */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.14 }}>
           <div className="glass rounded-2xl border border-white/8 overflow-hidden">
             <div className="flex items-center gap-3 px-6 py-4 border-b border-white/8">
               <div className="w-8 h-8 rounded-lg bg-brand-violet/15 border border-brand-violet/30 flex items-center justify-center">
@@ -161,12 +165,12 @@ export function OrganizerProfileClient({ profile }: Props) {
         </motion.div>
 
         {msg && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${msgCls(msg.type)}`}>
+          <motion.div initial={{ y: 8 }} animate={{ y: 0 }} className={`flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${msgCls(msg.type)}`}>
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> {msg.text}
           </motion.div>
         )}
 
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.2 }}>
           <Button variant="gradient" onClick={handleSave} disabled={isPending || !fullName.trim()} className="w-full sm:w-auto">
             {isPending ? "Kaydediliyor..." : "Profili Kaydet"}
           </Button>

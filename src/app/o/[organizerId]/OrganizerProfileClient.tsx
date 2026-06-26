@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
   Users, Calendar, MapPin, UserCheck, UserPlus, Building2,
-  ExternalLink, CalendarDays, Tag, Trophy,
+  ExternalLink, CalendarDays, Tag, Trophy, Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { followOrganizer, unfollowOrganizer } from "@/features/organizers/organizerActions";
@@ -55,7 +55,7 @@ export function OrganizerProfileClient({ organizer, events, viewerProfile, initi
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
 
         {/* Organizer Header */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }}
           className="glass rounded-2xl border border-white/10 p-6">
           <div className="flex items-start gap-5">
             {/* Avatar */}
@@ -105,11 +105,33 @@ export function OrganizerProfileClient({ organizer, events, viewerProfile, initi
             </div>
           </div>
 
-          {/* Bio */}
-          {organizer.bio && (
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed border-t border-white/8 pt-4">
-              {organizer.bio}
-            </p>
+          {/* Org details */}
+          {(organizer.org_name || organizer.website || organizer.city || organizer.bio) && (
+            <div className="mt-4 border-t border-white/8 pt-4 space-y-2">
+              {organizer.org_name && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{organizer.org_name}</span>
+                </div>
+              )}
+              {organizer.city && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{organizer.city}</span>
+                </div>
+              )}
+              {organizer.website && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="w-3.5 h-3.5 flex-shrink-0 text-brand-indigo-light" />
+                  <a href={organizer.website} target="_blank" rel="noopener noreferrer" className="text-brand-indigo-light hover:underline truncate">
+                    {organizer.website.replace(/^https?:\/\//, "")}
+                  </a>
+                </div>
+              )}
+              {organizer.bio && (
+                <p className="text-sm text-muted-foreground leading-relaxed pt-1">{organizer.bio}</p>
+              )}
+            </div>
           )}
 
           {/* Auth hint */}
@@ -123,7 +145,7 @@ export function OrganizerProfileClient({ organizer, events, viewerProfile, initi
 
         {/* Aktif / Yaklaşan Fuarlar */}
         {upcomingEvents.length > 0 && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.07 }}>
             <div className="flex items-center gap-2 mb-4">
               <CalendarDays className="w-5 h-5 text-brand-indigo-light" />
               <h2 className="font-semibold text-white">Aktif ve Yaklaşan Fuarlar</h2>
@@ -136,7 +158,7 @@ export function OrganizerProfileClient({ organizer, events, viewerProfile, initi
 
         {/* Geçmiş Fuarlar */}
         {pastEvents.length > 0 && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.12 }}>
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-muted-foreground" />
               <h2 className="font-semibold text-white">Geçmiş Fuarlar</h2>

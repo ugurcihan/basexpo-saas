@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Profile } from "@/types";
 import { ORGANIZER_NAV } from "../_nav";
+import { sendAIInsightNotification } from "@/features/notifications/notificationActions";
 
 interface BoothRow { id: string; code: string; exhibitor_id: string | null }
 interface HallRow  { id: string; name: string; floor: number; booths: BoothRow[] }
@@ -373,6 +374,8 @@ export function OrganizerReportsClient({
   topBooths, hourlyData, registrations,
 }: Props) {
   const [tab, setTab] = useState<"analytics" | "booths" | "fair">("analytics");
+  const [insightSent, setInsightSent] = useState(false);
+  const [insightPending, startInsightTransition] = useTransition();
 
   const tabs = [
     { id: "analytics" as const, label: "Genel Analiz",    icon: BarChart2 },
@@ -393,7 +396,7 @@ export function OrganizerReportsClient({
     <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center">
               <BarChart2 className="w-5 h-5 text-brand-cyan" />
@@ -423,7 +426,7 @@ export function OrganizerReportsClient({
 
         {/* ── Analytics Tab ─────────────────────────────────────────── */}
         {tab === "analytics" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }} className="space-y-6">
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
@@ -488,7 +491,7 @@ export function OrganizerReportsClient({
 
         {/* ── Booth Tracking Tab ──────────────────────────────────── */}
         {tab === "booths" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }} className="space-y-6">
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-3 text-xs">
               {[
@@ -513,7 +516,7 @@ export function OrganizerReportsClient({
                   <div className="w-9 h-9 rounded-xl bg-brand-violet/15 border border-brand-violet/30 flex items-center justify-center flex-shrink-0">
                     <Brain className="w-5 h-5 text-brand-violet-light" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold text-white text-sm">AI Öngörüsü</h3>
                       <Badge variant="violet" className="text-xs">Deneysel</Badge>
@@ -530,14 +533,37 @@ export function OrganizerReportsClient({
                         ))}.{" "}Bu saatlerde personel desteği artırılması önerilir.
                       </>}
                     </p>
-                    <div className="flex items-center gap-4 mt-3">
-                      {peakHours.map((p) => (
-                        <div key={p.hour} className="flex items-center gap-1.5">
-                          <Flame className="w-3.5 h-3.5 text-orange-400" />
-                          <span className="text-xs text-white font-mono">{String(p.hour).padStart(2, "0")}:00</span>
-                          <span className="text-xs text-muted-foreground">({p.count})</span>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-4">
+                        {peakHours.map((p) => (
+                          <div key={p.hour} className="flex items-center gap-1.5">
+                            <Flame className="w-3.5 h-3.5 text-orange-400" />
+                            <span className="text-xs text-white font-mono">{String(p.hour).padStart(2, "0")}:00</span>
+                            <span className="text-xs text-muted-foreground">({p.count})</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5"
+                        disabled={insightPending || insightSent}
+                        onClick={() => {
+                          const firstEventId = events[0]?.id;
+                          if (!firstEventId) return;
+                          const peakText = peakHours.length > 0
+                            ? `En yoğun saatler: ${peakHours.map((p) => `${String(p.hour).padStart(2, "0")}:00`).join(", ")}. Bu saatlerde personel desteği artırılması önerilir.`
+                            : "";
+                          const text = `${scans.length} QR tarama analiz edildi. ${peakText}`.trim();
+                          startInsightTransition(async () => {
+                            await sendAIInsightNotification(firstEventId, text);
+                            setInsightSent(true);
+                            setTimeout(() => setInsightSent(false), 3000);
+                          });
+                        }}
+                      >
+                        {insightSent ? "✓ Bildirim gönderildi" : "📤 Bildiri Gönder"}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -623,7 +649,7 @@ export function OrganizerReportsClient({
 
         {/* ── Fair Reports Tab ─────────────────────────────────────── */}
         {tab === "fair" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }} className="space-y-6">
             {/* Summary KPIs */}
             <div className="grid grid-cols-3 gap-4">
               {[

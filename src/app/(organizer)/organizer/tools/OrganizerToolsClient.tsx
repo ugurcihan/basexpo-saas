@@ -94,7 +94,8 @@ function GoldenQRTab({ goldenQRs: initialQRs, events }: { goldenQRs: GoldenQRRow
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const [selectedEventId, setSelectedEventId] = useState("");
+  const defaultEventId = events.find((e) => e.status === "active" || e.status === "published")?.id ?? events[0]?.id ?? "";
+  const [selectedEventId, setSelectedEventId] = useState(defaultEventId);
   const [selectedBoothId, setSelectedBoothId] = useState("none");
   const [qrLabel, setQRLabel] = useState("");
   const [prizeDesc, setPrizeDesc] = useState("");
@@ -485,7 +486,18 @@ function BoothsTab({ events }: { events: EventOption[] }) {
             </Link>
           </div>
 
-          {selectedEvent.halls.map((hall) => (
+          {selectedEvent.halls.length === 0 ? (
+            <div className="glass rounded-2xl border border-dashed border-white/10 p-10 flex flex-col items-center text-center">
+              <Store className="w-10 h-10 text-muted-foreground/25 mb-3" />
+              <p className="text-sm font-medium text-white mb-1">Henüz salon/stand oluşturulmadı</p>
+              <p className="text-xs text-muted-foreground mb-4">Bu fuara salon ve stand eklemek için fuar detay sayfasına gidin.</p>
+              <Link href={`/organizer/events/${selectedEventId}`}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <LinkIcon className="w-3.5 h-3.5" /> Fuar Detayına Git
+                </Button>
+              </Link>
+            </div>
+          ) : selectedEvent.halls.map((hall) => (
             <div key={hall.id} className="glass rounded-2xl border border-white/8 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 border-b border-white/8">
                 <span className="font-medium text-white text-sm">{hall.name}</span>
@@ -536,7 +548,7 @@ export function OrganizerToolsClient({ profile, goldenQRs, events }: Props) {
     <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-violet/15 border border-brand-violet/30 flex items-center justify-center">
               <Wrench className="w-5 h-5 text-brand-violet-light" />
@@ -566,19 +578,19 @@ export function OrganizerToolsClient({ profile, goldenQRs, events }: Props) {
 
         {/* Tab content */}
         {tab === "tasks" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
             <TasksTab events={events} />
           </motion.div>
         )}
 
         {tab === "booths" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
             <BoothsTab events={events} />
           </motion.div>
         )}
 
         {tab === "golden-qr" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
             <GoldenQRTab goldenQRs={goldenQRs} events={events} />
           </motion.div>
         )}

@@ -8,6 +8,9 @@ export type OrganizerProfile = {
   full_name: string;
   avatar_url: string | null;
   bio: string | null;
+  org_name: string | null;
+  website: string | null;
+  city: string | null;
   follower_count: number;
   event_count: number;
 };
@@ -29,7 +32,7 @@ export async function getOrganizerProfile(organizerId: string): Promise<Organize
   const [{ data: profile }, { count: followerCount }, { count: eventCount }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, avatar_url, bio")
+      .select("id, full_name, avatar_url, bio, org_name, website, city")
       .eq("id", organizerId)
       .eq("role", "organizer")
       .maybeSingle(),
@@ -51,6 +54,9 @@ export async function getOrganizerProfile(organizerId: string): Promise<Organize
     full_name: profile.full_name,
     avatar_url: profile.avatar_url ?? null,
     bio: (profile as Record<string, unknown>).bio as string | null ?? null,
+    org_name: (profile as Record<string, unknown>).org_name as string | null ?? null,
+    website: (profile as Record<string, unknown>).website as string | null ?? null,
+    city: (profile as Record<string, unknown>).city as string | null ?? null,
     follower_count: followerCount ?? 0,
     event_count: eventCount ?? 0,
   };

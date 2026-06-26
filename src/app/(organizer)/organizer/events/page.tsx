@@ -9,5 +9,5 @@ export default async function EventsPage() {
 
   const events = await getOrganizerEvents();
 
-  return <EventsClient events={events} />;
+  return <EventsClient events={events} profileId={profile.id} />;
 }

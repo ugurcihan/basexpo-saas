@@ -370,6 +370,57 @@ export async function getEventLeaderboard(eventId: string): Promise<LeaderboardE
     .slice(0, 10);
 }
 
+// ─── getPublicEventRewardTiers ───────────────────────────────
+// Public — auth gerekmez. reward_tiers RLS: SELECT USING (true)
+export async function getPublicEventRewardTiers(eventId: string): Promise<RewardTierWithStats[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: tiers } = await supabase
+    .from("reward_tiers")
+    .select("*")
+    .eq("event_id", eventId)
+    .eq("is_active", true)
+    .order("points_required", { ascending: true });
+
+  if (!tiers || tiers.length === 0) return [];
+
+  const tierIds = (tiers as RewardTier[]).map((t) => t.id);
+  const { data: winnerRows } = await supabase
+    .from("reward_winners")
+    .select("tier_id")
+    .in("tier_id", tierIds);
+
+  const winnerCountMap = new Map<string, number>();
+  for (const row of winnerRows ?? []) {
+    winnerCountMap.set(row.tier_id, (winnerCountMap.get(row.tier_id) ?? 0) + 1);
+  }
+
+  return (tiers as RewardTier[]).map((t) => {
+    const winner_count = winnerCountMap.get(t.id) ?? 0;
+    return {
+      ...t,
+      max_winners: t.max_winners ?? null,
+      winner_count,
+      is_full: t.max_winners !== null && winner_count >= t.max_winners,
+    } as RewardTierWithStats;
+  });
+}
+
+// ─── getMyEventTotalPoints ────────────────────────────────────
+export async function getMyEventTotalPoints(eventId: string): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  const { data } = await supabase
+    .from("loyalty_points")
+    .select("points")
+    .eq("event_id", eventId)
+    .eq("visitor_id", user.id);
+
+  return (data ?? []).reduce((s: number, r: { points: number }) => s + r.points, 0);
+}
+
 // ─── getVisitorEventsWithPoints ───────────────────────────────
 export async function getVisitorEventsWithPoints(): Promise<{
   event_id: string;

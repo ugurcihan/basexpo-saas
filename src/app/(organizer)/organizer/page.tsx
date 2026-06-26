@@ -11,7 +11,7 @@ export default async function OrganizerPage() {
 
   const { data: myEventsRaw } = await supabase
     .from("events")
-    .select("id, name")
+    .select("id, name, status, start_date, end_date")
     .eq("organizer_id", profile.id)
     .order("created_at", { ascending: false });
 

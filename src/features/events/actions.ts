@@ -83,7 +83,22 @@ export async function getOrganizerEvents() {
     .eq("organizer_id", user.id)
     .order("created_at", { ascending: false });
 
-  return data ?? [];
+  const events = data ?? [];
+
+  // Tarihi geçmiş ama hâlâ ended değil olanları lazy-update et
+  const now = new Date().toISOString();
+  const toEnd = events.filter(
+    (e) => e.end_date < now && e.status !== "ended"
+  );
+  if (toEnd.length > 0) {
+    await supabase
+      .from("events")
+      .update({ status: "ended" })
+      .in("id", toEnd.map((e) => e.id));
+    toEnd.forEach((e) => { e.status = "ended"; });
+  }
+
+  return events;
 }
 
 export async function updateEventGallery(eventId: string, galleryUrls: string[]) {

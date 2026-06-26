@@ -54,6 +54,28 @@ export async function sendNotification(params: {
   return { success: true, count: recipientIds.length };
 }
 
+export async function sendAIInsightNotification(
+  eventId: string,
+  insightText: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum açık değil." };
+
+  const { error } = await supabase.from("notifications").insert({
+    recipient_id: user.id,
+    sender_id: user.id,
+    event_id: eventId,
+    type: "announcement",
+    title: "AI Öngörüsü",
+    body: insightText,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/organizer/reports");
+  return { error: null };
+}
+
 export async function markNotificationRead(notificationId: string) {
   const supabase = await createSupabaseServerClient();
   await supabase

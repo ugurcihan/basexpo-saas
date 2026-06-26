@@ -15,10 +15,14 @@ import {
   AlertCircle,
   Tag,
   Zap,
+  Trophy,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createLeadFromScan } from "@/features/leads/actions";
 import type { UserRole } from "@/types";
+import type { RewardTierWithStats } from "@/features/loyalty/actions";
 
 interface Product { id: string; name: string; description: string; image_url: string | null }
 type EventRow = { id: string; name: string; location: string; start_date: string; end_date: string };
@@ -43,13 +47,16 @@ interface Props {
   exhibitor: ExhibitorData;
   visitorRole: UserRole | null;
   alreadyCheckedIn: boolean;
+  rewardTiers: RewardTierWithStats[];
+  visitorPoints: number;
 }
 
-export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }: Props) {
+export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, rewardTiers, visitorPoints }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [checkedIn, setCheckedIn] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
 
   async function handleCheckIn() {
     setError(null);
@@ -75,7 +82,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
         {/* Exhibitor header card */}
         <motion.div
           initial={{ y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ y: 0 }}
           className="glass rounded-2xl border border-white/10 p-6"
         >
           <div className="flex items-start gap-4 mb-4">
@@ -119,10 +126,78 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
           )}
         </motion.div>
 
+        {/* Ödül Banner */}
+        {rewardTiers.length > 0 && (
+          <motion.div
+            initial={{ y: 16 }}
+            animate={{ y: 0 }}
+            transition={{ delay: 0.08 }}
+          >
+            <button
+              onClick={() => setRewardsOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-brand-gold/40 bg-brand-gold/10 text-brand-gold hover:bg-brand-gold/15 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-semibold">Bu fuarda puan kazan, ödül al!</span>
+              </div>
+              {rewardsOpen ? <ChevronUp className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
+            </button>
+
+            <AnimatePresence>
+              {rewardsOpen && (
+                <motion.div
+                  key="rewards-panel"
+                  initial={{ y: -8 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: -8 }}
+                  className="mt-1 rounded-2xl border border-brand-gold/25 bg-brand-gold/6 overflow-hidden"
+                >
+                  <div className="px-4 pt-4 pb-2">
+                    <p className="text-xs font-semibold text-brand-gold mb-3">Fuar Ödülleri</p>
+                    <div className="space-y-2">
+                      {rewardTiers.map((tier) => (
+                        <div key={tier.id} className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-white">{tier.reward_title}</span>
+                            {tier.reward_description && (
+                              <p className="text-xs text-muted-foreground truncate">{tier.reward_description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-xs text-brand-gold font-semibold">{tier.points_required} puan</span>
+                            {tier.max_winners !== null && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full border ${tier.is_full ? "border-red-500/30 text-red-400 bg-red-500/10" : "border-brand-gold/30 text-brand-gold/70"}`}>
+                                {tier.is_full ? "Doldu" : `İlk ${tier.max_winners}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-brand-gold/15 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {visitorPoints > 0
+                          ? `Şu anki puanın: ${visitorPoints} puan`
+                          : "Bu standı ziyaret et → +10 puan kazan"}
+                      </span>
+                      {visitorRole === "visitor" && (
+                        <Link href="/visitor/loyalty" className="text-xs text-brand-gold hover:underline">
+                          Puanlarım →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
         {/* Check-in action */}
         <motion.div
           initial={{ y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.1 }}
           className="glass rounded-2xl border border-white/10 p-6"
         >
@@ -131,7 +206,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
               <motion.div
                 key="success"
                 initial={{ scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{ scale: 1 }}
                 className="flex flex-col items-center text-center py-2"
               >
                 <div className="w-16 h-16 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-4">
@@ -208,7 +283,7 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
         {exhibitor.products.length > 0 && (
           <motion.div
             initial={{ y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ y: 0 }}
             transition={{ delay: 0.2 }}
             className="glass rounded-2xl border border-white/8 p-5"
           >
@@ -242,8 +317,8 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial }
 
         {/* BasExpo branding */}
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ y: 4 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.35 }}
           className="text-center text-xs text-muted-foreground/40"
         >
