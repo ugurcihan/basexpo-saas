@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useTransition, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,7 @@ import {
   MapPin, Calendar, Users, Tag, Globe, Instagram, Twitter, Linkedin,
   Crown, CheckCircle2, Clock, QrCode, ExternalLink, Navigation,
   Ticket, ChevronRight, AlertCircle, Mail, Lock, Building2, UserPlus,
+  Camera, X, Trophy, Gift,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
@@ -18,6 +20,7 @@ import { FloorMapViewer } from "@/components/map/FloorMapViewer";
 import type { HallWithMap } from "@/features/events/hallMapActions";
 import type { OrganizerInfo } from "./page";
 import type { Profile } from "@/types";
+import type { RewardTierWithStats } from "@/features/loyalty/actions";
 
 interface SponsorRow {
   id: string;
@@ -47,6 +50,90 @@ interface Props {
   organizer: OrganizerInfo | null;
   profile: Profile | null;
   registration: { status: string; ticket_code: string | null } | null;
+  rewardTiers: RewardTierWithStats[];
+}
+
+function EventQRScanner({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
+  const [status, setStatus] = useState<"scanning" | "found" | "error">("scanning");
+
+  const startScanner = useCallback(async () => {
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const scanner = new Html5Qrcode("event-qr-reader");
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        (text) => {
+          setStatus("found");
+          scanner.stop().catch(() => {});
+          const path = text.includes(window.location.origin)
+            ? text.replace(window.location.origin, "")
+            : text.startsWith("/") ? text : null;
+          if (path) {
+            setTimeout(() => { router.push(path); onClose(); }, 600);
+          } else {
+            setTimeout(onClose, 1200);
+          }
+        },
+        () => {}
+      );
+    } catch {
+      setStatus("error");
+    }
+  }, [router, onClose]);
+
+  useEffect(() => {
+    startScanner();
+    return () => { scannerRef.current?.stop().catch(() => {}); };
+  }, [startScanner]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/98 flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-3 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <Camera className="w-5 h-5 text-brand-cyan" />
+          <span className="font-semibold text-white text-sm">Stant QR Okut</span>
+        </div>
+        <button onClick={onClose} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+          <X className="w-5 h-5 text-white" />
+        </button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-4 gap-6">
+        {status === "found" ? (
+          <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-green-400" />
+            </div>
+            <p className="text-white font-semibold">QR kod bulundu!</p>
+            <p className="text-xs text-muted-foreground">Yönlendiriliyorsunuz...</p>
+          </motion.div>
+        ) : status === "error" ? (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <AlertCircle className="w-12 h-12 text-red-400" />
+            <p className="text-red-400 font-medium">Kamera açılamadı</p>
+            <p className="text-xs text-muted-foreground">Kamera izni verip tekrar deneyin</p>
+            <button onClick={onClose} className="mt-2 px-4 py-2 rounded-xl bg-white/10 text-white text-sm">Kapat</button>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <div id="event-qr-reader" className="rounded-2xl overflow-hidden" style={{ width: 280, height: 280 }} />
+              <div className="absolute inset-0 border-2 border-brand-cyan/60 rounded-2xl pointer-events-none">
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-brand-cyan rounded-tl-xl" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-brand-cyan rounded-tr-xl" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-brand-cyan rounded-bl-xl" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-brand-cyan rounded-br-xl" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground text-center">Stanttaki QR kodu kameranıza gösterin</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function QRDisplay({ value, size }: { value: string; size: number }) {
@@ -56,12 +143,13 @@ function QRDisplay({ value, size }: { value: string; size: number }) {
   return <QRCodeSVG value={value} size={size} level="M" fgColor="#1a1a2e" />;
 }
 
-export function EventLandingClient({ event, sponsors, halls, organizer, profile, registration }: Props) {
+export function EventLandingClient({ event, sponsors, halls, organizer, profile, registration, rewardTiers }: Props) {
   const supabase = createSupabaseBrowserClient();
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [currentReg, setCurrentReg] = useState(registration);
   const [currentProfile, setCurrentProfile] = useState(profile);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const [authTab, setAuthTab] = useState<"login" | "register">("register");
   const [email, setEmail] = useState("");
@@ -128,6 +216,9 @@ export function EventLandingClient({ event, sponsors, halls, organizer, profile,
 
   return (
     <div className="min-h-screen bg-brand-dark text-white">
+      <AnimatePresence>
+        {scannerOpen && <EventQRScanner onClose={() => setScannerOpen(false)} />}
+      </AnimatePresence>
       {/* Hero */}
       {event.cover_url && (
         <div className="relative h-64 md:h-80 overflow-hidden">
@@ -340,6 +431,16 @@ export function EventLandingClient({ event, sponsors, halls, organizer, profile,
               <p className="text-xs text-muted-foreground text-center">
                 Bu QR&apos;ı kapıda okutun. Bilet kodunuz: <span className="font-mono text-white">{currentReg.ticket_code}</span>
               </p>
+              {/* Kamera ile stant QR okut */}
+              <button
+                onClick={() => setScannerOpen(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-indigo to-brand-violet text-white font-semibold text-sm shadow-lg hover:opacity-90 transition-opacity"
+              >
+                <Camera className="w-4 h-4" /> Kamera ile Stant QR Okut
+              </button>
+              <p className="text-xs text-muted-foreground text-center -mt-2">
+                Fuardaki standları ziyaret et, puan kazan
+              </p>
             </div>
           )}
 
@@ -432,6 +533,48 @@ export function EventLandingClient({ event, sponsors, halls, organizer, profile,
               </p>
             </div>
           )}
+        </motion.div>
+
+        {/* Hediyeler & Ödüller */}
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="glass rounded-2xl border border-brand-gold/30 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Gift className="w-5 h-5 text-brand-gold" />
+              <h2 className="font-semibold text-white">Hediyeler & Ödüller</h2>
+            </div>
+            {rewardTiers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-2">Bu fuar için henüz ödül tanımlanmamış.</p>
+            ) : (
+              <div className="space-y-3">
+                {rewardTiers.map((tier) => (
+                  <div key={tier.id} className="flex items-center justify-between gap-3 py-2.5 px-3 rounded-xl bg-white/4 border border-white/8">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-brand-gold/15 border border-brand-gold/25 flex items-center justify-center flex-shrink-0">
+                        <Trophy className="w-4 h-4 text-brand-gold" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white">{tier.reward_title}</p>
+                        {tier.reward_description && (
+                          <p className="text-xs text-muted-foreground truncate">{tier.reward_description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-brand-gold font-bold whitespace-nowrap">{tier.points_required} puan</span>
+                      {tier.max_winners !== null && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border ${tier.is_full ? "border-red-500/30 text-red-400 bg-red-500/10" : "border-brand-gold/30 text-brand-gold/70"}`}>
+                          {tier.is_full ? "Doldu" : `İlk ${tier.max_winners}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  Standları ziyaret et puan kazan, ödülleri kap!
+                </p>
+              </div>
+            )}
+          </div>
         </motion.div>
 
         <div className="text-center text-xs text-muted-foreground/50 pb-8">

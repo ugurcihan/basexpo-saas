@@ -3,6 +3,7 @@ import { getProfile } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import { EventLandingClient } from "./EventLandingClient";
 import { getEventHallsWithMaps } from "@/features/events/hallMapActions";
+import { getPublicEventRewardTiers } from "@/features/loyalty/actions";
 
 interface PageProps { params: Promise<{ eventId: string }> }
 
@@ -25,7 +26,7 @@ export default async function EventLandingPage({ params }: PageProps) {
 
   if (!event) notFound();
 
-  const [{ data: sponsors }, halls, { data: organizerData }] = await Promise.all([
+  const [{ data: sponsors }, halls, { data: organizerData }, rewardTiers] = await Promise.all([
     supabase
       .from("event_sponsors")
       .select("id, tier, tier_name, width_pct, height_px, sort_order, custom_logo_url, exhibitor:exhibitors(id, company_name, logo_url)")
@@ -38,6 +39,7 @@ export default async function EventLandingPage({ params }: PageProps) {
       .select("id, full_name, avatar_url")
       .eq("id", event.organizer_id)
       .maybeSingle(),
+    getPublicEventRewardTiers(eventId),
   ]);
 
   const profile = await getProfile().catch(() => null);
@@ -65,6 +67,7 @@ export default async function EventLandingPage({ params }: PageProps) {
       organizer={organizer}
       profile={profile}
       registration={registration}
+      rewardTiers={rewardTiers}
     />
   );
 }
