@@ -37,9 +37,10 @@ export function BoothScanClient({ boothId, boothCode, qrToken, event, exhibitor,
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [checkedIn, setCheckedIn] = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [error, setError]         = useState<string | null>(null);
   const [goldenReveal, setGoldenReveal] = useState(false);
   const [bonusPoints, setBonusPoints]   = useState(0);
+  const [isGolden, setIsGolden]         = useState(false);
   const [rewardsOpen, setRewardsOpen]   = useState(false);
 
   function handleCheckIn() {
@@ -52,6 +53,7 @@ export function BoothScanClient({ boothId, boothCode, qrToken, event, exhibitor,
       }
       if (result.error) { setError(result.error); return; }
 
+      setIsGolden(result.isGolden);
       setCheckedIn(true);
 
       if (result.isGolden && result.bonusPoints > 0) {
@@ -222,20 +224,71 @@ export function BoothScanClient({ boothId, boothCode, qrToken, event, exhibitor,
           className="glass rounded-2xl border border-white/10 p-6"
         >
           <AnimatePresence mode="wait">
-            {checkedIn ? (
-              <motion.div key="success" initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="flex flex-col items-center text-center py-2">
-                <div className="w-16 h-16 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-green-400" />
+            {checkedIn ? (() => {
+              const earnedBase = 20;
+              const earnedTotal = isGolden ? earnedBase + bonusPoints : earnedBase;
+              const newTotal = visitorPoints + earnedTotal;
+              const nextTier = rewardTiers.find(t => t.points_required > newTotal);
+              const progressPct = nextTier
+                ? Math.min(100, Math.round((newTotal / nextTier.points_required) * 100))
+                : 100;
+              return (
+              <motion.div key="success" initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="flex flex-col items-center text-center py-2 w-full">
+                <div className="w-14 h-14 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-3">
+                  <CheckCircle2 className="w-7 h-7 text-green-400" />
                 </div>
-                <h2 className="font-display text-lg font-bold text-white mb-1">Check-in Başarılı!</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {exhibitor
-                    ? `${exhibitor.company_name} firmasıyla bağlantın kuruldu.`
-                    : "Stand ziyaretiniz kaydedildi. +20 puan kazandınız."}
-                </p>
-                <Link href="/visitor" className="text-xs text-brand-indigo-light hover:underline">Paneline dön →</Link>
+                <h2 className="font-display text-lg font-bold text-white mb-1">
+                  {exhibitor ? `${exhibitor.company_name} ziyareti kaydedildi!` : "Stand ziyareti kaydedildi!"}
+                </h2>
+
+                {/* Kazanılan puan kartı */}
+                <div className="mt-3 w-full px-3 py-2.5 rounded-xl bg-brand-gold/15 border border-brand-gold/35 flex items-center justify-center gap-2">
+                  <Trophy className="w-5 h-5 text-brand-gold flex-shrink-0" />
+                  <div className="text-left">
+                    <p className="text-brand-gold font-bold text-base leading-tight">
+                      +{earnedTotal} Puan Kazandın!
+                    </p>
+                    {isGolden && bonusPoints > 0 && (
+                      <p className="text-xs text-brand-gold/70">Altın QR bonusu +{bonusPoints} dahil</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Toplam puan + tier progress */}
+                <div className="mt-3 w-full space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                    <span>Toplam puanın</span>
+                    <span className="font-semibold text-white">{newTotal} puan</span>
+                  </div>
+
+                  {rewardTiers.length > 0 && nextTier && (
+                    <div className="w-full space-y-1">
+                      <div className="flex items-center justify-between text-xs px-1">
+                        <span className="text-muted-foreground">Sonraki ödül:</span>
+                        <span className="text-brand-gold font-medium">{nextTier.reward_title} — {nextTier.points_required} puan</span>
+                      </div>
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPct}%` }}
+                          transition={{ delay: 0.3, duration: 0.6 }}
+                          className="h-full bg-gradient-to-r from-brand-gold to-yellow-400 rounded-full"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/60 text-right px-1">
+                        {nextTier.points_required - newTotal} puan kaldı
+                      </p>
+                    </div>
+                  )}
+                  {rewardTiers.length > 0 && !nextTier && (
+                    <p className="text-xs text-brand-gold text-center">🏆 Tüm ödül seviyelerine ulaştın!</p>
+                  )}
+                </div>
+
+                <Link href="/visitor" className="mt-4 text-xs text-brand-indigo-light hover:underline">Paneline dön →</Link>
               </motion.div>
-            ) : visitorRole === null ? (
+              );
+            })() : visitorRole === null ? (
               <motion.div key="login" className="flex flex-col items-center text-center py-2">
                 <div className="w-14 h-14 rounded-2xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center mb-4">
                   <Zap className="w-7 h-7 text-brand-cyan" />

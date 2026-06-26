@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,16 @@ import {
   LayoutDashboard, Sparkles, Heart, Users,
   CalendarClock, Settings, CalendarDays, Ticket,
   MapPin, Calendar, CheckCircle2, Clock, AlertCircle,
-  Download, QrCode,
-  Trophy,
+  Download, QrCode, Camera, X, Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
+import {
+  checkInToBoothScan,
+  createLeadFromScan,
+  getBoothByQrToken,
+  getExhibitorByToken,
+} from "@/features/leads/actions";
 
 const NAV_ITEMS = [
   { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
@@ -103,6 +108,148 @@ function TicketQR({ ticketCode, visitorName, phone, eventId, eventName, visitorI
   );
 }
 
+// ── QR Parse ────────────────────────────────────────────────
+function parseQrText(text: string): { type: "booth" | "exhibitor" | "unknown"; token: string } {
+  const boothMatch = text.match(/\/scan\/booth\/([a-zA-Z0-9_-]+)/);
+  if (boothMatch) return { type: "booth", token: boothMatch[1] };
+  const exhMatch = text.match(/\/scan\/([a-zA-Z0-9_-]+)(?:\?.*)?$/);
+  if (exhMatch) return { type: "exhibitor", token: exhMatch[1] };
+  return { type: "unknown", token: text };
+}
+
+type BoothScanResult =
+  | { ok: true; message: string; points: number }
+  | { ok: false; message: string };
+
+// ── Ziyaretçi Booth Tarayıcı ────────────────────────────────
+function VisitorBoothScanner({ onClose }: { onClose: () => void }) {
+  const SCANNER_DIV = "visitor-qr-reader";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const html5QrRef = useRef<any>(null);
+  const [result, setResult] = useState<BoothScanResult | null>(null);
+  const [scanning, setScanning] = useState(true);
+  const [isPending, startTransition] = useTransition();
+
+  const handleScan = useCallback(async (text: string) => {
+    if (!scanning) return;
+    setScanning(false);
+    try { await html5QrRef.current?.stop(); } catch { /* ignore */ }
+
+    const { type, token } = parseQrText(text);
+
+    startTransition(async () => {
+      if (type === "booth") {
+        const booth = await getBoothByQrToken(token);
+        if (!booth) { setResult({ ok: false, message: "Geçersiz stant QR kodu." }); return; }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = await checkInToBoothScan((booth as any).id);
+        if (res.error === "login_required") { setResult({ ok: false, message: "Giriş yapmanız gerekiyor." }); return; }
+        if (res.error) { setResult({ ok: false, message: res.error }); return; }
+        const earned = res.isGolden ? 20 + res.bonusPoints : 20;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const company = (booth as any).exhibitor?.company_name as string | undefined;
+        setResult({ ok: true, message: company ? `${company} stantı ziyaretiniz kaydedildi!` : "Stant ziyaretiniz kaydedildi!", points: earned });
+      } else if (type === "exhibitor") {
+        const exhibitor = await getExhibitorByToken(token);
+        if (!exhibitor) { setResult({ ok: false, message: "Geçersiz firma QR kodu." }); return; }
+        const res = await createLeadFromScan(exhibitor.id);
+        if (res.error === "login_required") { setResult({ ok: false, message: "Giriş yapmanız gerekiyor." }); return; }
+        if (res.error && !res.alreadyExists) { setResult({ ok: false, message: res.error! }); return; }
+        setResult({
+          ok: true,
+          message: res.alreadyExists
+            ? `${exhibitor.company_name} ile zaten bağlantınız var.`
+            : `${exhibitor.company_name} firmasıyla bağlantınız kuruldu!`,
+          points: res.alreadyExists ? 0 : 20,
+        });
+      } else {
+        setResult({ ok: false, message: "Tanımlanamayan QR kodu. Lütfen BasExpo stant veya firma kodlarını okutun." });
+      }
+    });
+  }, [scanning]);
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let html5Qrcode: any;
+    async function start() {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      html5Qrcode = new Html5Qrcode(SCANNER_DIV);
+      html5QrRef.current = html5Qrcode;
+      await html5Qrcode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        handleScan,
+        () => {},
+      );
+    }
+    start().catch(() => {});
+    return () => {
+      try { html5Qrcode?.stop().then(() => html5Qrcode?.clear()).catch(() => {}); } catch { /* ignore */ }
+    };
+  }, [handleScan]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/96 flex flex-col">
+      <div className="flex items-center justify-between px-4 h-14 border-b border-white/10 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Camera className="w-4 h-4 text-brand-cyan" />
+          <span className="text-sm font-semibold text-white">Stant QR Okut</span>
+        </div>
+        <button onClick={onClose} className="p-2 rounded-lg text-muted-foreground hover:text-white hover:bg-white/10 transition-colors">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+        <AnimatePresence mode="wait">
+          {result ? (
+            <motion.div key="result" initial={{ scale: 0.9 }} animate={{ scale: 1 }}
+              className={`w-full max-w-sm rounded-2xl border-2 p-8 text-center ${
+                result.ok ? "border-green-500/40 bg-green-500/10" : "border-red-500/40 bg-red-500/10"
+              }`}
+            >
+              {result.ok ? (
+                <>
+                  <CheckCircle2 className="w-14 h-14 text-green-400 mx-auto mb-3" />
+                  <p className="text-white font-semibold mb-2">{result.message}</p>
+                  {result.points > 0 && (
+                    <div className="flex items-center justify-center gap-2 mt-3 px-4 py-2 rounded-xl bg-brand-gold/15 border border-brand-gold/35">
+                      <Trophy className="w-4 h-4 text-brand-gold" />
+                      <span className="text-brand-gold font-bold">+{result.points} Puan Kazandın!</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-14 h-14 text-red-400 mx-auto mb-3" />
+                  <p className="text-red-300 font-medium">{result.message}</p>
+                </>
+              )}
+              <button onClick={onClose} className="mt-6 text-sm text-muted-foreground hover:text-white transition-colors">
+                Kapat
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div key="scanner" className="w-full max-w-sm space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Stant veya firma QR kodunu kameraya gösterin
+              </p>
+              <div
+                id={SCANNER_DIV}
+                className="w-full rounded-2xl overflow-hidden border border-brand-cyan/30 bg-black"
+                style={{ minHeight: 300 }}
+              />
+              {isPending && (
+                <p className="text-sm text-brand-cyan animate-pulse text-center">İşleniyor...</p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 function statusConfig(status: string) {
   switch (status) {
     case "confirmed":
@@ -139,8 +286,11 @@ function statusConfig(status: string) {
 export function TicketsClient({ profile, registrations }: Props) {
   const visitorName = profile.full_name || profile.email;
   const phone = profile.phone_number || "";
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   return (
+    <>
+    {scannerOpen && <VisitorBoothScanner onClose={() => setScannerOpen(false)} />}
     <DashboardShell role="visitor" userName={visitorName} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-6">
         <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -267,6 +417,14 @@ export function TicketsClient({ profile, registrations }: Props) {
                               Kayıt onaylandı · {formatDateTime(reg.created_at)}
                             </span>
                           </div>
+
+                          {/* Stant QR Okut */}
+                          <button
+                            onClick={() => setScannerOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-indigo/15 border border-brand-indigo/35 text-brand-indigo-light hover:bg-brand-indigo/25 transition-colors text-sm font-medium"
+                          >
+                            <Camera className="w-4 h-4" /> Stant QR Okut
+                          </button>
                         </div>
                       </div>
                     ) : reg.status === "pending_approval" ? (
@@ -340,5 +498,6 @@ export function TicketsClient({ profile, registrations }: Props) {
         )}
       </div>
     </DashboardShell>
+    </>
   );
 }

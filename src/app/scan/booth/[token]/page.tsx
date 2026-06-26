@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { notFound } from "next/navigation";
 import { getBoothByQrToken } from "@/features/leads/actions";
 import { getProfile } from "@/lib/supabase-server";
-import { getPublicEventRewardTiers } from "@/features/loyalty/actions";
+import { getPublicEventRewardTiers, getMyEventTotalPoints } from "@/features/loyalty/actions";
 import { BoothScanClient } from "./BoothScanClient";
 
 interface Props {
@@ -22,7 +22,13 @@ export default async function BoothScanPage({ params }: Props) {
   const exhibitor = booth.exhibitor as unknown as { id: string; company_name: string; description: string; logo_url: string | null; tags: string[]; products: { id: string; name: string; description: string; image_url: string | null }[] } | null;
 
   const eventId = hall?.event_id ?? null;
-  const rewardTiers = eventId ? await getPublicEventRewardTiers(eventId) : [];
+
+  const [rewardTiers, visitorPoints] = await Promise.all([
+    eventId ? getPublicEventRewardTiers(eventId) : Promise.resolve([]),
+    profile?.role === "visitor" && eventId
+      ? getMyEventTotalPoints(eventId)
+      : Promise.resolve(0),
+  ]);
 
   return (
     <BoothScanClient
@@ -33,7 +39,7 @@ export default async function BoothScanPage({ params }: Props) {
       exhibitor={exhibitor}
       visitorRole={profile?.role ?? null}
       rewardTiers={rewardTiers}
-      visitorPoints={0}
+      visitorPoints={visitorPoints}
     />
   );
 }
