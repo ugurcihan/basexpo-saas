@@ -20,33 +20,35 @@ export default async function OrganizerPage() {
 
   const [
     { data: exhibitors },
-    { data: leads },
     { count: visitorCount },
+    { count: qrScanCount },
+    { count: pendingApprovalCount },
   ] = await Promise.all([
     eventIds.length > 0
       ? supabase.from("exhibitors").select("id").in("event_id", eventIds)
       : Promise.resolve({ data: [] }),
     eventIds.length > 0
-      ? supabase.from("leads").select("id, visitor_id").in("exhibitor_id",
-          (await supabase.from("exhibitors").select("id").in("event_id", eventIds)).data?.map((e) => e.id) ?? []
-        )
-      : Promise.resolve({ data: [] }),
-    eventIds.length > 0
       ? supabase.from("event_registrations").select("id", { count: "exact", head: true }).in("event_id", eventIds)
       : Promise.resolve({ count: 0 }),
+    eventIds.length > 0
+      ? supabase.from("qr_scans").select("id", { count: "exact", head: true }).in("event_id", eventIds)
+      : Promise.resolve({ count: 0 }),
+    eventIds.length > 0
+      ? supabase.from("event_registrations").select("id", { count: "exact", head: true })
+          .in("event_id", eventIds).eq("status", "pending")
+      : Promise.resolve({ count: 0 }),
   ]);
-
-  const uniqueVisitors = new Set((leads ?? []).map((r) => r.visitor_id)).size;
 
   return (
     <OrganizerDashboard
       profile={profile}
       events={myEvents}
+      pendingApprovals={pendingApprovalCount ?? 0}
       stats={{
         eventCount: myEvents.length,
         exhibitorCount: exhibitors?.length ?? 0,
-        leadCount: leads?.length ?? 0,
-        visitorCount: visitorCount ?? uniqueVisitors,
+        qrScanCount: qrScanCount ?? 0,
+        visitorCount: visitorCount ?? 0,
       }}
     />
   );

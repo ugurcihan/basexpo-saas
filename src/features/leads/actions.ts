@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { earnPoints } from "@/features/loyalty/actions";
 
@@ -87,7 +88,8 @@ export async function createLeadFromScan(exhibitorId: string) {
 
 // ─── Booth QR Scan ───────────────────────────────────────────
 export async function getBoothByQrToken(token: string) {
-  const supabase = await createSupabaseServerClient();
+  // Admin client kullanıyoruz: bu veri public (RLS bypass gerekmez auth olmadan)
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase
     .from("booths")
     .select(`

@@ -6,7 +6,7 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   CalendarDays, Building2, QrCode, Users2,
   Plus, Wrench, BarChart2, MessageSquare,
-  MapPin, UserCircle2, ChevronRight,
+  MapPin, ChevronRight, ClipboardList, Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ import { ORGANIZER_NAV } from "./_nav";
 interface Stats {
   eventCount: number;
   exhibitorCount: number;
-  leadCount: number;
+  qrScanCount: number;
   visitorCount: number;
 }
 
@@ -32,6 +32,7 @@ interface Props {
   profile: Profile;
   stats: Stats;
   events: EventRow[];
+  pendingApprovals: number;
 }
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
@@ -41,21 +42,21 @@ const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   ended:     { label: "Bitti",    color: "text-slate-400 bg-slate-500/10 border border-slate-500/20" },
 };
 
-export function OrganizerDashboard({ profile, stats, events }: Props) {
+export function OrganizerDashboard({ profile, stats, events, pendingApprovals }: Props) {
   const statCards = [
-    { label: "Toplam Fuar",   value: stats.eventCount,     desc: "Oluşturulan fuar sayısı",       icon: CalendarDays, color: "text-brand-indigo-light", bg: "bg-brand-indigo/12" },
-    { label: "Kayıtlı Firma", value: stats.exhibitorCount, desc: "Fuarlarınızdaki firma sayısı",   icon: Building2,    color: "text-brand-cyan",          bg: "bg-brand-cyan/10" },
-    { label: "Toplam Lead",   value: stats.leadCount,      desc: "QR ile oluşturulan bağlantı",   icon: QrCode,       color: "text-brand-violet-light",  bg: "bg-brand-violet/12" },
-    { label: "Ziyaretçi",     value: stats.visitorCount,   desc: "Kayıtlı ziyaretçi sayısı",      icon: Users2,       color: "text-brand-gold",          bg: "bg-brand-gold/12" },
+    { label: "Toplam Fuar",    value: stats.eventCount,     desc: "Oluşturulan fuar sayısı",      icon: CalendarDays, color: "text-brand-indigo-light", bg: "bg-brand-indigo/12" },
+    { label: "Kayıtlı Firma",  value: stats.exhibitorCount, desc: "Fuarlarınızdaki firma sayısı",  icon: Building2,    color: "text-brand-cyan",          bg: "bg-brand-cyan/10" },
+    { label: "QR Taramaları",  value: stats.qrScanCount,    desc: "Toplam stant ziyareti",         icon: QrCode,       color: "text-brand-violet-light",  bg: "bg-brand-violet/12" },
+    { label: "Ziyaretçi",      value: stats.visitorCount,   desc: "Kayıtlı ziyaretçi sayısı",     icon: Users2,       color: "text-brand-gold",          bg: "bg-brand-gold/12" },
   ];
 
   const quickLinks = [
-    { label: "Fuarlarım",     href: "/organizer/events",        icon: CalendarDays,  color: "brand-indigo" },
-    { label: "Katılımcılar",  href: "/organizer/participants",  icon: Users2,        color: "brand-cyan" },
-    { label: "Araçlar",       href: "/organizer/tools",         icon: Wrench,        color: "brand-gold" },
-    { label: "Raporlar",      href: "/organizer/reports",       icon: BarChart2,     color: "brand-violet" },
-    { label: "Mesajlar",      href: "/organizer/messages",      icon: MessageSquare, color: "brand-cyan" },
-    { label: "Profilim",      href: "/organizer/profile",       icon: UserCircle2,   color: "brand-indigo" },
+    { label: "Fuarlarım",        href: "/organizer/events",                 icon: CalendarDays,  color: "brand-indigo", badge: 0 },
+    { label: "Katılımcılar",     href: "/organizer/participants",           icon: Users2,        color: "brand-cyan",   badge: 0 },
+    { label: "Araçlar",          href: "/organizer/tools",                  icon: Wrench,        color: "brand-gold",   badge: 0 },
+    { label: "Raporlar",         href: "/organizer/reports",                icon: BarChart2,     color: "brand-violet", badge: 0 },
+    { label: "Katılım İstekleri", href: "/organizer/participation-requests", icon: ClipboardList, color: "brand-cyan",  badge: pendingApprovals },
+    { label: "Mesajlar",         href: "/organizer/messages",               icon: MessageSquare, color: "brand-indigo", badge: 0 },
   ];
 
   const recentEvents = events.slice(0, 3);
@@ -70,6 +71,22 @@ export function OrganizerDashboard({ profile, stats, events }: Props) {
           </h1>
           <p className="text-muted-foreground mt-1">BasExpo yönetim paneline hoş geldin.</p>
         </motion.div>
+
+        {/* Bekleyen onay uyarısı */}
+        {pendingApprovals > 0 && (
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.08 }}>
+            <Link
+              href="/organizer/participation-requests"
+              className="flex items-center gap-3 px-5 py-3.5 rounded-xl border border-brand-gold/30 bg-brand-gold/8 hover:bg-brand-gold/12 transition-colors group"
+            >
+              <Bell className="w-4 h-4 text-brand-gold flex-shrink-0" />
+              <span className="text-sm text-white flex-1">
+                <span className="text-brand-gold font-semibold">{pendingApprovals} katılım isteği</span> onay bekliyor
+              </span>
+              <ChevronRight className="w-4 h-4 text-brand-gold/60 group-hover:text-brand-gold transition-colors flex-shrink-0" />
+            </Link>
+          </motion.div>
+        )}
 
         {/* Stat cards */}
         <motion.div
@@ -100,12 +117,17 @@ export function OrganizerDashboard({ profile, stats, events }: Props) {
         <motion.div initial={{ y: 20 }} animate={{ y: 0 }} transition={{ delay: 0.25 }}>
           <h2 className="font-semibold text-white mb-3">Hızlı Erişim</h2>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-            {quickLinks.map(({ label, href, icon: Icon, color }) => (
+            {quickLinks.map(({ label, href, icon: Icon, color, badge }) => (
               <Link
                 key={label}
                 href={href}
-                className={`glass rounded-xl border border-white/8 hover:border-${color}/30 hover:bg-${color}/5 p-4 flex flex-col items-center gap-2 transition-all group`}
+                className={`glass rounded-xl border border-white/8 hover:border-${color}/30 hover:bg-${color}/5 p-4 flex flex-col items-center gap-2 transition-all group relative`}
               >
+                {badge > 0 && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
                 <div className={`w-10 h-10 rounded-xl bg-${color}/12 flex items-center justify-center group-hover:bg-${color}/20 transition-colors`}>
                   <Icon className={`w-5 h-5 text-${color}-light`} />
                 </div>

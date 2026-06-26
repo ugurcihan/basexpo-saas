@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronRight, Palette, ImagePlus, X as XIcon, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 
 /* ─── Types ────────────────────────────────────────────────── */
 interface Exhibitor  { id: string; company_name: string }
@@ -31,7 +31,7 @@ interface BadgeConfig {
   elements: BadgeElement[];
 }
 
-interface Props { eventName: string; exhibitors: Exhibitor[]; halls: HallRow[] }
+interface Props { eventId: string; eventName: string; exhibitors: Exhibitor[]; halls: HallRow[] }
 
 /* ─── Templates ─────────────────────────────────────────────── */
 const TEMPLATES = [
@@ -105,6 +105,62 @@ const TEMPLATES = [
     fontFamily: "'Inter',Arial,sans-serif",
     accentColor: "#f59e0b",
   },
+  {
+    id: "taslak1",
+    label: "Geometrik I",
+    preview: "linear-gradient(135deg,#2b2b2b,#3d3354)",
+    headerBg: "#2b2b2b",
+    headerText: "#ddcae9",
+    bodyBg: "#2b2b2b",
+    bodyText: "#ddcae9",
+    subText: "#b0a8db",
+    border: "1px solid #756fbf",
+    borderRadius: "10px",
+    fontFamily: "'Inter',Arial,sans-serif",
+    accentColor: "#756fbf",
+  },
+  {
+    id: "taslak2",
+    label: "Geometrik II",
+    preview: "linear-gradient(135deg,#1a1a2e,#2b2b2b)",
+    headerBg: "#1a1a2e",
+    headerText: "#b0a8db",
+    bodyBg: "#1a1a2e",
+    bodyText: "#ffffff",
+    subText: "#ddcae9",
+    border: "1px solid #756fbf40",
+    borderRadius: "12px",
+    fontFamily: "'Inter',Arial,sans-serif",
+    accentColor: "#ddcae9",
+  },
+  {
+    id: "kirmizi1",
+    label: "Kırmızı I",
+    preview: "linear-gradient(135deg,#c01515,#d91f1f)",
+    headerBg: "#d91f1f",
+    headerText: "#ffffff",
+    bodyBg: "#d91f1f",
+    bodyText: "#ffffff",
+    subText: "#ffffff",
+    border: "2px solid #b01010",
+    borderRadius: "8px",
+    fontFamily: "'Inter',Arial,sans-serif",
+    accentColor: "#010101",
+  },
+  {
+    id: "kirmizi2",
+    label: "Kırmızı II",
+    preview: "#d91f1f",
+    headerBg: "#d91f1f",
+    headerText: "#ffffff",
+    bodyBg: "#d91f1f",
+    bodyText: "#ffffff",
+    subText: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontFamily: "'Inter',Arial,sans-serif",
+    accentColor: "#010101",
+  },
 ] as const;
 
 type TemplateId = typeof TEMPLATES[number]["id"];
@@ -127,7 +183,7 @@ function boothCode(exhibitorId: string | null, halls: HallRow[]): string {
 
 /* ─── BadgeHTML component — rendered inside hidden capture div ─ */
 function BadgeHTML({
-  template, eventName, mainLine, subLine, subLabel, logoUrl, elements,
+  template, eventName, mainLine, subLine, subLabel, logoUrl, elements, qrDataUrl, qrEl, logoEl,
 }: {
   template: typeof TEMPLATES[number];
   eventName: string;
@@ -136,10 +192,16 @@ function BadgeHTML({
   subLabel: string;
   logoUrl: string | null;
   elements: BadgeElement[];
+  qrDataUrl: string;
+  qrEl: { x: number; y: number; size: number };
+  logoEl: { x: number; y: number; size: number };
 }) {
   const nameEl = elements.find(e => e.id === "name")!;
   const roleEl = elements.find(e => e.id === "role")!;
   const subEl  = elements.find(e => e.id === "sub")!;
+  const isGeo  = template.id === "taslak1" || template.id === "taslak2";
+  const isRed  = template.id === "kirmizi1" || template.id === "kirmizi2";
+  const isDark = template.id === "koyu" || isGeo || isRed;
 
   return (
     <div style={{
@@ -152,16 +214,54 @@ function BadgeHTML({
       position: "relative",
       boxSizing: "border-box",
     }}>
+      {/* Geometrik dekor — mor/lavendar (taslak1/2) */}
+      {isGeo && (
+        <>
+          <div style={{ position:"absolute", top:0, right:0, width:140, height:140,
+            background:"#756fbf", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.35 }} />
+          <div style={{ position:"absolute", top:0, right:0, width:90, height:90,
+            background:"#b0a8db", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.45 }} />
+          <div style={{ position:"absolute", top:0, right:0, width:50, height:50,
+            background:"#ddcae9", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.6 }} />
+          <div style={{ position:"absolute", bottom:0, left:0, width:80, height:80,
+            background:"#756fbf", clipPath:"polygon(0 0,100% 100%,0 100%)", opacity:0.25 }} />
+          <div style={{ position:"absolute", bottom:0, left:0, width:40, height:40,
+            background:"#b0a8db", clipPath:"polygon(0 0,100% 100%,0 100%)", opacity:0.4 }} />
+        </>
+      )}
+
+      {/* Kırmızı dekor — köşe üçgenler (kirmizi1/2) */}
+      {isRed && (
+        <>
+          <div style={{ position:"absolute", top:0, right:0, width:70, height:70,
+            background:"#010101", clipPath:"polygon(100% 0,100% 100%,0 0)" }} />
+          <div style={{ position:"absolute", top:0, right:0, width:42, height:42,
+            background:"#ffffff", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.12 }} />
+          <div style={{ position:"absolute", top:0, left:0, width:44, height:44,
+            background:"#010101", clipPath:"polygon(0 0,100% 0,0 100%)" }} />
+          <div style={{ position:"absolute", top:0, left:0, width:22, height:22,
+            background:"#ffffff", clipPath:"polygon(0 0,100% 0,0 100%)", opacity:0.15 }} />
+          <div style={{ position:"absolute", bottom:0, right:0, width:54, height:54,
+            background:"#010101", clipPath:"polygon(100% 0,100% 100%,0 100%)" }} />
+          <div style={{ position:"absolute", bottom:0, left:0, width:36, height:36,
+            background:"#010101", clipPath:"polygon(0 0,0 100%,100% 100%)" }} />
+          <div style={{ position:"absolute", top:"18%", left:0, right:0, height:2,
+            background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)" }} />
+        </>
+      )}
+      {template.id === "kirmizi2" && (
+        <div style={{ position:"absolute", left:0, right:0, top:"38%", height:"22%",
+          background:"#010101" }} />
+      )}
+
       {/* Header bar */}
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, height: "20%",
-        background: template.headerBg,
+        background: (isGeo || isRed) ? "transparent" : template.headerBg,
+        borderBottom: isGeo ? "1px solid #756fbf60" : "none",
         display: "flex", alignItems: "center", justifyContent: "center",
-        gap: 8, padding: "0 12px",
+        padding: "0 12px",
       }}>
-        {logoUrl && (
-          <img src={logoUrl} alt="logo" style={{ height: 22, objectFit: "contain", maxWidth: 40 }} crossOrigin="anonymous" />
-        )}
         <span style={{
           fontSize: 9, fontWeight: 700, color: template.headerText,
           letterSpacing: "0.06em", textTransform: "uppercase", textAlign: "center",
@@ -185,7 +285,7 @@ function BadgeHTML({
           fontWeight: el.bold ? 700 : 400,
           color,
           whiteSpace: "nowrap",
-          maxWidth: "90%",
+          maxWidth: "72%",
           overflow: "hidden",
           textOverflow: "ellipsis",
           textAlign: "center",
@@ -194,14 +294,42 @@ function BadgeHTML({
         </div>
       ))}
 
+      {/* Logo — serbest konumlandırılabilir */}
+      {logoUrl && (
+        <div style={{
+          position: "absolute",
+          left: `${logoEl.x}%`, top: `${logoEl.y}%`,
+          transform: "translate(-50%,-50%)",
+          lineHeight: 0,
+        }}>
+          <img src={logoUrl} alt="logo"
+            style={{ height: logoEl.size, objectFit: "contain", maxWidth: logoEl.size * 2 }}
+            crossOrigin="anonymous"
+          />
+        </div>
+      )}
+
+      {/* Kapı geçiş QR kodu — serbest konumlandırılabilir */}
+      {qrDataUrl && (
+        <div style={{
+          position: "absolute",
+          left: `${qrEl.x}%`, top: `${qrEl.y}%`,
+          transform: "translate(-50%,-50%)",
+          background: "#fff", padding: 2, borderRadius: 4,
+          lineHeight: 0,
+        }}>
+          <img src={qrDataUrl} width={qrEl.size} height={qrEl.size} style={{ display: "block" }} />
+        </div>
+      )}
+
       {/* Bottom divider + branding */}
       <div style={{
         position: "absolute", bottom: "12%", left: "5%", right: "5%",
-        borderTop: `1px solid ${template.id === "koyu" ? "#334155" : "#e2e8f0"}`,
+        borderTop: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
       }} />
       <div style={{
         position: "absolute", bottom: "3%", left: 0, right: 0,
-        textAlign: "center", fontSize: 7, color: template.id === "koyu" ? "#475569" : "#94a3b8",
+        textAlign: "center", fontSize: 7, color: isDark ? "#475569" : "#94a3b8",
       }}>
         BasExpo — Akıllı Fuar Sistemi
       </div>
@@ -210,7 +338,7 @@ function BadgeHTML({
 }
 
 /* ─── Main Component ─────────────────────────────────────── */
-export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
+export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Props) {
   /* -- Template & design state -- */
   const [templateId, setTemplateId] = useState<TemplateId>("modern");
   const [elements, setElements]     = useState<BadgeElement[]>(DEFAULT_ELEMENTS);
@@ -235,6 +363,14 @@ export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
   const [captureData, setCaptureData] = useState({ name: "", role: "", sub: "" });
   const captureRef = useRef<HTMLDivElement>(null!);
 
+  /* -- Kapı geçiş QR -- */
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const qrCanvasRef = useRef<HTMLDivElement>(null!);
+
+  /* -- Konumlandırılabilir elementler -- */
+  const [qrEl, setQrEl]   = useState({ x: 82, y: 78, size: 52 });
+  const [logoEl, setLogoEl] = useState({ x: 14, y: 11, size: 28 });
+
   const template = TEMPLATES.find(t => t.id === templateId) ?? TEMPLATES[0];
 
   /* ── Drag: window listeners ─────────────────────────────── */
@@ -243,15 +379,34 @@ export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
     const move = (e: MouseEvent) => {
       if (!previewRef.current) return;
       const rect = previewRef.current.getBoundingClientRect();
-      const x = Math.max(5, Math.min(95, (e.clientX - rect.left) / rect.width * 100));
-      const y = Math.max(22, Math.min(82, (e.clientY - rect.top) / rect.height * 100));
-      setElements(prev => prev.map(el => el.id === dragging ? { ...el, x, y } : el));
+      const rawX = (e.clientX - rect.left) / rect.width * 100;
+      const rawY = (e.clientY - rect.top) / rect.height * 100;
+      const x = Math.max(5, Math.min(95, rawX));
+      if (dragging === "qr") {
+        setQrEl(prev => ({ ...prev, x, y: Math.max(5, Math.min(92, rawY)) }));
+      } else if (dragging === "logo") {
+        setLogoEl(prev => ({ ...prev, x, y: Math.max(5, Math.min(92, rawY)) }));
+      } else {
+        const y = Math.max(22, Math.min(82, rawY));
+        setElements(prev => prev.map(el => el.id === dragging ? { ...el, x, y } : el));
+      }
     };
     const up = () => setDragging(null);
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
     return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
   }, [dragging]);
+
+  /* ── QR data URL (kapı geçiş) ──────────────────────────── */
+  useEffect(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://basexpo.site";
+    // Kısa timeout: hidden canvas mount sonrası okunur
+    const t = setTimeout(() => {
+      const canvas = qrCanvasRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+      if (canvas) setQrDataUrl(canvas.toDataURL("image/png"));
+    }, 80);
+    return () => clearTimeout(t);
+  }, [eventId]);
 
   function updateEl(id: BadgeElement["id"], patch: Partial<BadgeElement>) {
     setElements(prev => prev.map(el => el.id === id ? { ...el, ...patch } : el));
@@ -378,6 +533,15 @@ export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
   return (
     <div className="space-y-6">
 
+      {/* ── Gizli QR canvas (kapı geçiş QR data URL üretimi) ── */}
+      <div ref={qrCanvasRef} style={{ position: "fixed", left: -9999, top: 0, pointerEvents: "none" }}>
+        <QRCodeCanvas
+          value={`${typeof window !== "undefined" ? window.location.origin : "https://basexpo.site"}/e/${eventId}`}
+          size={88}
+          level="M"
+        />
+      </div>
+
       {/* ── Gizli capture div (html2canvas için) ───────────── */}
       <div style={{ position: "fixed", left: -9999, top: 0, zIndex: -1, pointerEvents: "none" }}>
         <div ref={captureRef}>
@@ -389,6 +553,9 @@ export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
             subLabel={captureData.sub}
             logoUrl={logoUrl}
             elements={elements}
+            qrDataUrl={qrDataUrl}
+            qrEl={qrEl}
+            logoEl={logoEl}
           />
         </div>
       </div>
@@ -478,7 +645,32 @@ export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
                   >B</button>
                 </div>
               ))}
-              <p className="text-[10px] text-muted-foreground/50">Sağdaki önizlemede metinleri sürükleyerek yerini değiştir</p>
+            </div>
+
+            {/* Element Boyutları (QR + Logo) */}
+            <div className="space-y-2 pt-2 border-t border-white/8">
+              <p className="text-xs font-medium text-muted-foreground">Element Boyutları</p>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-14 flex-shrink-0">QR Kodu</span>
+                <span className="text-xs text-muted-foreground/60 w-8 text-right flex-shrink-0">{qrEl.size}px</span>
+                <input
+                  type="range" min={30} max={90} value={qrEl.size}
+                  onChange={e => setQrEl(prev => ({ ...prev, size: Number(e.target.value) }))}
+                  className="flex-1 accent-brand-indigo-light h-1"
+                />
+              </div>
+              {logoUrl && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-14 flex-shrink-0">Logo</span>
+                  <span className="text-xs text-muted-foreground/60 w-8 text-right flex-shrink-0">{logoEl.size}px</span>
+                  <input
+                    type="range" min={16} max={80} value={logoEl.size}
+                    onChange={e => setLogoEl(prev => ({ ...prev, size: Number(e.target.value) }))}
+                    className="flex-1 accent-brand-indigo-light h-1"
+                  />
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground/50">Yazılar, QR kodu ve logo önizlemede sürüklenebilir</p>
             </div>
           </div>
 
@@ -487,71 +679,157 @@ export function BadgePrintSection({ eventName, exhibitors, halls }: Props) {
             <p className="text-xs font-medium text-muted-foreground">Canlı Önizleme — sürükle &amp; bırak</p>
 
             {/* Preview badge */}
-            <div
-              ref={previewRef}
-              style={{
-                position: "relative", width: "100%", aspectRatio: "88/58",
-                background: template.bodyBg,
-                border: template.border,
-                borderRadius: template.borderRadius,
-                overflow: "hidden",
-                userSelect: dragging ? "none" : undefined,
-                cursor: dragging ? "grabbing" : undefined,
-                fontFamily: template.fontFamily,
-              }}
-              className="shadow-xl"
-            >
-              {/* Header */}
-              <div style={{
-                position: "absolute", top: 0, left: 0, right: 0, height: "20%",
-                background: template.headerBg,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "0 10px",
-              }}>
-                {logoUrl && <img src={logoUrl} alt="logo" style={{ height: 18, objectFit: "contain", maxWidth: 36 }} />}
-                <span style={{
-                  fontSize: "8px", fontWeight: 700, color: template.headerText,
-                  letterSpacing: "0.05em", textTransform: "uppercase",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {eventName}
-                </span>
-              </div>
-
-              {/* Draggable elements */}
-              {([
-                { el: nameEl, text: previewName, color: template.bodyText },
-                { el: roleEl, text: previewRole, color: template.bodyText },
-                { el: subEl,  text: "PERSONEL",  color: template.subText  },
-              ]).map(({ el, text, color }) => (
+            {(() => {
+              const isGeo  = template.id === "taslak1" || template.id === "taslak2";
+              const isRed  = template.id === "kirmizi1" || template.id === "kirmizi2";
+              const isDark = template.id === "koyu" || isGeo || isRed;
+              return (
                 <div
-                  key={el.id}
+                  ref={previewRef}
                   style={{
-                    position: "absolute",
-                    left: `${el.x}%`, top: `${el.y}%`,
-                    transform: "translate(-50%,-50%)",
-                    fontSize: el.fontSize,
-                    fontWeight: el.bold ? 700 : 400,
-                    color,
-                    cursor: dragging === el.id ? "grabbing" : "grab",
-                    padding: "2px 4px",
-                    borderRadius: 3,
-                    background: dragging === el.id ? "rgba(99,102,241,0.12)" : "transparent",
-                    outline: dragging === el.id ? "1.5px solid #6366f1" : "none",
-                    whiteSpace: "nowrap", maxWidth: "90%", overflow: "hidden", textOverflow: "ellipsis",
+                    position: "relative", width: "100%", aspectRatio: "88/58",
+                    background: template.bodyBg,
+                    border: template.border,
+                    borderRadius: template.borderRadius,
+                    overflow: "hidden",
+                    userSelect: dragging ? "none" : undefined,
+                    cursor: dragging ? "grabbing" : undefined,
+                    fontFamily: template.fontFamily,
                   }}
-                  onMouseDown={e => { e.preventDefault(); setDragging(el.id); }}
+                  className="shadow-xl"
                 >
-                  {text}
-                </div>
-              ))}
+                  {/* Geometrik dekor — mor/lavendar */}
+                  {isGeo && (
+                    <>
+                      <div style={{ position:"absolute", top:0, right:0, width:"40%", height:"60%",
+                        background:"#756fbf", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.35 }} />
+                      <div style={{ position:"absolute", top:0, right:0, width:"26%", height:"39%",
+                        background:"#b0a8db", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.45 }} />
+                      <div style={{ position:"absolute", top:0, right:0, width:"14%", height:"22%",
+                        background:"#ddcae9", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.6 }} />
+                      <div style={{ position:"absolute", bottom:0, left:0, width:"23%", height:"35%",
+                        background:"#756fbf", clipPath:"polygon(0 0,100% 100%,0 100%)", opacity:0.25 }} />
+                      <div style={{ position:"absolute", bottom:0, left:0, width:"11%", height:"17%",
+                        background:"#b0a8db", clipPath:"polygon(0 0,100% 100%,0 100%)", opacity:0.4 }} />
+                    </>
+                  )}
 
-              {/* Bottom */}
-              <div style={{ position: "absolute", bottom: "12%", left: "5%", right: "5%", borderTop: "1px solid #e2e8f0" }} />
-              <div style={{ position: "absolute", bottom: "3%", left: 0, right: 0, textAlign: "center", fontSize: 7, color: "#94a3b8" }}>
-                BasExpo — Akıllı Fuar Sistemi
-              </div>
-            </div>
+                  {/* Kırmızı dekor — köşe üçgenler */}
+                  {isRed && (
+                    <>
+                      <div style={{ position:"absolute", top:0, right:0, width:"20%", height:"30%",
+                        background:"#010101", clipPath:"polygon(100% 0,100% 100%,0 0)" }} />
+                      <div style={{ position:"absolute", top:0, right:0, width:"12%", height:"18%",
+                        background:"#ffffff", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.12 }} />
+                      <div style={{ position:"absolute", top:0, left:0, width:"13%", height:"19%",
+                        background:"#010101", clipPath:"polygon(0 0,100% 0,0 100%)" }} />
+                      <div style={{ position:"absolute", top:0, left:0, width:"6%", height:"10%",
+                        background:"#ffffff", clipPath:"polygon(0 0,100% 0,0 100%)", opacity:0.15 }} />
+                      <div style={{ position:"absolute", bottom:0, right:0, width:"15%", height:"23%",
+                        background:"#010101", clipPath:"polygon(100% 0,100% 100%,0 100%)" }} />
+                      <div style={{ position:"absolute", bottom:0, left:0, width:"10%", height:"15%",
+                        background:"#010101", clipPath:"polygon(0 0,0 100%,100% 100%)" }} />
+                      <div style={{ position:"absolute", top:"18%", left:0, right:0, height:2,
+                        background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)" }} />
+                    </>
+                  )}
+                  {template.id === "kirmizi2" && (
+                    <div style={{ position:"absolute", left:0, right:0, top:"38%", height:"22%",
+                      background:"#010101" }} />
+                  )}
+
+                  {/* Header */}
+                  <div style={{
+                    position: "absolute", top: 0, left: 0, right: 0, height: "20%",
+                    background: (isGeo || isRed) ? "transparent" : template.headerBg,
+                    borderBottom: isGeo ? "1px solid #756fbf60" : "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "0 10px",
+                  }}>
+                    <span style={{
+                      fontSize: "8px", fontWeight: 700, color: template.headerText,
+                      letterSpacing: "0.05em", textTransform: "uppercase",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {eventName}
+                    </span>
+                  </div>
+
+                  {/* Draggable text elements */}
+                  {([
+                    { el: nameEl, text: previewName, color: template.bodyText },
+                    { el: roleEl, text: previewRole, color: template.bodyText },
+                    { el: subEl,  text: "PERSONEL",  color: template.subText  },
+                  ]).map(({ el, text, color }) => (
+                    <div
+                      key={el.id}
+                      style={{
+                        position: "absolute",
+                        left: `${el.x}%`, top: `${el.y}%`,
+                        transform: "translate(-50%,-50%)",
+                        fontSize: el.fontSize,
+                        fontWeight: el.bold ? 700 : 400,
+                        color,
+                        cursor: dragging === el.id ? "grabbing" : "grab",
+                        padding: "2px 4px",
+                        borderRadius: 3,
+                        background: dragging === el.id ? "rgba(99,102,241,0.12)" : "transparent",
+                        outline: dragging === el.id ? "1.5px solid #6366f1" : "none",
+                        whiteSpace: "nowrap", maxWidth: "72%", overflow: "hidden", textOverflow: "ellipsis",
+                      }}
+                      onMouseDown={e => { e.preventDefault(); setDragging(el.id); }}
+                    >
+                      {text}
+                    </div>
+                  ))}
+
+                  {/* Logo — sürüklenebilir */}
+                  {logoUrl && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: `${logoEl.x}%`, top: `${logoEl.y}%`,
+                        transform: "translate(-50%,-50%)",
+                        cursor: dragging === "logo" ? "grabbing" : "grab",
+                        padding: "2px 3px",
+                        borderRadius: 3,
+                        background: dragging === "logo" ? "rgba(99,102,241,0.12)" : "transparent",
+                        outline: dragging === "logo" ? "1.5px solid #6366f1" : "none",
+                        lineHeight: 0,
+                      }}
+                      onMouseDown={e => { e.preventDefault(); setDragging("logo"); }}
+                    >
+                      <img src={logoUrl} alt="logo" style={{ height: logoEl.size * 0.55, objectFit: "contain" }} />
+                    </div>
+                  )}
+
+                  {/* Kapı geçiş QR — sürüklenebilir */}
+                  {qrDataUrl && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: `${qrEl.x}%`, top: `${qrEl.y}%`,
+                        transform: "translate(-50%,-50%)",
+                        background: "#fff", padding: 1.5, borderRadius: 3, lineHeight: 0,
+                        cursor: dragging === "qr" ? "grabbing" : "grab",
+                        outline: dragging === "qr" ? "1.5px solid #6366f1" : "none",
+                      }}
+                      onMouseDown={e => { e.preventDefault(); setDragging("qr"); }}
+                    >
+                      <img src={qrDataUrl} width={Math.round(qrEl.size * 0.5)} height={Math.round(qrEl.size * 0.5)} style={{ display:"block" }} />
+                    </div>
+                  )}
+
+                  {/* Bottom */}
+                  <div style={{ position: "absolute", bottom: "12%", left: "5%", right: "5%",
+                    borderTop: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` }} />
+                  <div style={{ position: "absolute", bottom: "3%", left: 0, right: 0,
+                    textAlign: "center", fontSize: 7, color: isDark ? "#475569" : "#94a3b8" }}>
+                    BasExpo — Akıllı Fuar Sistemi
+                  </div>
+                </div>
+              );
+            })()}
 
             <p className="text-[10px] text-muted-foreground/50 text-center">
               Bu şablon tüm yaka kartlarına uygulanır · Önizleme = PDF çıktısı (WYSIWYG)

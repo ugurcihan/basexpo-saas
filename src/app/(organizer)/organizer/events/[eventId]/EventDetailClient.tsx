@@ -1195,6 +1195,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
           {/* YAKA KARTI */}
           {activeTab === "yaka" && (
             <BadgePrintSection
+              eventId={initialEvent.id}
               eventName={initialEvent.name}
               exhibitors={eventExhibitors}
               halls={(initialEvent.halls ?? []) as { id: string; name: string; booths: { id: string; code: string; exhibitor_id: string | null }[] }[]}
