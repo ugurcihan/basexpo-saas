@@ -57,16 +57,16 @@ import { QRCodeSVG } from "qrcode.react";
 
 const STATUS_MAP: Record<EventStatus, { label: string; variant: "default" | "cyan" | "violet" | "gold" | "outline" }> = {
   draft:     { label: "Taslak",  variant: "outline" },
-  published: { label: "Yayında", variant: "default" },
+  published: { label: "Yayında", variant: "gold" },
   active:    { label: "Aktif",   variant: "cyan" },
-  ended:     { label: "Bitti",   variant: "gold" },
+  ended:     { label: "Bitti",   variant: "outline" },
 };
 
 const STATUS_PALETTE: Record<EventStatus, { border: string; hover: string; accent: string; iconColor: string; groupColor: string; dotColor: string }> = {
-  active:    { border: "border-green-500/40",    hover: "hover:border-green-400/60 hover:bg-green-500/8",    accent: "bg-green-500",    iconColor: "text-green-400",           groupColor: "text-green-400",         dotColor: "bg-green-400" },
-  published: { border: "border-brand-indigo/30", hover: "hover:border-brand-indigo/50 hover:bg-brand-indigo/8", accent: "bg-brand-indigo", iconColor: "text-brand-indigo-light",  groupColor: "text-brand-indigo-light",dotColor: "bg-brand-indigo" },
-  draft:     { border: "border-slate-500/25",    hover: "hover:border-slate-400/40 hover:bg-slate-500/6",    accent: "bg-slate-500",    iconColor: "text-slate-400",           groupColor: "text-slate-400",         dotColor: "bg-slate-500" },
-  ended:     { border: "border-brand-gold/25",   hover: "hover:border-brand-gold/40 hover:bg-brand-gold/6",  accent: "bg-brand-gold",   iconColor: "text-brand-gold",          groupColor: "text-brand-gold",        dotColor: "bg-brand-gold" },
+  active:    { border: "border-green-500/40",   hover: "hover:border-green-400/60 hover:bg-green-500/8",   accent: "bg-green-500",  iconColor: "text-green-400",  groupColor: "text-green-400",  dotColor: "bg-green-400" },
+  published: { border: "border-brand-gold/25",  hover: "hover:border-brand-gold/40 hover:bg-brand-gold/6", accent: "bg-brand-gold", iconColor: "text-brand-gold", groupColor: "text-brand-gold", dotColor: "bg-brand-gold" },
+  draft:     { border: "border-slate-500/25",   hover: "hover:border-slate-400/40 hover:bg-slate-500/6",   accent: "bg-slate-500",  iconColor: "text-slate-400",  groupColor: "text-slate-400",  dotColor: "bg-slate-500" },
+  ended:     { border: "border-slate-500/20",   hover: "hover:border-slate-400/35 hover:bg-slate-500/5",   accent: "bg-slate-600",  iconColor: "text-slate-500",  groupColor: "text-slate-500",  dotColor: "bg-slate-600" },
 };
 
 const STATUS_ORDER: EventStatus[] = ["active", "published", "draft", "ended"];
@@ -341,25 +341,27 @@ export function EventsClient({ events: initialEvents, profileId }: { events: Exp
 
                           {/* Actions */}
                           <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => (event.status === "published" || event.status === "active") ? openQr(event) : undefined}
                               title={event.status === "published" || event.status === "active" ? "Kapı QR Kodu" : "QR yalnızca yayında/aktif fuarlar için kullanılabilir"}
                               disabled={event.status !== "published" && event.status !== "active"}
-                              className="p-2 rounded-lg text-muted-foreground hover:text-brand-indigo-light hover:bg-brand-indigo/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="gap-1.5 h-8 text-xs px-2.5"
                             >
-                              <QrCode className="w-4 h-4" />
-                            </button>
+                              <QrCode className="w-3.5 h-3.5" /> QR
+                            </Button>
                             <button
                               onClick={() => openEdit(event)}
                               className="p-2 rounded-lg text-muted-foreground hover:text-white hover:bg-white/8 transition-colors"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Pencil className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => setDeleteTarget(event)}
                               className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-5 h-5" />
                             </button>
                             <Link href={`/organizer/events/${event.id}`}>
                               <Button variant="outline" size="sm" className="gap-1 h-8 text-xs">

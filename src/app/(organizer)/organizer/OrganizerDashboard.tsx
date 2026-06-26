@@ -36,9 +36,9 @@ interface Props {
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   active:    { label: "Aktif",    color: "text-green-400 bg-green-500/15 border border-green-500/30" },
-  published: { label: "Yayında",  color: "text-brand-indigo-light bg-brand-indigo/15 border border-brand-indigo/30" },
+  published: { label: "Yayında",  color: "text-brand-gold bg-brand-gold/10 border border-brand-gold/25" },
   draft:     { label: "Taslak",   color: "text-muted-foreground bg-white/8 border border-white/10" },
-  ended:     { label: "Bitti",    color: "text-brand-gold bg-brand-gold/10 border border-brand-gold/25" },
+  ended:     { label: "Bitti",    color: "text-slate-400 bg-slate-500/10 border border-slate-500/20" },
 };
 
 export function OrganizerDashboard({ profile, stats, events }: Props) {

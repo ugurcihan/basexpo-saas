@@ -14,7 +14,7 @@ import type { Profile } from "@/types";
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   active:    { label: "Aktif",    color: "text-green-400 bg-green-500/15 border-green-500/30" },
-  published: { label: "Yayında",  color: "text-brand-indigo-light bg-brand-indigo/15 border-brand-indigo/30" },
+  published: { label: "Yayında",  color: "text-brand-gold bg-brand-gold/15 border-brand-gold/30" },
   ended:     { label: "Tamamlandı", color: "text-muted-foreground bg-white/5 border-white/10" },
 };
 

@@ -235,13 +235,13 @@ function RewardManagementSection({ eventId }: { eventId: string }) {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                      <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                         {tier.winner_count > 0 && (
                           <button
                             onClick={() => toggleWinners(tier.id)}
-                            className="text-[10px] px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-white transition-colors"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-brand-gold/10 border border-brand-gold/30 text-brand-gold hover:bg-brand-gold/20 transition-colors font-medium"
                           >
-                            {isExpanded ? "Gizle" : "Kazananlar"}
+                            {isExpanded ? "Gizle" : `${tier.winner_count} Kazananı Gör`}
                           </button>
                         )}
                         <button
@@ -982,6 +982,9 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
           </div>
         </motion.div>
 
+        {/* ── ÖDÜL YÖNETİMİ ──────────────────────────────────── */}
+        <RewardManagementSection eventId={event.id} />
+
         {/* ── SALONLAR & STANDLAR ───────────────────────────── */}
         <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center justify-between mb-4">
@@ -1068,9 +1071,6 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
             </div>
           )}
         </motion.div>
-
-        {/* ── ÖDÜL YÖNETİMİ ──────────────────────────────────── */}
-        <RewardManagementSection eventId={event.id} />
 
         {/* ── GİRİŞ KAYITLARI ────────────────────────────────── */}
         <CheckinSection eventId={event.id} />

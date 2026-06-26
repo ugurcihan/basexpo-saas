@@ -175,14 +175,14 @@ async function checkAndAwardRewards(
   // Bu fuarın aktif tierları — sadece eşiğe ulaşılanlar
   const { data: tiers } = await supabase
     .from("reward_tiers")
-    .select("id, points_required, max_winners")
+    .select("id, points_required, max_winners, reward_title")
     .eq("event_id", eventId)
     .eq("is_active", true)
     .lte("points_required", totalPoints);
 
   if (!tiers || tiers.length === 0) return;
 
-  for (const tier of tiers as { id: string; points_required: number; max_winners: number | null }[]) {
+  for (const tier of tiers as { id: string; points_required: number; max_winners: number | null; reward_title: string }[]) {
     // Zaten kazandı mı?
     const { count: alreadyWon } = await supabase
       .from("reward_winners")
@@ -212,6 +212,18 @@ async function checkAndAwardRewards(
     // 23505 = başka thread aynı anda insert etti, yine de ignore
     if (error && error.code !== "23505") {
       console.error("[checkAndAwardRewards] error:", error.message);
+    }
+
+    // Kazanana bildirim gönder
+    if (!error) {
+      await supabase.from("notifications").insert({
+        sender_id: visitorId,
+        recipient_id: visitorId,
+        event_id: eventId,
+        type: "announcement",
+        title: "🏆 Ödül Kazandınız!",
+        body: `Tebrikler! "${tier.reward_title}" ödülünü kazandınız. Fuarın giriş noktasından ödülünüzü teslim alabilirsiniz.`,
+      });
     }
   }
 }

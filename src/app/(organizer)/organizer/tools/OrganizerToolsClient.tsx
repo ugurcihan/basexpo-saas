@@ -400,8 +400,18 @@ function TasksTab({ events }: { events: EventOption[] }) {
         </div>
         {eventTasks.length === 0 ? (
           <div className="p-10 flex flex-col items-center text-center">
-            <Trophy className="w-10 h-10 text-muted-foreground/25 mb-3" />
-            <p className="text-sm text-muted-foreground">Görev ekleyin veya "Hazır Şablon" ile başlayın.</p>
+            <CheckSquare className="w-10 h-10 text-muted-foreground/25 mb-3" />
+            <p className="text-sm font-medium text-white mb-1">Fuar Hazırlık Görevleri</p>
+            <p className="text-xs text-muted-foreground mb-4">Fuar öncesi tamamlanması gereken adımları buradan takip edin.</p>
+            <Button
+              variant="gradient"
+              size="sm"
+              onClick={handleTemplate}
+              disabled={isPending || !selectedEventId}
+              className="gap-1.5"
+            >
+              <Trophy className="w-3.5 h-3.5" /> Hazır Şablondan Başla
+            </Button>
           </div>
         ) : (
           <div className="divide-y divide-white/5">
@@ -460,6 +470,11 @@ function BoothsTab({ events }: { events: EventOption[] }) {
           </SelectContent>
         </Select>
       )}
+
+      <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-white/4 border border-white/8 text-xs text-muted-foreground">
+        <Store className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+        <span>Stand/salon doluluk durumu. Stantları doldurmak için firmaları fuara davet edin.</span>
+      </div>
 
       {!selectedEvent ? (
         <div className="glass rounded-2xl border border-dashed border-white/10 p-14 flex flex-col items-center text-center">
@@ -539,9 +554,9 @@ export function OrganizerToolsClient({ profile, goldenQRs, events }: Props) {
   const [tab, setTab] = useState<"tasks" | "booths" | "golden-qr">("golden-qr");
 
   const tabs = [
-    { id: "tasks" as const,     label: "Görevler",  icon: Trophy },
-    { id: "booths" as const,    label: "Standlar",  icon: Store },
-    { id: "golden-qr" as const, label: "Altın QR",  icon: Crown },
+    { id: "tasks" as const,     label: "Görevler",   desc: "Hazırlık takibi",  icon: CheckSquare },
+    { id: "booths" as const,    label: "Standlar",   desc: "Doluluk durumu",   icon: Store },
+    { id: "golden-qr" as const, label: "Altın QR",   desc: "Çekiliş",          icon: Crown },
   ];
 
   return (
@@ -564,14 +579,17 @@ export function OrganizerToolsClient({ profile, goldenQRs, events }: Props) {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all ${
+              className={`flex flex-col items-start gap-0 px-4 py-2.5 border-b-2 -mb-px transition-all text-left ${
                 tab === t.id
                   ? "border-brand-violet text-brand-violet-light"
                   : "border-transparent text-muted-foreground hover:text-white"
               }`}
             >
-              <t.icon className="w-4 h-4" />
-              {t.label}
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <t.icon className="w-4 h-4" />
+                {t.label}
+              </span>
+              <span className="text-[10px] text-muted-foreground/60 pl-6">{t.desc}</span>
             </button>
           ))}
         </div>
