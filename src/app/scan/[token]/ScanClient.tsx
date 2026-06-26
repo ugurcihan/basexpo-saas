@@ -328,6 +328,45 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
           </motion.div>
         )}
 
+        {/* HEDİYELER */}
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.28 }}>
+          <div className="glass rounded-2xl border border-brand-gold/30 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-5 h-5 text-brand-gold" />
+              <h3 className="font-semibold text-white text-sm">Hediyeler & Ödüller</h3>
+            </div>
+            {rewardTiers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-2">Bu fuarda henüz ödül tanımlanmamış.</p>
+            ) : (
+              <div className="space-y-3">
+                {rewardTiers.map((tier) => (
+                  <div key={tier.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{tier.reward_title}</p>
+                      {tier.reward_description && (
+                        <p className="text-xs text-muted-foreground truncate">{tier.reward_description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-brand-gold font-semibold">{tier.points_required} puan</span>
+                      {tier.max_winners !== null && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border ${tier.is_full ? "border-red-500/30 text-red-400 bg-red-500/10" : "border-brand-gold/30 text-brand-gold/70"}`}>
+                          {tier.is_full ? "Doldu" : `İlk ${tier.max_winners}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {visitorRole === "visitor" && (
+                  <div className="pt-1 flex justify-end">
+                    <Link href="/visitor/loyalty" className="text-xs text-brand-gold hover:underline">Puanlarım →</Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </motion.div>
+
         {/* BasExpo branding */}
         <motion.p
           initial={{ y: 4 }}

@@ -352,8 +352,8 @@ export function TicketsClient({ profile, registrations }: Props) {
                     {reg.status === "confirmed" && reg.ticket_code ? (
                       /* ── CONFIRMED: Show QR + full details ── */
                       <div className="flex flex-col md:flex-row gap-6 items-start">
-                        {/* QR code */}
-                        <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                        {/* QR code + kamera butonu */}
+                        <div className="flex-shrink-0 flex flex-col items-center gap-2 w-full md:w-auto">
                           <TicketQR
                             ticketCode={reg.ticket_code}
                             visitorName={visitorName}
@@ -365,6 +365,12 @@ export function TicketsClient({ profile, registrations }: Props) {
                           <p className="text-xs text-muted-foreground text-center">
                             Girişte okutun
                           </p>
+                          <button
+                            onClick={() => setScannerOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-indigo to-brand-violet text-white font-semibold text-sm shadow-lg hover:opacity-90 transition-opacity"
+                          >
+                            <Camera className="w-4 h-4" /> Kamera ile Stant Oku
+                          </button>
                         </div>
 
                         {/* Event info */}
@@ -418,13 +424,6 @@ export function TicketsClient({ profile, registrations }: Props) {
                             </span>
                           </div>
 
-                          {/* Stant QR Okut */}
-                          <button
-                            onClick={() => setScannerOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-indigo/15 border border-brand-indigo/35 text-brand-indigo-light hover:bg-brand-indigo/25 transition-colors text-sm font-medium"
-                          >
-                            <Camera className="w-4 h-4" /> Stant QR Okut
-                          </button>
                         </div>
                       </div>
                     ) : reg.status === "pending_approval" ? (
