@@ -7,13 +7,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   MapPin, Calendar, Building2, Package, LogIn,
-  CheckCircle2, AlertCircle, Zap, Tag, Trophy, Sparkles,
+  CheckCircle2, AlertCircle, Zap, Tag, Trophy, Sparkles, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkInToBoothScan } from "@/features/leads/actions";
 import type { UserRole } from "@/types";
+import type { RewardTierWithStats } from "@/features/loyalty/actions";
 
-interface EventRow { id: string; name: string; location: string; start_date: string; end_date: string }
+interface EventRow { id: string; name: string; location: string; start_date: string; end_date: string; gallery_urls?: string[] }
 interface Product  { id: string; name: string; description: string; image_url: string | null }
 interface ExhibitorRow {
   id: string; company_name: string; description: string;
@@ -28,15 +29,18 @@ interface Props {
   event: EventRow | null;
   exhibitor: ExhibitorRow | null;
   visitorRole: UserRole | null;
+  rewardTiers: RewardTierWithStats[];
+  visitorPoints: number;
 }
 
-export function BoothScanClient({ boothId, boothCode, qrToken, event, exhibitor, visitorRole }: Props) {
+export function BoothScanClient({ boothId, boothCode, qrToken, event, exhibitor, visitorRole, rewardTiers, visitorPoints }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [checkedIn, setCheckedIn] = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [goldenReveal, setGoldenReveal] = useState(false);
   const [bonusPoints, setBonusPoints]   = useState(0);
+  const [rewardsOpen, setRewardsOpen]   = useState(false);
 
   function handleCheckIn() {
     setError(null);
@@ -119,6 +123,63 @@ export function BoothScanClient({ boothId, boothCode, qrToken, event, exhibitor,
             </div>
           )}
         </motion.div>
+
+        {/* Ödül Banner */}
+        {rewardTiers.length > 0 && (
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.08 }}>
+            <button
+              onClick={() => setRewardsOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-brand-gold/40 bg-brand-gold/10 text-brand-gold hover:bg-brand-gold/15 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-semibold">Bu fuarda puan kazan, ödül al!</span>
+              </div>
+              {rewardsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            <AnimatePresence>
+              {rewardsOpen && (
+                <motion.div key="rp" initial={{ y: -8 }} animate={{ y: 0 }} exit={{ y: -8 }}
+                  className="mt-1 rounded-2xl border border-brand-gold/25 bg-brand-gold/6 overflow-hidden"
+                >
+                  <div className="px-4 pt-4 pb-3 space-y-2">
+                    <p className="text-xs font-semibold text-brand-gold mb-2">Fuar Ödülleri</p>
+                    {rewardTiers.map((tier) => (
+                      <div key={tier.id} className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-white">{tier.reward_title}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-brand-gold font-semibold">{tier.points_required} puan</span>
+                          {tier.max_winners !== null && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full border ${tier.is_full ? "border-red-500/30 text-red-400 bg-red-500/10" : "border-brand-gold/30 text-brand-gold/70"}`}>
+                              {tier.is_full ? "Doldu" : `İlk ${tier.max_winners}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="pt-2 border-t border-brand-gold/15 text-xs text-muted-foreground">
+                      {visitorPoints > 0 ? `Şu anki puanın: ${visitorPoints} puan` : "Bu standı ziyaret et → +20 puan kazan"}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {/* Fuar Galerisi */}
+        {event?.gallery_urls && event.gallery_urls.length > 0 && (
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.09 }}>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">Fuar Galerisi</p>
+            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: "none" }}>
+              {event.gallery_urls.map((url) => (
+                <div key={url} className="flex-shrink-0 w-56 h-36 snap-start rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Altın QR sürpriz reveal */}
         <AnimatePresence>

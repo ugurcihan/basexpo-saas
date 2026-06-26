@@ -85,9 +85,10 @@ import {
 import type { RewardTierWithStats } from "@/features/loyalty/actions";
 import type { EventStatus } from "@/types";
 import { ORGANIZER_NAV } from "../../_nav";
+import { RegistrantsSection } from "./RegistrantsSection";
 
 // ── Ödül Yönetimi Bileşeni ───────────────────────────────
-function RewardManagementSection({ eventId }: { eventId: string }) {
+function RewardManagementSection({ eventId, alwaysOpen }: { eventId: string; alwaysOpen?: boolean }) {
   const [tiers, setTiers] = useState<RewardTierWithStats[]>([]);
   const [summary, setSummary] = useState<{ totalParticipants: number; totalPointsAwarded: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -101,6 +102,11 @@ function RewardManagementSection({ eventId }: { eventId: string }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [expandedTier, setExpandedTier] = useState<string | null>(null);
   const [tierWinners, setTierWinners] = useState<Record<string, RewardWinnerRow[]>>({});
+
+  useEffect(() => {
+    if (alwaysOpen && !loaded) load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alwaysOpen]);
 
   async function load() {
     if (loaded) return;
@@ -160,23 +166,27 @@ function RewardManagementSection({ eventId }: { eventId: string }) {
     return new Date(s).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
   }
 
-  return (
-    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.4 }}>
-      <button
-        className="w-full flex items-center justify-between px-5 py-4 glass rounded-2xl border border-white/8 text-left"
-        onClick={() => { setOpen(o => !o); load(); }}
-      >
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-brand-gold" />
-          <span className="font-semibold text-white">Ödül Yönetimi</span>
-          {loaded && tiers.length > 0 && (
-            <span className="text-xs text-muted-foreground ml-1">({tiers.length} ödül eşiği)</span>
-          )}
-        </div>
-        <ChevronLeft className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "-rotate-90" : "rotate-180"}`} />
-      </button>
+  const isOpen = alwaysOpen ? true : open;
 
-      {open && (
+  return (
+    <div>
+      {!alwaysOpen && (
+        <button
+          className="w-full flex items-center justify-between px-5 py-4 glass rounded-2xl border border-white/8 text-left"
+          onClick={() => { setOpen(o => !o); load(); }}
+        >
+          <div className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-brand-gold" />
+            <span className="font-semibold text-white">Ödül Yönetimi</span>
+            {loaded && tiers.length > 0 && (
+              <span className="text-xs text-muted-foreground ml-1">({tiers.length} ödül eşiği)</span>
+            )}
+          </div>
+          <ChevronLeft className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "-rotate-90" : "rotate-180"}`} />
+        </button>
+      )}
+
+      {isOpen && (
         <div className="glass rounded-2xl border border-white/8 border-t-0 rounded-t-none -mt-2 pt-4 px-5 pb-5 space-y-4 overflow-hidden">
           {/* Özet */}
           {summary && (
@@ -385,7 +395,7 @@ function RewardManagementSection({ eventId }: { eventId: string }) {
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -556,6 +566,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   const [galleryInput, setGalleryInput] = useState("");
 
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("genel");
 
   // ── Hall handlers ──────────────────────────────────────────
   async function handleAddHall() {
@@ -741,6 +752,8 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   }
 
   const status = STATUS_MAP[event.status];
+  const totalBooths  = event.halls.reduce((s, h) => s + h.booths.length, 0);
+  const filledBooths = event.halls.reduce((s, h) => s + h.booths.filter(b => b.exhibitor_id).length, 0);
 
   // Group sponsors by tier
   const sponsorsByTier = sponsors.reduce<Record<number, SponsorRow[]>>((acc, s) => {
@@ -749,386 +762,420 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
     return acc;
   }, {});
 
-  // Exhibitors not yet sponsors (for the add dialog)
   const sponsoredExhibitorIds = new Set(sponsors.map((s) => s.exhibitor?.id).filter(Boolean));
   const availableExhibitors = eventExhibitors.filter((e) => !sponsoredExhibitorIds.has(e.id));
 
+  const TABS = [
+    { id: "genel",    label: "Genel",              icon: LayoutDashboard },
+    { id: "salonlar", label: "Salonlar & Standlar", icon: Layers          },
+    { id: "oduller",  label: "Ödüller",             icon: Trophy          },
+    { id: "galeri",   label: "Galeri",              icon: Images          },
+    { id: "kayitlar", label: "Kayıtlar",            icon: ClipboardList   },
+    { id: "sponsor",  label: "Sponsor",             icon: Crown           },
+  ] as const;
+
+  const TIER_COLORS: Record<number, { text: string; border: string; bg: string }> = {
+    1: { text: "text-slate-200", border: "border-slate-400/40", bg: "bg-slate-400/10" },
+    2: { text: "text-brand-gold", border: "border-brand-gold/35", bg: "bg-brand-gold/10" },
+    3: { text: "text-brand-cyan", border: "border-brand-cyan/30", bg: "bg-brand-cyan/8" },
+    4: { text: "text-orange-400", border: "border-orange-500/30", bg: "bg-orange-500/8" },
+  };
+  const getColor = (tier: number) => TIER_COLORS[Math.min(tier, 4)] ?? TIER_COLORS[4];
+
   return (
     <DashboardShell role="organizer" userName="" navItems={ORGANIZER_NAV}>
-      <div className="p-6 lg:p-8 space-y-8">
+      <div className="flex flex-col">
 
         {/* ── Header ─────────────────────────────────────────── */}
-        <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
-          <Link
-            href="/organizer/events"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mb-4"
-          >
-            <ChevronLeft className="w-4 h-4" /> Fuarlarım
-          </Link>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="font-display text-2xl font-bold text-white">{event.name}</h1>
-                <Badge variant={status.variant}>{status.label}</Badge>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {event.location}</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {new Date(event.start_date).toLocaleDateString("tr-TR")} → {new Date(event.end_date).toLocaleDateString("tr-TR")}
-                </span>
-              </div>
-            </div>
-            <Link href={`/organizer/events/${event.id}/gate`}>
-              <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
-                <QrCode className="w-4 h-4" /> Kapı Tarayıcı
-              </Button>
+        <div className="px-4 lg:px-6 pt-4 lg:pt-6 pb-0">
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
+            <Link href="/organizer/events" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors mb-3">
+              <ChevronLeft className="w-4 h-4" /> Fuarlarım
             </Link>
-          </div>
-        </motion.div>
-
-        {/* ── Stats ──────────────────────────────────────────── */}
-        <motion.div
-          initial={{ y: 16 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-4"
-        >
-          {[
-            { label: "Salon",       value: event.halls.length,                                                                        icon: Layers    },
-            { label: "Stand",       value: event.halls.reduce((s, h) => s + h.booths.length, 0),                                      icon: Grid3X3   },
-            { label: "Dolu Stand",  value: event.halls.reduce((s, h) => s + h.booths.filter((b) => b.exhibitor_id).length, 0),        icon: Building2 },
-          ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="glass rounded-xl p-4 border border-white/8 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-brand-indigo/15 flex items-center justify-center">
-                <Icon className="w-4 h-4 text-brand-indigo-light" />
-              </div>
+            <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <p className="text-xl font-display font-bold text-white">{value}</p>
-                <p className="text-xs text-muted-foreground">{label}</p>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 className="font-display text-xl font-bold text-white leading-tight">{event.name}</h1>
+                  <Badge variant={status.variant}>{status.label}</Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(event.start_date).toLocaleDateString("tr-TR")} → {new Date(event.end_date).toLocaleDateString("tr-TR")}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </motion.div>
-
-        {/* ── ÖDÜL YÖNETİMİ ──────────────────────────────────── */}
-        <RewardManagementSection eventId={event.id} />
-
-        {/* ── SPONSOR PİRAMİDİ ───────────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.15 }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-brand-gold" />
-              <h2 className="font-semibold text-white">Sponsor Piramidi</h2>
-              <span className="text-xs text-muted-foreground">({sponsors.length} sponsor)</span>
-              {layoutDirty && (
-                <span className="text-xs text-brand-cyan animate-pulse">• değişiklik var</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {layoutDirty && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveLayout}
-                  disabled={layoutSaving}
-                  className="gap-1.5 border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  {layoutSaving ? "Kaydediliyor..." : "Düzeni Kaydet"}
+              <Link href={`/organizer/events/${event.id}/gate`} className="flex-shrink-0">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <QrCode className="w-3.5 h-3.5" /> Kapı Tarayıcı
                 </Button>
-              )}
-              <Button
-                variant="gradient"
-                size="sm"
-                onClick={() => { setError(null); setSponsorModalOpen(true); }}
-                disabled={availableExhibitors.length === 0}
-              >
-                <Plus className="w-4 h-4" /> Sponsor Ekle
-              </Button>
+              </Link>
             </div>
+          </motion.div>
+        </div>
+
+        {/* ── Pill Tab Bar ───────────────────────────────────── */}
+        <div className="px-4 lg:px-6 border-b border-white/8">
+          <div className="flex gap-2 overflow-x-auto pb-3 pt-1" style={{ scrollbarWidth: "none" }}>
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                    activeTab === tab.id
+                      ? "bg-brand-indigo text-white shadow-lg shadow-brand-indigo/20"
+                      : "glass border border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {sponsors.length === 0 ? (
-            <div className="glass rounded-2xl border border-dashed border-brand-gold/20 p-8 flex flex-col items-center text-center">
-              <Crown className="w-10 h-10 text-brand-gold/30 mb-3" />
-              <p className="text-muted-foreground text-sm">Henüz sponsor yok.</p>
-              <p className="text-muted-foreground/60 text-xs mt-1">Katılımcı firmalar arasından sponsor seçin.</p>
-            </div>
-          ) : (() => {
-            const TIER_COLORS: Record<number, { text: string; border: string; bg: string }> = {
-              1: { text: "text-slate-200",   border: "border-slate-400/40",   bg: "bg-slate-400/10"  },
-              2: { text: "text-brand-gold",   border: "border-brand-gold/35",  bg: "bg-brand-gold/10" },
-              3: { text: "text-brand-cyan",   border: "border-brand-cyan/30",  bg: "bg-brand-cyan/8"  },
-              4: { text: "text-orange-400",   border: "border-orange-500/30",  bg: "bg-orange-500/8"  },
-            };
-            const getColor = (tier: number) => TIER_COLORS[Math.min(tier, 4)] ?? TIER_COLORS[4];
+        {/* ── Tab İçerikleri ─────────────────────────────────── */}
+        <div className="p-4 lg:p-6 space-y-6">
 
-            return (
-              <div className="space-y-4" ref={pyramidRef}>
-                {Object.keys(sponsorsByTier).map(Number).sort((a, b) => a - b).map((tier) => {
-                  const tierSponsors = [...sponsorsByTier[tier]].sort(
-                    (a, b) => (sponsorLayouts[a.id]?.sort_order ?? 0) - (sponsorLayouts[b.id]?.sort_order ?? 0)
-                  );
-                  const tierName = tierSponsors[0]?.tier_name ?? `Seviye ${tier}`;
-                  const { text: textCls } = getColor(tier);
-                  return (
-                    <div key={tier} className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Crown className={`w-3.5 h-3.5 ${textCls}`} />
-                        <span className={`text-xs font-semibold ${textCls}`}>{tierName}</span>
-                        <span className="text-xs text-muted-foreground/50">— sürükle/bırak sıralamak için, kenara tutup çek boyutu ayarla</span>
-                      </div>
-                      <div className="flex flex-row flex-wrap gap-3 items-stretch">
-                        {tierSponsors.map((sponsor) => {
-                          const layout  = sponsorLayouts[sponsor.id] ?? { width_pct: 100, height_px: 80, sort_order: 0 };
-                          const logoSrc = sponsor.custom_logo_url ?? sponsor.exhibitor?.logo_url ?? null;
-                          const { text: tc, border: bc, bg: bgc } = getColor(tier);
-                          const isDraggingThis = dragId === sponsor.id;
-                          return (
-                            <div
-                              key={sponsor.id}
-                              draggable
-                              onDragStart={() => setDragId(sponsor.id)}
-                              onDragOver={e => e.preventDefault()}
-                              onDrop={() => handleDrop(sponsor.id)}
-                              onDragEnd={() => setDragId(null)}
-                              style={{
-                                flexBasis: `calc(${layout.width_pct}% - 12px)`,
-                                minWidth: 120,
-                                height: layout.height_px,
-                              }}
-                              className={`relative glass rounded-xl border ${bc} ${bgc} flex flex-col items-center justify-center overflow-hidden group cursor-grab active:cursor-grabbing select-none transition-opacity ${isDraggingThis ? "opacity-40" : ""}`}
-                            >
-                              {/* Logo veya firma adı */}
-                              <div className="flex flex-col items-center justify-center w-full h-full px-6 pb-4 pt-2 pointer-events-none">
-                                {logoSrc ? (
-                                  <img
-                                    src={logoSrc}
-                                    alt={sponsor.exhibitor?.company_name ?? ""}
-                                    className="max-h-[65%] max-w-[85%] object-contain"
-                                  />
-                                ) : (
-                                  <span className={`font-bold text-sm text-center leading-tight ${tc}`}>
-                                    {sponsor.exhibitor?.company_name ?? "—"}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Logo yükle overlay (hover) */}
-                              <label className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity z-10">
-                                <Upload className="w-4 h-4 text-white" />
-                                <span className="text-[10px] text-white/80">Logo Yükle</span>
-                                <span className="text-[9px] text-white/50 text-center leading-tight">
-                                  Önerilen: {Math.round((layout.width_pct / 100) * 800)}×{layout.height_px}px
-                                </span>
-                                <input
-                                  type="file"
-                                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                                  className="hidden"
-                                  onChange={ev => { ev.stopPropagation(); handleLogoUpload(sponsor.id, ev); }}
-                                />
-                              </label>
-
-                              {/* Silme butonu */}
-                              <button
-                                onClick={e => { e.stopPropagation(); handleRemoveSponsor(sponsor.id); }}
-                                disabled={isPending}
-                                className="absolute top-1.5 right-7 z-20 opacity-0 group-hover:opacity-100 p-1 rounded text-red-400 hover:bg-red-500/20 transition-opacity"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-
-                              {/* Sağ kenar — genişlik resize */}
-                              <div
-                                className="absolute right-0 top-0 bottom-4 w-4 cursor-col-resize flex items-center justify-center hover:bg-white/15 z-20 rounded-r-xl"
-                                onMouseDown={e => handleResizeWidth(e, sponsor.id)}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <GripVertical className="w-3 h-3 text-white/30" />
-                              </div>
-
-                              {/* Alt kenar — yükseklik resize */}
-                              <div
-                                className="absolute bottom-0 left-4 right-4 h-4 cursor-row-resize flex items-center justify-center hover:bg-white/15 z-20 rounded-b-xl"
-                                onMouseDown={e => handleResizeHeight(e, sponsor.id)}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <GripHorizontal className="w-3 h-3 text-white/30" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+          {/* GENEL */}
+          {activeTab === "genel" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-6">
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Salon",      value: event.halls.length, icon: Layers,    color: "text-brand-indigo-light", bg: "bg-brand-indigo/15" },
+                  { label: "Stand",      value: totalBooths,        icon: Grid3X3,   color: "text-brand-cyan",          bg: "bg-brand-cyan/15"  },
+                  { label: "Dolu Stand", value: filledBooths,       icon: Building2, color: "text-brand-gold",          bg: "bg-brand-gold/15"  },
+                ].map(({ label, value, icon: Icon, color, bg }) => (
+                  <div key={label} className="glass rounded-2xl p-4 border border-white/8 flex flex-col gap-2">
+                    <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </motion.div>
-
-        {/* ── GALERİ YÖNETİMİ ──────────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.18 }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Images className="w-5 h-5 text-brand-violet-light" />
-            <h2 className="font-semibold text-white">Fotoğraf Galerisi</h2>
-            <span className="text-xs text-muted-foreground">({galleryUrls.length} fotoğraf)</span>
-          </div>
-
-          <div className="glass rounded-2xl border border-white/8 p-5 space-y-4">
-            {/* URL input */}
-            <div className="flex gap-2">
-              <Input
-                placeholder="https://example.com/photo.jpg"
-                value={galleryInput}
-                onChange={(e) => setGalleryInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddGalleryUrl()}
-                className="flex-1 font-mono text-xs"
-              />
-              <Button variant="gradient" size="sm" onClick={handleAddGalleryUrl} disabled={!galleryInput.trim() || isPending}>
-                <ImagePlus className="w-4 h-4" /> Ekle
-              </Button>
-            </div>
-
-            {/* Gallery grid */}
-            {galleryUrls.length === 0 ? (
-              <p className="text-xs text-muted-foreground/60 text-center py-4">Henüz fotoğraf eklenmedi. URL girerek galeri oluştur.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {galleryUrls.map((url) => (
-                  <div key={url} className="group relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => handleRemoveGalleryUrl(url)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <XIcon className="w-3 h-3" />
-                    </button>
+                    <p className="text-2xl font-display font-bold text-white">{value}</p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        </motion.div>
 
-        {/* ── SALONLAR & STANDLAR ───────────────────────────── */}
-        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-brand-indigo-light" />
-              <h2 className="font-semibold text-white">Salon & Stand Yönetimi</h2>
-            </div>
-            <Button variant="gradient" size="sm" onClick={() => { setError(null); setHallModalOpen(true); }}>
-              <Plus className="w-4 h-4" /> Salon Ekle
-            </Button>
-          </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hızlı Git</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { label: "Salonlar & Standlar", tab: "salonlar", icon: Layers,       color: "text-brand-indigo-light" },
+                    { label: "Ödüller",             tab: "oduller",  icon: Trophy,       color: "text-brand-gold"         },
+                    { label: "Galeri",              tab: "galeri",   icon: Images,       color: "text-brand-violet-light" },
+                    { label: "Kayıtlar",            tab: "kayitlar", icon: ClipboardList, color: "text-brand-cyan"        },
+                  ] as const).map(({ label, tab, icon: Icon, color }) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className="flex items-center gap-2 px-4 py-3 glass rounded-xl border border-white/8 hover:border-white/15 transition-colors text-left"
+                    >
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${color}`} />
+                      <span className="text-sm text-white">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {event.halls.length === 0 ? (
-            <div className="glass rounded-2xl border border-dashed border-white/15 p-10 flex flex-col items-center text-center">
-              <Layers className="w-10 h-10 text-muted-foreground/40 mb-3" />
-              <p className="text-muted-foreground text-sm">Henüz salon yok.</p>
-              <p className="text-muted-foreground/60 text-xs mt-1">&quot;Salon Ekle&quot; ile ilk salonu oluştur.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {event.halls.map((hall, hi) => (
-                <motion.div
-                  key={hall.id}
-                  initial={{ y: 16 }}
-                  animate={{ y: 0 }}
-                  transition={{ delay: 0.15 + hi * 0.07 }}
-                  className="glass rounded-2xl border border-white/8 overflow-hidden"
-                >
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-brand-indigo-light" />
-                      <span className="font-semibold text-white">{hall.name}</span>
-                      <span className="text-xs text-muted-foreground">Kat {hall.floor} · {hall.booths.length} stand</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Link href={`/organizer/halls/${hall.id}/map-editor`}>
-                        <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5 border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10 hover:border-brand-cyan/60">
-                          <Map className="w-3.5 h-3.5" /> Harita Düzenle
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost" size="sm" className="text-xs h-8"
-                        onClick={() => { setError(null); setBoothCode(""); setBoothModal({ hallId: hall.id, hallName: hall.name }); }}
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Stand
-                      </Button>
-                      <button
-                        onClick={() => handleDeleteHall(hall.id)}
-                        disabled={isPending}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+              <div className="glass rounded-2xl border border-white/8 p-5 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fuar Bilgileri</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="text-white">{event.location}</span>
                   </div>
-                  <div className="p-4">
-                    {hall.booths.length === 0 ? (
-                      <p className="text-xs text-muted-foreground/60 text-center py-2">Bu salonda stand yok.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {hall.booths.map((booth) => (
-                          <div
-                            key={booth.id}
-                            className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
-                              booth.is_golden
-                                ? "border-brand-gold/50 bg-brand-gold/12 text-brand-gold"
-                                : booth.exhibitor_id
-                                ? "border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan"
-                                : "border-white/10 bg-white/5 text-muted-foreground"
-                            }`}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="text-white">
+                      {new Date(event.start_date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
+                      {" → "}
+                      {new Date(event.end_date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
+                    </span>
+                  </div>
+                  {event.description && (
+                    <p className="text-muted-foreground text-xs leading-relaxed pt-1">{event.description}</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* SALONLAR & STANDLAR */}
+          {activeTab === "salonlar" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {event.halls.length} Salon · {totalBooths} Stand
+                </p>
+                <Button variant="gradient" size="sm" onClick={() => { setError(null); setHallModalOpen(true); }}>
+                  <Plus className="w-4 h-4" /> Salon Ekle
+                </Button>
+              </div>
+
+              {event.halls.length === 0 ? (
+                <div className="glass rounded-2xl border border-dashed border-white/15 p-10 flex flex-col items-center text-center">
+                  <Layers className="w-10 h-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-muted-foreground text-sm">Henüz salon yok.</p>
+                  <p className="text-muted-foreground/60 text-xs mt-1">&quot;Salon Ekle&quot; ile başla.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {event.halls.map((hall, hi) => (
+                    <motion.div key={hall.id} initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: hi * 0.05 }}
+                      className="glass rounded-2xl border border-white/8 overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-brand-indigo/20 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-brand-indigo-light">{hall.name.charAt(0)}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-white text-sm">{hall.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">Kat {hall.floor} · {hall.booths.length} stand</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Link href={`/organizer/halls/${hall.id}/map-editor`}>
+                            <Button variant="outline" size="sm" className="text-xs h-7 gap-1 border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10">
+                              <Map className="w-3 h-3" /> Harita
+                            </Button>
+                          </Link>
+                          <Button variant="ghost" size="sm" className="text-xs h-7 px-2"
+                            onClick={() => { setError(null); setBoothCode(""); setBoothModal({ hallId: hall.id, hallName: hall.name }); }}
                           >
-                            {booth.is_golden
-                              ? <Star className="w-3 h-3 fill-brand-gold text-brand-gold" />
-                              : <Grid3X3 className="w-3 h-3" />
-                            }
-                            {booth.code}
-                            {/* Hover actions */}
-                            <div className="hidden group-hover:flex items-center gap-1 ml-1">
-                              <button
-                                onClick={() => handleToggleGolden(booth, hall.id)}
-                                disabled={isPending}
-                                title={booth.is_golden ? "Altın QR kaldır" : "Altın QR yap"}
-                                className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
+                            <Plus className="w-3.5 h-3.5 mr-0.5" /> Stand
+                          </Button>
+                          <button onClick={() => handleDeleteHall(hall.id)} disabled={isPending}
+                            className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/8 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        {hall.booths.length === 0 ? (
+                          <p className="text-xs text-muted-foreground/50 text-center py-2">Bu salonda stand yok.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {hall.booths.map((booth) => (
+                              <div key={booth.id}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono transition-colors ${
                                   booth.is_golden
-                                    ? "text-brand-gold hover:bg-brand-gold/20"
-                                    : "text-muted-foreground hover:text-brand-gold hover:bg-brand-gold/15"
+                                    ? "border-brand-gold/50 bg-brand-gold/12 text-brand-gold"
+                                    : booth.exhibitor_id
+                                    ? "border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan"
+                                    : "border-white/10 bg-white/5 text-muted-foreground"
                                 }`}
                               >
-                                {booth.is_golden ? <StarOff className="w-3 h-3" /> : <Star className="w-3 h-3" />}
-                              </button>
-                              <button
-                                onClick={() => handleCopyQr(booth)}
-                                title="QR linkini kopyala"
-                                className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground hover:text-white hover:bg-white/10 transition-colors"
-                              >
-                                {copiedBoothId === booth.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBooth(booth.id, hall.id)}
-                                disabled={isPending}
-                                className="flex items-center justify-center w-5 h-5 rounded text-red-400 hover:bg-red-500/20 transition-colors"
-                              >×</button>
-                            </div>
+                                {booth.is_golden ? <Star className="w-3 h-3 fill-brand-gold text-brand-gold" /> : <Grid3X3 className="w-3 h-3" />}
+                                {booth.code}
+                                <div className="flex items-center gap-0.5 ml-0.5">
+                                  <button onClick={() => handleToggleGolden(booth, hall.id)} disabled={isPending}
+                                    title={booth.is_golden ? "Altın QR kaldır" : "Altın QR yap"}
+                                    className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
+                                      booth.is_golden ? "text-brand-gold bg-brand-gold/20" : "text-muted-foreground/40 hover:text-brand-gold hover:bg-brand-gold/15"
+                                    }`}
+                                  >
+                                    {booth.is_golden ? <StarOff className="w-3 h-3" /> : <Star className="w-3 h-3" />}
+                                  </button>
+                                  <button onClick={() => handleCopyQr(booth)} title="QR linkini kopyala"
+                                    className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground/40 hover:text-white hover:bg-white/10 transition-colors"
+                                  >
+                                    {copiedBoothId === booth.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                  <button onClick={() => handleDeleteBooth(booth.id, hall.id)} disabled={isPending}
+                                    className="flex items-center justify-center w-5 h-5 rounded text-red-400/40 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+                                  >×</button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
           )}
-        </motion.div>
 
-        {/* ── GİRİŞ KAYITLARI ────────────────────────────────── */}
-        <CheckinSection eventId={event.id} />
+          {/* ÖDÜLLER */}
+          {activeTab === "oduller" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
+              <RewardManagementSection eventId={event.id} alwaysOpen />
+            </motion.div>
+          )}
 
+          {/* GALERİ */}
+          {activeTab === "galeri" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
+              <div className="glass rounded-2xl border border-white/8 p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Images className="w-4 h-4 text-brand-violet-light" />
+                  <p className="text-sm font-semibold text-white">Fotoğraf Galerisi</p>
+                  <span className="text-xs text-muted-foreground">({galleryUrls.length} fotoğraf)</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.com/photo.jpg"
+                    value={galleryInput}
+                    onChange={(e) => setGalleryInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddGalleryUrl()}
+                    className="flex-1 font-mono text-xs"
+                  />
+                  <Button variant="gradient" size="sm" onClick={handleAddGalleryUrl} disabled={!galleryInput.trim() || isPending}>
+                    <ImagePlus className="w-4 h-4" /> Ekle
+                  </Button>
+                </div>
+                {galleryUrls.length === 0 ? (
+                  <p className="text-xs text-muted-foreground/60 text-center py-4">Henüz fotoğraf eklenmedi.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {galleryUrls.map((url) => (
+                      <div key={url} className="group relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button onClick={() => handleRemoveGalleryUrl(url)}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <XIcon className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* KAYITLAR */}
+          {activeTab === "kayitlar" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kayıtlı Ziyaretçiler</p>
+                <Link href={`/organizer/events/${event.id}/gate`}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10">
+                    <QrCode className="w-3.5 h-3.5" /> Kapı Tarayıcı Aç
+                  </Button>
+                </Link>
+              </div>
+              <RegistrantsSection
+                eventId={event.id}
+                eventTitle={event.name}
+                eventStatus={event.status}
+              />
+            </motion.div>
+          )}
+
+          {/* SPONSOR */}
+          {activeTab === "sponsor" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-brand-gold" />
+                  <p className="text-sm font-semibold text-white">Sponsor Piramidi</p>
+                  <span className="text-xs text-muted-foreground">({sponsors.length} sponsor)</span>
+                  {layoutDirty && <span className="text-xs text-brand-cyan animate-pulse">• değişiklik var</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {layoutDirty && (
+                    <Button variant="outline" size="sm" onClick={handleSaveLayout} disabled={layoutSaving}
+                      className="gap-1.5 border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      {layoutSaving ? "Kaydediliyor..." : "Düzeni Kaydet"}
+                    </Button>
+                  )}
+                  <Button variant="gradient" size="sm" onClick={() => { setError(null); setSponsorModalOpen(true); }} disabled={availableExhibitors.length === 0}>
+                    <Plus className="w-4 h-4" /> Sponsor Ekle
+                  </Button>
+                </div>
+              </div>
+
+              {sponsors.length === 0 ? (
+                <div className="glass rounded-2xl border border-dashed border-brand-gold/20 p-8 flex flex-col items-center text-center">
+                  <Crown className="w-10 h-10 text-brand-gold/30 mb-3" />
+                  <p className="text-muted-foreground text-sm">Henüz sponsor yok.</p>
+                  <p className="text-muted-foreground/60 text-xs mt-1">Katılımcı firmalar arasından sponsor seçin.</p>
+                </div>
+              ) : (
+                <div className="space-y-4" ref={pyramidRef}>
+                  {Object.keys(sponsorsByTier).map(Number).sort((a, b) => a - b).map((tier) => {
+                    const tierSponsors = [...sponsorsByTier[tier]].sort(
+                      (a, b) => (sponsorLayouts[a.id]?.sort_order ?? 0) - (sponsorLayouts[b.id]?.sort_order ?? 0)
+                    );
+                    const tierName = tierSponsors[0]?.tier_name ?? `Seviye ${tier}`;
+                    const { text: textCls } = getColor(tier);
+                    return (
+                      <div key={tier} className="space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <Crown className={`w-3.5 h-3.5 ${textCls}`} />
+                          <span className={`text-xs font-semibold ${textCls}`}>{tierName}</span>
+                          <span className="text-xs text-muted-foreground/50">— sürükle/bırak ile sırala</span>
+                        </div>
+                        <div className="flex flex-row flex-wrap gap-3 items-stretch">
+                          {tierSponsors.map((sponsor) => {
+                            const layout  = sponsorLayouts[sponsor.id] ?? { width_pct: 100, height_px: 80, sort_order: 0 };
+                            const logoSrc = sponsor.custom_logo_url ?? sponsor.exhibitor?.logo_url ?? null;
+                            const { text: tc, border: bc, bg: bgc } = getColor(tier);
+                            const isDraggingThis = dragId === sponsor.id;
+                            return (
+                              <div key={sponsor.id} draggable
+                                onDragStart={() => setDragId(sponsor.id)}
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={() => handleDrop(sponsor.id)}
+                                onDragEnd={() => setDragId(null)}
+                                style={{ flexBasis: `calc(${layout.width_pct}% - 12px)`, minWidth: 120, height: layout.height_px }}
+                                className={`relative glass rounded-xl border ${bc} ${bgc} flex flex-col items-center justify-center overflow-hidden group cursor-grab active:cursor-grabbing select-none transition-opacity ${isDraggingThis ? "opacity-40" : ""}`}
+                              >
+                                <div className="flex flex-col items-center justify-center w-full h-full px-6 pb-4 pt-2 pointer-events-none">
+                                  {logoSrc ? (
+                                    <img src={logoSrc} alt={sponsor.exhibitor?.company_name ?? ""} className="max-h-[65%] max-w-[85%] object-contain" />
+                                  ) : (
+                                    <span className={`font-bold text-sm text-center leading-tight ${tc}`}>{sponsor.exhibitor?.company_name ?? "—"}</span>
+                                  )}
+                                </div>
+                                <label className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity z-10">
+                                  <Upload className="w-4 h-4 text-white" />
+                                  <span className="text-[10px] text-white/80">Logo Yükle</span>
+                                  <span className="text-[9px] text-white/50 text-center leading-tight">
+                                    Önerilen: {Math.round((layout.width_pct / 100) * 800)}×{layout.height_px}px
+                                  </span>
+                                  <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden"
+                                    onChange={ev => { ev.stopPropagation(); handleLogoUpload(sponsor.id, ev); }}
+                                  />
+                                </label>
+                                <button onClick={e => { e.stopPropagation(); handleRemoveSponsor(sponsor.id); }} disabled={isPending}
+                                  className="absolute top-1.5 right-7 z-20 opacity-0 group-hover:opacity-100 p-1 rounded text-red-400 hover:bg-red-500/20 transition-opacity"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                                <div className="absolute right-0 top-0 bottom-4 w-4 cursor-col-resize flex items-center justify-center hover:bg-white/15 z-20 rounded-r-xl"
+                                  onMouseDown={e => handleResizeWidth(e, sponsor.id)} onClick={e => e.stopPropagation()}
+                                >
+                                  <GripVertical className="w-3 h-3 text-white/30" />
+                                </div>
+                                <div className="absolute bottom-0 left-4 right-4 h-4 cursor-row-resize flex items-center justify-center hover:bg-white/15 z-20 rounded-b-xl"
+                                  onMouseDown={e => handleResizeHeight(e, sponsor.id)} onClick={e => e.stopPropagation()}
+                                >
+                                  <GripHorizontal className="w-3 h-3 text-white/30" />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+        </div>
       </div>
 
       {/* ── ADD HALL MODAL ───────────────────────────────────── */}

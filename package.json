@@ -31,7 +31,8 @@
     "react-dom": "^18",
     "stripe": "^22.2.1",
     "tailwind-merge": "^2.4.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",

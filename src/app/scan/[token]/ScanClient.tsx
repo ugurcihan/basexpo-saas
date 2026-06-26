@@ -25,7 +25,7 @@ import type { UserRole } from "@/types";
 import type { RewardTierWithStats } from "@/features/loyalty/actions";
 
 interface Product { id: string; name: string; description: string; image_url: string | null }
-type EventRow = { id: string; name: string; location: string; start_date: string; end_date: string };
+type EventRow = { id: string; name: string; location: string; start_date: string; end_date: string; gallery_urls?: string[] };
 
 interface ExhibitorData {
   id: string;
@@ -191,6 +191,25 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
                 </motion.div>
               )}
             </AnimatePresence>
+          </motion.div>
+        )}
+
+        {/* Fuar Galerisi — yatay kaydırmalı */}
+        {ev && ev.gallery_urls && ev.gallery_urls.length > 0 && (
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.09 }}>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+              Fuar Galerisi
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: "none" }}>
+              {ev.gallery_urls.map((url) => (
+                <div
+                  key={url}
+                  className="flex-shrink-0 w-56 h-36 snap-start rounded-xl overflow-hidden border border-white/10 bg-white/5"
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
 

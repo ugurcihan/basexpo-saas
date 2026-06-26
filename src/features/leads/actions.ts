@@ -10,7 +10,7 @@ export async function getExhibitorByToken(token: string) {
     .from("exhibitors")
     .select(`
       id, company_name, description, logo_url, tags, qr_token, event_id,
-      event:events(id, name, location, start_date, end_date),
+      event:events(id, name, location, start_date, end_date, gallery_urls),
       products(id, name, description, image_url)
     `)
     .eq("qr_token", token)
@@ -93,7 +93,7 @@ export async function getBoothByQrToken(token: string) {
     .select(`
       id, code, qr_token, is_golden, golden_bonus_points,
       hall:halls(id, name, event_id,
-        event:events(id, name, location, start_date, end_date)
+        event:events(id, name, location, start_date, end_date, gallery_urls)
       ),
       exhibitor:exhibitors(id, company_name, description, logo_url, tags,
         products(id, name, description, image_url)

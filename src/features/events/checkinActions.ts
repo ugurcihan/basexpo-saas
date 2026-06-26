@@ -81,6 +81,61 @@ export async function checkinOrCheckout(
   }
 }
 
+export type RegistrantRow = {
+  registration_id: string;
+  visitor_id: string;
+  full_name: string | null;
+  email: string;
+  ticket_code: string | null;
+  status: string;
+  registered_at: string;
+  checked_in: boolean;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+};
+
+export async function getEventRegistrantsWithCheckins(eventId: string): Promise<RegistrantRow[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: regs }, { data: checkins }] = await Promise.all([
+    supabase
+      .from("event_registrations")
+      .select("id, visitor_id, ticket_code, status, created_at, profiles(full_name, email)")
+      .eq("event_id", eventId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("fair_checkins")
+      .select("visitor_id, checked_in_at, checked_out_at")
+      .eq("event_id", eventId)
+      .order("checked_in_at", { ascending: false }),
+  ]);
+
+  const checkinMap = new Map<string, { checked_in_at: string; checked_out_at: string | null }>();
+  for (const c of (checkins ?? [])) {
+    if (!checkinMap.has(c.visitor_id)) {
+      checkinMap.set(c.visitor_id, { checked_in_at: c.checked_in_at, checked_out_at: c.checked_out_at });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (regs ?? []).map((r: any) => {
+    const profile = Array.isArray(r.profiles) ? (r.profiles[0] ?? null) : (r.profiles ?? null);
+    const checkin = checkinMap.get(r.visitor_id);
+    return {
+      registration_id: r.id,
+      visitor_id: r.visitor_id,
+      full_name: profile?.full_name ?? null,
+      email: profile?.email ?? "—",
+      ticket_code: r.ticket_code ?? null,
+      status: r.status ?? "pending",
+      registered_at: r.created_at,
+      checked_in: !!checkin,
+      checked_in_at: checkin?.checked_in_at ?? null,
+      checked_out_at: checkin?.checked_out_at ?? null,
+    };
+  });
+}
+
 export async function getCheckins(eventId: string): Promise<CheckinRecord[]> {
   const supabase = await createSupabaseServerClient();
 
