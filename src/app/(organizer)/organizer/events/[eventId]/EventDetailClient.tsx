@@ -62,6 +62,7 @@ import {
   StarOff,
   Copy,
   Check,
+  Printer,
 } from "lucide-react";
 import {
   createHall,
@@ -86,6 +87,7 @@ import type { RewardTierWithStats } from "@/features/loyalty/actions";
 import type { EventStatus } from "@/types";
 import { ORGANIZER_NAV } from "../../_nav";
 import { RegistrantsSection } from "./RegistrantsSection";
+import { BadgePrintSection } from "./BadgePrintSection";
 
 // ── Ödül Yönetimi Bileşeni ───────────────────────────────
 function RewardManagementSection({ eventId, alwaysOpen }: { eventId: string; alwaysOpen?: boolean }) {
@@ -772,6 +774,7 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
     { id: "galeri",   label: "Galeri",              icon: Images          },
     { id: "kayitlar", label: "Kayıtlar",            icon: ClipboardList   },
     { id: "sponsor",  label: "Sponsor",             icon: Crown           },
+    { id: "yaka",     label: "Yaka Kartı",          icon: Printer         },
   ] as const;
 
   const TIER_COLORS: Record<number, { text: string; border: string; bg: string }> = {
@@ -1173,6 +1176,15 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                 </div>
               )}
             </motion.div>
+          )}
+
+          {/* YAKA KARTI */}
+          {activeTab === "yaka" && (
+            <BadgePrintSection
+              eventName={initialEvent.name}
+              exhibitors={eventExhibitors}
+              halls={(initialEvent.halls ?? []) as { id: string; name: string; booths: { id: string; code: string; exhibitor_id: string | null }[] }[]}
+            />
           )}
 
         </div>
