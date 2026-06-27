@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdminClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function getMyExhibitorProfile() {
@@ -23,7 +24,11 @@ export async function getAvailableEvents() {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("events")
-    .select("id, name, location, start_date, end_date")
+    .select(`
+      id, name, location, start_date, end_date, status, capacity,
+      description, cover_url, category,
+      organizer:profiles!events_organizer_id_fkey(full_name, email)
+    `)
     .in("status", ["published", "active"])
     .order("start_date", { ascending: true });
   return data ?? [];
@@ -57,6 +62,7 @@ export async function createExhibitorProfile(input: {
 
 export async function applyToFair(eventId: string, note?: string) {
   const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Giriş yapmalısın" };
 
@@ -80,6 +86,7 @@ export async function applyToFair(eventId: string, note?: string) {
     description,
     logo_url,
     tags,
+    status: "pending",
   });
 
   if (error) {
@@ -87,6 +94,95 @@ export async function applyToFair(eventId: string, note?: string) {
     return { error: error.message };
   }
 
+  const { data: event } = await admin
+    .from("events")
+    .select("organizer_id, name")
+    .eq("id", eventId)
+    .single();
+
+  if (event?.organizer_id) {
+    await admin.from("notifications").insert({
+      recipient_id: event.organizer_id,
+      sender_id: user.id,
+      type: "alert",
+      title: `Yeni Firma Başvurusu: ${company_name}`,
+      body: `${company_name} firması "${event.name}" fuarına katılım başvurusu yaptı.`,
+      event_id: eventId,
+    });
+  }
+
+  revalidatePath("/exhibitor/fairs");
+  return { error: null };
+}
+
+export async function approveExhibitor(exhibitorId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: exhibitor } = await admin
+    .from("exhibitors")
+    .select("owner_id, company_name, event:events(name)")
+    .eq("id", exhibitorId)
+    .single();
+
+  const { error } = await admin
+    .from("exhibitors")
+    .update({ status: "approved" })
+    .eq("id", exhibitorId);
+
+  if (error) return { error: error.message };
+
+  if (exhibitor?.owner_id) {
+    const ev = Array.isArray(exhibitor.event) ? exhibitor.event[0] : exhibitor.event;
+    await admin.from("notifications").insert({
+      recipient_id: exhibitor.owner_id,
+      sender_id: user.id,
+      type: "alert",
+      title: "Başvurunuz Onaylandı!",
+      body: `${exhibitor.company_name} firmasının "${(ev as { name?: string } | null)?.name ?? "fuar"}" fuarına katılım başvurusu onaylandı. Stand tahsisi için organizatörle iletişime geçebilirsiniz.`,
+    });
+  }
+
+  revalidatePath("/organizer/participants");
+  revalidatePath("/exhibitor/fairs");
+  return { error: null };
+}
+
+export async function rejectExhibitor(exhibitorId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: exhibitor } = await admin
+    .from("exhibitors")
+    .select("owner_id, company_name, event:events(name)")
+    .eq("id", exhibitorId)
+    .single();
+
+  const { error } = await admin
+    .from("exhibitors")
+    .update({ status: "rejected" })
+    .eq("id", exhibitorId);
+
+  if (error) return { error: error.message };
+
+  if (exhibitor?.owner_id) {
+    const ev = Array.isArray(exhibitor.event) ? exhibitor.event[0] : exhibitor.event;
+    await admin.from("notifications").insert({
+      recipient_id: exhibitor.owner_id,
+      sender_id: user.id,
+      type: "alert",
+      title: "Başvurunuz Hakkında",
+      body: `${exhibitor.company_name} firmasının "${(ev as { name?: string } | null)?.name ?? "fuar"}" fuarına katılım başvurusu bu aşamada uygun görülmedi.`,
+    });
+  }
+
+  revalidatePath("/organizer/participants");
   revalidatePath("/exhibitor/fairs");
   return { error: null };
 }

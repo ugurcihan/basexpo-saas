@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import {
   CalendarClock, MapPin, Calendar, ChevronRight, CheckCircle2,
   XCircle, Clock, UserCircle2, QrCode, Store, X, Send,
+  Users, Tag, Info, Mail, Phone,
 } from "lucide-react";
 import { respondToMeeting } from "@/features/connections/actions";
 import { applyToFair } from "@/features/exhibitors/actions";
@@ -25,10 +26,24 @@ interface ExhibitorRow {
   id: string;
   company_name: string;
   qr_token: string;
+  status: string | null;
   event: EventInfo | EventInfo[] | null;
   booths: BoothInfo | BoothInfo[] | null;
 }
-interface UpcomingEvent { id: string; name: string; location: string; start_date: string; end_date: string; status: string; capacity: number | null }
+interface OrganizerInfo { full_name: string | null; email: string }
+interface UpcomingEvent {
+  id: string;
+  name: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  capacity: number | null;
+  description: string | null;
+  cover_url: string | null;
+  category: string | null;
+  organizer: OrganizerInfo | OrganizerInfo[] | null;
+}
 
 interface Props {
   profile: Profile;
@@ -56,6 +71,10 @@ function getBooths(b: BoothInfo | BoothInfo[] | null): BoothInfo[] {
   if (!b) return [];
   return Array.isArray(b) ? b : [b];
 }
+function getOrganizer(o: OrganizerInfo | OrganizerInfo[] | null): OrganizerInfo | null {
+  if (!o) return null;
+  return Array.isArray(o) ? (o[0] ?? null) : o;
+}
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   published: { label: "Yayında",  color: "text-green-400 bg-green-500/15 border-green-500/25" },
@@ -63,6 +82,122 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   draft:     { label: "Taslak",   color: "text-muted-foreground bg-white/8 border-white/12" },
   ended:     { label: "Bitti",    color: "text-orange-400 bg-orange-500/15 border-orange-500/25" },
 };
+
+const APPLICATION_STATUS: Record<string, { label: string; color: string; icon: React.FC<{ className?: string }> }> = {
+  pending:  { label: "Onay Bekliyor", color: "text-amber-400 bg-amber-500/15 border-amber-500/25",   icon: Clock },
+  approved: { label: "Onaylandı",     color: "text-green-400 bg-green-500/15 border-green-500/25",   icon: CheckCircle2 },
+  rejected: { label: "Reddedildi",    color: "text-red-400 bg-red-500/15 border-red-500/25",         icon: XCircle },
+};
+
+function EventDetailModal({
+  event,
+  onClose,
+  onApply,
+  alreadyApplied,
+}: {
+  event: UpcomingEvent;
+  onClose: () => void;
+  onApply: (ev: UpcomingEvent) => void;
+  alreadyApplied: boolean;
+}) {
+  const organizer = getOrganizer(event.organizer);
+  const s = STATUS_MAP[event.status] ?? STATUS_MAP.draft;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <motion.div
+        initial={{ y: 16 }}
+        animate={{ y: 0 }}
+        className="w-full max-w-lg glass rounded-2xl border border-white/12 shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cover or gradient header */}
+        {event.cover_url ? (
+          <div className="h-36 relative overflow-hidden">
+            <img src={event.cover_url} alt={event.name} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+            <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white/80 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="h-20 bg-gradient-to-r from-brand-indigo/30 to-brand-violet/20 relative flex items-center px-6">
+            <button onClick={onClose} className="absolute top-3 right-3 text-muted-foreground hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Title + status */}
+          <div>
+            <div className="flex items-start gap-2 flex-wrap mb-1">
+              <h2 className="font-display text-xl font-bold text-white">{event.name}</h2>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 self-center ${s.color}`}>{s.label}</span>
+            </div>
+            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {event.location}</span>
+              <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatDate(event.start_date)} – {formatDate(event.end_date)}</span>
+              {event.capacity && (
+                <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {event.capacity} kişi kapasitesi</span>
+              )}
+              {event.category && (
+                <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> {event.category}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          {event.description && (
+            <div className="glass rounded-xl border border-white/8 p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" /> Fuar Hakkında
+              </p>
+              <p className="text-sm text-white/80 leading-relaxed">{event.description}</p>
+            </div>
+          )}
+
+          {/* Organizer */}
+          {organizer && (
+            <div className="glass rounded-xl border border-white/8 p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organizatör</p>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-brand-indigo/15 border border-brand-indigo/20 flex items-center justify-center flex-shrink-0">
+                  <UserCircle2 className="w-4.5 h-4.5 text-brand-indigo-light" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">{organizer.full_name ?? "Organizatör"}</p>
+                  <div className="flex flex-wrap gap-2 mt-0.5 text-xs text-muted-foreground">
+                    {organizer.email && (
+                      <a href={`mailto:${organizer.email}`} className="flex items-center gap-1 hover:text-brand-indigo-light transition-colors">
+                        <Mail className="w-3 h-3" /> {organizer.email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="px-6 py-4 border-t border-white/8 flex gap-3">
+          {alreadyApplied ? (
+            <div className="flex-1 flex items-center justify-center gap-2 text-sm text-green-400">
+              <CheckCircle2 className="w-4 h-4" />
+              Zaten kayıtlısın
+            </div>
+          ) : (
+            <Button variant="gradient" className="flex-1" onClick={() => { onClose(); onApply(event); }}>
+              Bu Fuara Başvur →
+            </Button>
+          )}
+          <Button variant="outline" onClick={onClose}>Kapat</Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequests }: Props) {
   const [tab, setTab] = useState<Tab>("registered");
@@ -73,11 +208,18 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
   const [applySuccess, setApplySuccess] = useState<string | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [selectedEvent, setSelectedEvent] = useState<UpcomingEvent | null>(null);
 
-  const myEventIds = new Set(myExhibitors.map(ex => {
+  const myEventIds = new Set<string>();
+  const pendingEventIds = new Set<string>();
+
+  myExhibitors.forEach(ex => {
     const ev = getEvent(ex.event);
-    return ev?.id;
-  }).filter(Boolean));
+    if (ev?.id) {
+      myEventIds.add(ev.id);
+      if (ex.status === "pending") pendingEventIds.add(ev.id);
+    }
+  });
 
   function handleRespond(id: string, action: "accepted" | "declined") {
     startTransition(async () => {
@@ -97,8 +239,8 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
         setApplySuccess(applyingTo.name);
         setApplyingTo(null);
         setApplyNote("");
+        setApplyError(null);
       }
-      setApplyError(null);
     });
   }
 
@@ -153,6 +295,7 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                 const ev = getEvent(ex.event);
                 const booths = getBooths(ex.booths);
                 const s = STATUS_MAP[ev?.status ?? "draft"] ?? STATUS_MAP.draft;
+                const appStatus = ex.status ? (APPLICATION_STATUS[ex.status] ?? null) : null;
                 return (
                   <motion.div key={ex.id} initial={{ y: 14 }} animate={{ y: 0 }} transition={{ delay: i * 0.05 }}
                     className="glass rounded-xl border border-white/8 p-5 flex items-center gap-4"
@@ -161,9 +304,15 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                       <CalendarClock className="w-5 h-5 text-brand-indigo-light" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <p className="font-semibold text-white truncate">{ev?.name ?? "Bilinmeyen Fuar"}</p>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${s.color}`}>{s.label}</span>
+                        {appStatus && (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 flex items-center gap-1 ${appStatus.color}`}>
+                            <appStatus.icon className="w-2.5 h-2.5" />
+                            {appStatus.label}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> {ev?.location}
@@ -176,17 +325,21 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Link
-                        href={`/scan/${ex.qr_token}`}
-                        target="_blank"
-                        className="p-2 rounded-lg text-muted-foreground hover:text-brand-cyan hover:bg-brand-cyan/10 transition-colors"
-                        title="QR Sayfasını Gör"
-                      >
-                        <QrCode className="w-4 h-4" />
-                      </Link>
-                      <Link href="/exhibitor/card" className="text-xs text-brand-indigo-light hover:underline flex items-center gap-1">
-                        QR <ChevronRight className="w-3 h-3" />
-                      </Link>
+                      {ex.status !== "pending" && ex.status !== "rejected" && (
+                        <>
+                          <Link
+                            href={`/scan/${ex.qr_token}`}
+                            target="_blank"
+                            className="p-2 rounded-lg text-muted-foreground hover:text-brand-cyan hover:bg-brand-cyan/10 transition-colors"
+                            title="QR Sayfasını Gör"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </Link>
+                          <Link href="/exhibitor/card" className="text-xs text-brand-indigo-light hover:underline flex items-center gap-1">
+                            QR <ChevronRight className="w-3 h-3" />
+                          </Link>
+                        </>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -206,10 +359,13 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
             ) : (
               upcomingEvents.map((ev, i) => {
                 const isRegistered = myEventIds.has(ev.id);
+                const isPendingApplication = pendingEventIds.has(ev.id);
+                const justApplied = appliedIds.has(ev.id) && !isRegistered;
                 const s = STATUS_MAP[ev.status] ?? STATUS_MAP.draft;
                 return (
                   <motion.div key={ev.id} initial={{ y: 14 }} animate={{ y: 0 }} transition={{ delay: i * 0.04 }}
-                    className="glass rounded-xl border border-white/8 hover:border-white/12 transition-all p-5 flex items-center gap-4"
+                    className="glass rounded-xl border border-white/8 hover:border-white/14 transition-all p-5 flex items-center gap-4 cursor-pointer"
+                    onClick={() => setSelectedEvent(ev)}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
@@ -219,13 +375,20 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> {ev.location} · {formatDate(ev.start_date)}
                       </p>
+                      {ev.description && (
+                        <p className="text-xs text-muted-foreground/60 mt-1 line-clamp-1">{ev.description}</p>
+                      )}
                     </div>
-                    {isRegistered || appliedIds.has(ev.id) ? (
-                      <span className="flex items-center gap-1.5 text-xs text-green-400 flex-shrink-0">
-                        <CheckCircle2 className="w-4 h-4" /> {appliedIds.has(ev.id) && !isRegistered ? "Başvuruldu" : "Kayıtlısın"}
+                    {isPendingApplication ? (
+                      <span className="flex items-center gap-1.5 text-xs text-amber-400 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                        <Clock className="w-4 h-4" /> Onay Bekliyor
+                      </span>
+                    ) : isRegistered || justApplied ? (
+                      <span className="flex items-center gap-1.5 text-xs text-green-400 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                        <CheckCircle2 className="w-4 h-4" /> {justApplied ? "Başvuruldu" : "Kayıtlısın"}
                       </span>
                     ) : (
-                      <Button variant="gradient" size="sm" onClick={() => { setApplyingTo(ev); setApplyError(null); }}>
+                      <Button variant="gradient" size="sm" onClick={(e) => { e.stopPropagation(); setApplyingTo(ev); setApplyError(null); }}>
                         Başvur →
                       </Button>
                     )}
@@ -330,6 +493,16 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
             <X className="w-4 h-4" />
           </button>
         </div>
+      )}
+
+      {/* Event detail modal */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onApply={(ev) => { setApplyingTo(ev); setApplyError(null); }}
+          alreadyApplied={myEventIds.has(selectedEvent.id) || appliedIds.has(selectedEvent.id)}
+        />
       )}
 
       {/* Apply modal */}

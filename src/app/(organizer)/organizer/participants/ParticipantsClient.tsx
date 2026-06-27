@@ -13,6 +13,7 @@ import {
 import type { Profile } from "@/types";
 import { ORGANIZER_NAV } from "../_nav";
 import { approveRegistration, rejectRegistration } from "@/features/events/registrationActions";
+import { approveExhibitor, rejectExhibitor } from "@/features/exhibitors/actions";
 
 interface EventRef { id: string; name: string }
 interface VisitorRef { id: string; full_name: string | null; email: string; phone_number: string | null }
@@ -34,6 +35,7 @@ interface FirmRow {
   created_at: string;
   contact_email: string | null;
   city: string | null;
+  status: string | null;
   event: EventRef | null;
   booths: BoothRef[];
   owner: { full_name: string | null; email: string; phone_number: string | null } | null;
@@ -45,8 +47,8 @@ interface Props {
   firms: FirmRow[];
 }
 
-function statusBadge(status: string) {
-  if (status === "confirmed")       return <Badge className="text-xs bg-green-500/15 text-green-400 border-green-500/25"><CheckCircle2 className="w-3 h-3 mr-1" /> Onaylı</Badge>;
+function visitorStatusBadge(status: string) {
+  if (status === "confirmed")        return <Badge className="text-xs bg-green-500/15 text-green-400 border-green-500/25"><CheckCircle2 className="w-3 h-3 mr-1" /> Onaylı</Badge>;
   if (status === "pending_approval") return <Badge className="text-xs bg-amber-500/15 text-amber-400 border-amber-500/25"><Clock className="w-3 h-3 mr-1" /> Bekliyor</Badge>;
   return <Badge className="text-xs bg-white/8 text-muted-foreground border-white/10"><XCircle className="w-3 h-3 mr-1" /> Bekleme Listesi</Badge>;
 }
@@ -78,7 +80,7 @@ function VisitorCard({ row, onApprove, onReject }: { row: VisitorRow; onApprove:
         )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        {statusBadge(row.status)}
+        {visitorStatusBadge(row.status)}
         {isPending && (
           <>
             <Button
@@ -106,12 +108,124 @@ function VisitorCard({ row, onApprove, onReject }: { row: VisitorRow; onApprove:
   );
 }
 
+function FirmCard({
+  ex,
+  onApprove,
+  onReject,
+}: {
+  ex: FirmRow;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  const [loading, startTransition] = useTransition();
+  const isPending = ex.status === "pending";
+
+  return (
+    <div className={`px-5 py-4 flex items-start gap-4 ${isPending ? "bg-amber-500/3" : ""}`}>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+        isPending
+          ? "bg-amber-500/15 border border-amber-500/25"
+          : "bg-brand-gold/10 border border-brand-gold/20"
+      }`}>
+        <Building2 className={`w-5 h-5 ${isPending ? "text-amber-400" : "text-brand-gold"}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-white">{ex.company_name}</p>
+          {ex.city && (
+            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+              <MapPin className="w-3 h-3" /> {ex.city}
+            </span>
+          )}
+          {isPending && (
+            <Badge className="text-xs bg-amber-500/15 text-amber-400 border-amber-500/25">
+              <Clock className="w-3 h-3 mr-1" /> Onay Bekliyor
+            </Badge>
+          )}
+          {ex.status === "approved" && (
+            <Badge className="text-xs bg-green-500/15 text-green-400 border-green-500/25">
+              <CheckCircle2 className="w-3 h-3 mr-1" /> Onaylı
+            </Badge>
+          )}
+          {ex.status === "rejected" && (
+            <Badge className="text-xs bg-red-500/15 text-red-400 border-red-500/25">
+              <XCircle className="w-3 h-3 mr-1" /> Reddedildi
+            </Badge>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-0.5">
+          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {ex.event?.name ?? "—"}</span>
+          {ex.booths.map((b) => (
+            <span key={b.id} className="flex items-center gap-1 font-mono text-brand-indigo-light">
+              <Grid3X3 className="w-3 h-3" /> {b.code}
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground/80">
+          {(ex.contact_email || ex.owner?.email) && (
+            <span className="flex items-center gap-1">
+              <Mail className="w-3 h-3" />
+              {ex.contact_email || ex.owner?.email}
+            </span>
+          )}
+          {ex.owner?.phone_number && (
+            <span className="flex items-center gap-1">
+              <Phone className="w-3 h-3" /> {ex.owner.phone_number}
+            </span>
+          )}
+          {ex.owner?.full_name && (
+            <span className="text-muted-foreground/60">Yetkili: {ex.owner.full_name}</span>
+          )}
+        </div>
+        {ex.tags.length > 0 && (
+          <div className="flex gap-1 mt-1.5 flex-wrap">
+            {ex.tags.slice(0, 4).map((tag) => (
+              <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-white/8 text-muted-foreground">{tag}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        {ex.booths.length > 0 ? (
+          <Badge variant="default" className="text-xs">{ex.booths.length} Stand</Badge>
+        ) : (
+          <Badge variant="outline" className="text-xs">Stand Yok</Badge>
+        )}
+        {isPending && (
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              variant="gradient"
+              className="h-7 text-xs gap-1"
+              disabled={loading}
+              onClick={() => startTransition(() => onApprove(ex.id))}
+            >
+              <Check className="w-3 h-3" /> Onayla
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+              disabled={loading}
+              onClick={() => startTransition(() => onReject(ex.id))}
+            >
+              <X className="w-3 h-3" /> Reddet
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ParticipantsClient({ profile, visitors, firms }: Props) {
   const [tab, setTab] = useState<"visitors" | "firms">("visitors");
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState(visitors);
+  const [firmRows, setFirmRows] = useState(firms);
 
-  const pendingCount = rows.filter((r) => r.status === "pending_approval").length;
+  const pendingVisitorCount = rows.filter((r) => r.status === "pending_approval").length;
+  const pendingFirmCount    = firmRows.filter((f) => f.status === "pending").length;
 
   const filtered = rows.filter((r) => {
     const q = search.toLowerCase();
@@ -121,12 +235,16 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
       || (r.event?.name ?? "").toLowerCase().includes(q);
   });
 
-  const filteredFirms = firms.filter((f) => {
+  const filteredFirms = firmRows.filter((f) => {
     const q = search.toLowerCase();
     return !q || f.company_name.toLowerCase().includes(q) || (f.event?.name ?? "").toLowerCase().includes(q);
   });
 
-  async function handleApprove(id: string) {
+  const pendingFirms  = filteredFirms.filter((f) => f.status === "pending");
+  const approvedFirms = filteredFirms.filter((f) => f.status !== "pending" && f.status !== "rejected");
+  const rejectedFirms = filteredFirms.filter((f) => f.status === "rejected");
+
+  async function handleApproveVisitor(id: string) {
     const res = await approveRegistration(id);
     if (res.success) {
       setRows((prev) =>
@@ -137,16 +255,30 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
     }
   }
 
-  async function handleReject(id: string) {
+  async function handleRejectVisitor(id: string) {
     const res = await rejectRegistration(id);
     if (res.success) {
       setRows((prev) => prev.filter((r) => r.id !== id));
     }
   }
 
+  async function handleApproveFirm(id: string) {
+    const res = await approveExhibitor(id);
+    if (!res.error) {
+      setFirmRows((prev) => prev.map((f) => f.id === id ? { ...f, status: "approved" } : f));
+    }
+  }
+
+  async function handleRejectFirm(id: string) {
+    const res = await rejectExhibitor(id);
+    if (!res.error) {
+      setFirmRows((prev) => prev.map((f) => f.id === id ? { ...f, status: "rejected" } : f));
+    }
+  }
+
   const tabs = [
-    { id: "visitors" as const, label: "Ziyaretçiler",       count: rows.length,  icon: Users2 },
-    { id: "firms" as const,    label: "Katılımcı Firmalar",  count: firms.length, icon: Building2 },
+    { id: "visitors" as const, label: "Ziyaretçiler",      count: rows.length,     pendingCount: pendingVisitorCount, icon: Users2 },
+    { id: "firms" as const,    label: "Katılımcı Firmalar", count: firmRows.length, pendingCount: pendingFirmCount,    icon: Building2 },
   ];
 
   return (
@@ -159,9 +291,9 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
               <Users2 className="w-5 h-5 text-brand-indigo-light" />
             </div>
             <h1 className="font-display text-2xl font-bold text-white">Katılımcılar</h1>
-            {pendingCount > 0 && (
+            {(pendingVisitorCount + pendingFirmCount) > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                {pendingCount} bekliyor
+                {pendingVisitorCount + pendingFirmCount} bekliyor
               </span>
             )}
           </div>
@@ -174,7 +306,7 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
             <button
               key={t.id}
               onClick={() => { setTab(t.id); setSearch(""); }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all ${
+              className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all ${
                 tab === t.id
                   ? "border-brand-indigo text-brand-indigo-light"
                   : "border-transparent text-muted-foreground hover:text-white"
@@ -185,6 +317,11 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
               <span className={`px-1.5 py-0.5 rounded-full text-xs ${
                 tab === t.id ? "bg-brand-indigo/20 text-brand-indigo-light" : "bg-white/8 text-muted-foreground"
               }`}>{t.count}</span>
+              {t.pendingCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                  {t.pendingCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -200,15 +337,14 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
           />
         </div>
 
-        {/* Content */}
+        {/* Visitors tab */}
         {tab === "visitors" && (
           <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               {[
-                { label: "Toplam",    value: rows.length,                                          color: "text-white" },
-                { label: "Onaylı",    value: rows.filter((r) => r.status === "confirmed").length,  color: "text-green-400" },
-                { label: "Bekliyor", value: pendingCount,                                          color: "text-amber-400" },
+                { label: "Toplam",    value: rows.length,                                              color: "text-white" },
+                { label: "Onaylı",    value: rows.filter((r) => r.status === "confirmed").length,      color: "text-green-400" },
+                { label: "Bekliyor", value: pendingVisitorCount,                                       color: "text-amber-400" },
               ].map(({ label, value, color }) => (
                 <div key={label} className="glass rounded-xl p-4 border border-white/8">
                   <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -224,89 +360,79 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
             ) : (
               <div className="glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden">
                 {filtered.map((row) => (
-                  <VisitorCard key={row.id} row={row} onApprove={handleApprove} onReject={handleReject} />
+                  <VisitorCard key={row.id} row={row} onApprove={handleApproveVisitor} onReject={handleRejectVisitor} />
                 ))}
               </div>
             )}
           </motion.div>
         )}
 
+        {/* Firms tab */}
         {tab === "firms" && (
-          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
-            <div className="grid grid-cols-3 gap-4 mb-4">
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }} className="space-y-6">
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
               {[
-                { label: "Toplam Firma",   value: firms.length },
-                { label: "Standlı",        value: firms.filter((f) => f.booths.length > 0).length },
-                { label: "Stand Bekliyor", value: firms.filter((f) => f.booths.length === 0).length },
-              ].map(({ label, value }) => (
+                { label: "Toplam Firma",     value: firmRows.length,                                              color: "text-white" },
+                { label: "Onaylı",           value: firmRows.filter((f) => f.status === "approved").length,      color: "text-green-400" },
+                { label: "Onay Bekliyor",    value: pendingFirmCount,                                            color: "text-amber-400" },
+              ].map(({ label, value, color }) => (
                 <div key={label} className="glass rounded-xl p-4 border border-white/8">
-                  <p className="text-2xl font-bold text-white">{value}</p>
+                  <p className={`text-2xl font-bold ${color}`}>{value}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
                 </div>
               ))}
             </div>
+
             {filteredFirms.length === 0 ? (
               <div className="glass rounded-2xl border border-white/8 p-12 flex flex-col items-center text-center">
                 <Building2 className="w-10 h-10 text-muted-foreground/30 mb-3" />
                 <p className="text-muted-foreground text-sm">{search ? "Sonuç bulunamadı." : "Henüz katılım talebi yok."}</p>
               </div>
             ) : (
-              <div className="glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden">
-                {filteredFirms.map((ex) => (
-                  <div key={ex.id} className="px-5 py-4 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="w-5 h-5 text-brand-gold" />
+              <>
+                {/* Pending firms */}
+                {pendingFirms.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5" /> Onay Bekleyen Başvurular ({pendingFirms.length})
+                    </p>
+                    <div className="glass rounded-2xl border border-amber-500/20 divide-y divide-white/6 overflow-hidden">
+                      {pendingFirms.map((ex) => (
+                        <FirmCard key={ex.id} ex={ex} onApprove={handleApproveFirm} onReject={handleRejectFirm} />
+                      ))}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-white">{ex.company_name}</p>
-                        {ex.city && (
-                          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                            <MapPin className="w-3 h-3" /> {ex.city}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-0.5">
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {ex.event?.name ?? "—"}</span>
-                        {ex.booths.map((b) => (
-                          <span key={b.id} className="flex items-center gap-1 font-mono text-brand-indigo-light">
-                            <Grid3X3 className="w-3 h-3" /> {b.code}
-                          </span>
-                        ))}
-                      </div>
-                      {/* İletişim bilgileri */}
-                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground/80">
-                        {(ex.contact_email || ex.owner?.email) && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {ex.contact_email || ex.owner?.email}
-                          </span>
-                        )}
-                        {ex.owner?.phone_number && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {ex.owner.phone_number}
-                          </span>
-                        )}
-                        {ex.owner?.full_name && (
-                          <span className="text-muted-foreground/60">
-                            Yetkili: {ex.owner.full_name}
-                          </span>
-                        )}
-                      </div>
-                      {ex.tags.length > 0 && (
-                        <div className="flex gap-1 mt-1.5 flex-wrap">
-                          {ex.tags.slice(0, 4).map((tag) => (
-                            <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-white/8 text-muted-foreground">{tag}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <Badge variant={ex.booths.length > 0 ? "default" : "outline"} className="flex-shrink-0 text-xs">
-                      {ex.booths.length > 0 ? `${ex.booths.length} Stand` : "Stand Yok"}
-                    </Badge>
                   </div>
-                ))}
-              </div>
+                )}
+
+                {/* Approved firms */}
+                {approvedFirms.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Onaylı Firmalar ({approvedFirms.length})
+                    </p>
+                    <div className="glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden">
+                      {approvedFirms.map((ex) => (
+                        <FirmCard key={ex.id} ex={ex} onApprove={handleApproveFirm} onReject={handleRejectFirm} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejected firms */}
+                {rejectedFirms.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Reddedilenler ({rejectedFirms.length})
+                    </p>
+                    <div className="glass rounded-2xl border border-white/8 divide-y divide-white/6 overflow-hidden opacity-60">
+                      {rejectedFirms.map((ex) => (
+                        <FirmCard key={ex.id} ex={ex} onApprove={handleApproveFirm} onReject={handleRejectFirm} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </motion.div>
         )}

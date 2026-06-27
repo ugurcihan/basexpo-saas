@@ -17,7 +17,7 @@ export default async function FairsPage() {
     supabase
       .from("exhibitors")
       .select(`
-        id, company_name, qr_token,
+        id, company_name, qr_token, status,
         event:events(id, name, location, start_date, end_date, status),
         booths:booths(id, code)
       `)
@@ -25,7 +25,11 @@ export default async function FairsPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("events")
-      .select("id, name, location, start_date, end_date, status, capacity")
+      .select(`
+        id, name, location, start_date, end_date, status, capacity,
+        description, cover_url, category,
+        organizer:profiles!events_organizer_id_fkey(full_name, email)
+      `)
       .in("status", ["published", "active"])
       .order("start_date", { ascending: true }),
     getExhibitorMeetingRequests(),
