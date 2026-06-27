@@ -187,16 +187,25 @@ export async function getExhibitorLeads(exhibitorId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
-    .from("leads")
-    .select(`
-      id, source, score, note, created_at,
-      visitor:profiles!leads_visitor_id_fkey(id, full_name, email, interests, avatar_url)
-    `)
-    .eq("exhibitor_id", exhibitorId)
-    .order("created_at", { ascending: false });
+  const [{ data: leads }, { data: conversions }] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("id, source, score, note, created_at, visitor:profiles!leads_visitor_id_fkey(id, full_name, email, interests, avatar_url)")
+      .eq("exhibitor_id", exhibitorId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("lead_conversions")
+      .select("visitor_id, deal_status")
+      .eq("exhibitor_id", exhibitorId),
+  ]);
 
-  return data ?? [];
+  const convMap = new Map((conversions ?? []).map(c => [c.visitor_id, c.deal_status as string]));
+
+  return (leads ?? []).map(lead => {
+    const v = Array.isArray(lead.visitor) ? lead.visitor[0] : lead.visitor;
+    const visitorId = (v as { id: string } | null)?.id ?? null;
+    return { ...lead, deal_status: visitorId ? (convMap.get(visitorId) ?? null) : null };
+  });
 }
 
 export async function getVisitorLeads() {

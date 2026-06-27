@@ -49,6 +49,15 @@ interface VisitorInfo {
   avatar_url: string | null;
 }
 
+const DEAL_STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+  lead:          { label: "Yeni",           cls: "bg-white/8 text-muted-foreground border-white/12" },
+  contacted:     { label: "Temas Edildi",   cls: "bg-brand-indigo/15 text-brand-indigo-light border-brand-indigo/25" },
+  meeting_held:  { label: "Görüşme",        cls: "bg-brand-violet/15 text-brand-violet-light border-brand-violet/25" },
+  proposal_sent: { label: "Teklif",         cls: "bg-amber-500/15 text-amber-300 border-amber-500/25" },
+  won:           { label: "Kazanıldı",      cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25" },
+  lost:          { label: "Kaybedildi",     cls: "bg-red-500/15 text-red-400 border-red-500/25" },
+};
+
 interface LeadRow {
   id: string;
   source: string;
@@ -56,6 +65,7 @@ interface LeadRow {
   note: string | null;
   created_at: string;
   visitor: VisitorInfo | VisitorInfo[];
+  deal_status?: string | null;
 }
 
 interface ExhibitorMini { id: string; company_name: string }
@@ -195,6 +205,11 @@ export function LeadsClient({
                       {lead.score > 0 && (
                         <span className={`flex items-center gap-0.5 text-xs flex-shrink-0 ${scoreColor(lead.score)}`}>
                           <Star className="w-3 h-3 fill-current" /> {lead.score}
+                        </span>
+                      )}
+                      {lead.deal_status && DEAL_STATUS_LABEL[lead.deal_status] && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border flex-shrink-0 ${DEAL_STATUS_LABEL[lead.deal_status].cls}`}>
+                          {DEAL_STATUS_LABEL[lead.deal_status].label}
                         </span>
                       )}
                     </div>

@@ -122,14 +122,14 @@ function LeadRow({ conv, onUpdate }: {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ y: 0 }}
       className="glass rounded-xl border border-white/8 p-4 flex flex-wrap items-center gap-4"
     >
       <div className="flex-1 min-w-0">
         <p className="font-medium text-white text-sm truncate">
           {conv.visitor?.full_name || conv.visitor?.email || "Ziyaretçi"}
         </p>
-        <p className="text-xs text-muted-foreground truncate">{conv.visitor?.email}</p>
+        <p className="text-xs text-muted-foreground truncate">{conv.visitor?.email ?? ""}</p>
       </div>
 
       {/* Status dropdown */}
@@ -303,12 +303,43 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
             ))}
           </div>
 
+          {/* Conversions tablosu — print only */}
+          {conversions.length > 0 && (
+            <div className="mt-2">
+              <div className="h-px bg-gray-200 mb-4" />
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Lead Takip Listesi</p>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-1.5 text-xs text-gray-500 font-semibold">Kişi</th>
+                    <th className="text-left py-1.5 text-xs text-gray-500 font-semibold">E-posta</th>
+                    <th className="text-left py-1.5 text-xs text-gray-500 font-semibold">Durum</th>
+                    <th className="text-right py-1.5 text-xs text-gray-500 font-semibold">Değer (TL)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conversions.slice(0, 15).map((conv) => (
+                    <tr key={conv.id} className="border-b border-gray-100">
+                      <td className="py-1.5 text-gray-800 font-medium">{conv.visitor?.full_name || "—"}</td>
+                      <td className="py-1.5 text-gray-500 text-xs">{conv.visitor?.email || "—"}</td>
+                      <td className="py-1.5 text-gray-600">{STATUS_CONFIG[conv.deal_status]?.label || conv.deal_status}</td>
+                      <td className="py-1.5 text-right text-gray-800">{conv.deal_value_tl ? formatTL(conv.deal_value_tl) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div className="h-px bg-gray-200 mt-5" />
           <p className="text-xs text-gray-400 mt-3">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir. Belge doğrulama: basexpo.com</p>
         </div>
 
+        {/* ── Ekran görünümü — yazdırılmaz ── */}
+        <div className="print:hidden space-y-8">
+
         {/* ── Screen Header ── */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="print:hidden">
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center">
@@ -336,7 +367,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
         </motion.div>
 
         {/* ── Firma Bilgileri Kartı ── */}
-        <motion.div initial={{ y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="print:mb-4">
+        <motion.div initial={{ y: 20 }} animate={{ y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="print:mb-4">
           <div className="glass rounded-2xl border border-brand-cyan/20 p-6">
             <div className="flex items-center gap-2 mb-5">
               <Building2 className="w-4 h-4 text-brand-cyan" />
@@ -428,7 +459,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
             {/* KPI cards */}
             <motion.div
               initial={{ y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={{ y: 0 }}
               transition={{ duration: 0.4, delay: 0.08 }}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
             >
@@ -442,7 +473,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
                 <motion.div
                   key={label}
                   initial={{ y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  animate={{ y: 0 }}
                   transition={{ delay: 0.1 + i * 0.06 }}
                   className={`glass rounded-xl border border-${color === "emerald" ? "emerald-500/20" : `${color}/20`} p-5`}
                 >
@@ -458,7 +489,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
             {/* Score + Funnel */}
             <motion.div
               initial={{ y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={{ y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
               className="grid md:grid-cols-2 gap-6"
             >
@@ -506,7 +537,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
             {/* Lead status table */}
             <motion.div
               initial={{ y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={{ y: 0 }}
               transition={{ duration: 0.4, delay: 0.3 }}
             >
               <div className="flex items-center justify-between mb-4">
@@ -539,6 +570,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
             </p>
           </div>
         )}
+        </div>{/* end print:hidden */}
       </div>
     </DashboardShell>
   );
