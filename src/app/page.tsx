@@ -1,7 +1,6 @@
 import { Hero } from "@/components/landing/Hero";
 import { FairGameSection } from "@/components/landing/FairGameSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { KOSGEBSection } from "@/components/landing/KOSGEBSection";
 import { UserRoles } from "@/components/landing/UserRoles";
 import { Features } from "@/components/landing/Features";
 import { AppInstallSection } from "@/components/landing/AppInstallSection";
@@ -15,7 +14,6 @@ export default function LandingPage() {
       <Hero />
       <FairGameSection />
       <HowItWorks />
-      <KOSGEBSection />
       <UserRoles />
       <Features />
       <AppInstallSection />

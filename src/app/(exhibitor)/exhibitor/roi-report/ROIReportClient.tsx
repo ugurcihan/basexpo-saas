@@ -213,7 +213,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
     <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 space-y-8 print:p-8 print:space-y-6">
 
-        {/* ── Print-only KOSGEB Belge Başlığı ── */}
+        {/* ── Yazdırma belgesi ── */}
         <div className="hidden print:block border-2 border-gray-800 rounded-xl p-6 mb-4">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -221,7 +221,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
               <p className="text-sm text-gray-500">AI Destekli Fuar İşletim Sistemi</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-400 uppercase tracking-wide">KOSGEB Fuar Katılım ROI Belgesi</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Fuar Katılım ROI Belgesi</p>
               <p className="text-sm font-semibold text-gray-700">{new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
           </div>
@@ -332,7 +332,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
           )}
 
           <div className="h-px bg-gray-200 mt-5" />
-          <p className="text-xs text-gray-400 mt-3">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. KOSGEB Fuar Katılım Desteği başvurularında kullanılabilir. Belge doğrulama: basexpo.com</p>
+          <p className="text-xs text-gray-400 mt-3">Bu belge BasExpo platformu tarafından otomatik oluşturulmuştur. Belge doğrulama: basexpo.com</p>
         </div>
 
         {/* ── Ekran görünümü — yazdırılmaz ── */}
@@ -360,7 +360,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
               onClick={handlePDFDownload}
             >
               <FileCheck className="w-4 h-4" />
-              KOSGEB Formatı — PDF İndir
+              ROI Raporu — PDF İndir
               <Download className="w-4 h-4" />
             </Button>
           </div>
@@ -372,7 +372,7 @@ export function ROIReportClient({ profile, roi, conversions: initialConversions,
             <div className="flex items-center gap-2 mb-5">
               <Building2 className="w-4 h-4 text-brand-cyan" />
               <h2 className="font-semibold text-white">Firma Bilgileri</h2>
-              <span className="ml-auto text-xs text-muted-foreground bg-brand-cyan/10 border border-brand-cyan/20 px-2 py-0.5 rounded-full">KOSGEB Belgesi</span>
+              <span className="ml-auto text-xs text-muted-foreground bg-brand-cyan/10 border border-brand-cyan/20 px-2 py-0.5 rounded-full">ROI Belgesi</span>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
               <div>
