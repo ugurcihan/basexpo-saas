@@ -209,6 +209,39 @@ export async function getExhibitorLeads(exhibitorId: string) {
   });
 }
 
+export async function updateLeadDealStatus(
+  exhibitorId: string,
+  visitorId: string,
+  dealStatus: string,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const { data: existing } = await supabase
+    .from("lead_conversions")
+    .select("id")
+    .eq("exhibitor_id", exhibitorId)
+    .eq("visitor_id", visitorId)
+    .maybeSingle();
+
+  let error;
+  if (existing) {
+    ({ error } = await supabase
+      .from("lead_conversions")
+      .update({ deal_status: dealStatus })
+      .eq("id", existing.id));
+  } else {
+    ({ error } = await supabase
+      .from("lead_conversions")
+      .insert({ exhibitor_id: exhibitorId, visitor_id: visitorId, deal_status: dealStatus }));
+  }
+
+  if (error) return { error: error.message };
+  revalidatePath("/exhibitor/leads");
+  return { error: null };
+}
+
 export async function getVisitorLeads() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

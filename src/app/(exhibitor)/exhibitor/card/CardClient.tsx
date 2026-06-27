@@ -20,7 +20,7 @@ import {
   updateExhibitorProfile,
 } from "@/features/exhibitors/actions";
 import {
-  createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion,
+  createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion, getSurveyResults,
 } from "@/features/surveys/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -63,6 +63,7 @@ const TABS = [
   { key: "card",    label: "Kartvizit" },
   { key: "qr",     label: "QR Kodlarım" },
   { key: "survey", label: "Anket" },
+  { key: "results",label: "Sonuçlar" },
   { key: "preview",label: "Önizleme" },
 ] as const;
 
@@ -126,6 +127,9 @@ export function CardClient({ profile, exhibitors, availableEvents, initialSurvey
             )}
             {tab === "survey" && (
               <SurveyTab exhibitorId={primary.id} initialSurvey={initialSurvey} />
+            )}
+            {tab === "results" && (
+              <SurveyResultsTab surveyId={initialSurvey?.id ?? null} />
             )}
             {tab === "preview" && (
               <PreviewTab exhibitor={primary} survey={initialSurvey} />
@@ -632,6 +636,94 @@ function SurveyTab({ exhibitorId, initialSurvey }: { exhibitorId: string; initia
       {(survey?.questions.length ?? 0) >= 5 && (
         <p className="text-xs text-muted-foreground text-center">Maksimum 5 soru eklenebilir.</p>
       )}
+    </motion.div>
+  );
+}
+
+// ─── Tab: Sonuçlar ────────────────────────────────────────────
+type SurveyResult = {
+  id: string;
+  question_text: string;
+  question_type: string;
+  options: string[] | null;
+  total: number;
+  counts: Record<string, number>;
+};
+
+function SurveyResultsTab({ surveyId }: { surveyId: string | null }) {
+  const [results, setResults] = useState<SurveyResult[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!surveyId) return;
+    setLoading(true);
+    getSurveyResults(surveyId).then(data => {
+      setResults(data as SurveyResult[]);
+      setLoading(false);
+    });
+  }, [surveyId]);
+
+  if (!surveyId) {
+    return (
+      <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="glass rounded-2xl border border-white/8 p-10 text-center">
+        <ClipboardList className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+        <h2 className="font-display text-lg font-semibold text-white mb-2">Henüz anket yok</h2>
+        <p className="text-muted-foreground text-sm">Önce Anket sekmesinden sorularını oluştur.</p>
+      </motion.div>
+    );
+  }
+
+  if (loading) {
+    return <div className="text-muted-foreground text-sm text-center py-12">Sonuçlar yükleniyor...</div>;
+  }
+
+  if (results.length === 0) {
+    return (
+      <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="glass rounded-2xl border border-white/8 p-10 text-center">
+        <ClipboardList className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+        <h2 className="font-display text-lg font-semibold text-white mb-2">Henüz yanıt yok</h2>
+        <p className="text-muted-foreground text-sm">Ziyaretçiler QR tarayıp anket doldurduğunda sonuçlar burada görünecek.</p>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
+      {results.map((q) => {
+        const total = q.total || 1;
+        const answers = q.question_type === "yes_no"
+          ? ["Evet", "Hayır"]
+          : (q.options ?? Object.keys(q.counts));
+
+        return (
+          <div key={q.id} className="glass rounded-xl border border-white/8 p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold text-white">{q.question_text}</p>
+              <span className="text-xs text-muted-foreground flex-shrink-0">{q.total} yanıt</span>
+            </div>
+            <div className="space-y-2">
+              {answers.map((answer) => {
+                const count = q.counts[answer] ?? 0;
+                const pct = Math.round((count / total) * 100);
+                return (
+                  <div key={answer} className="space-y-0.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{answer}</span>
+                      <span className="text-white font-medium">{count} ({pct}%)</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/6 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-brand-indigo to-brand-violet"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </motion.div>
   );
 }

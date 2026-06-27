@@ -55,6 +55,42 @@ export async function createExhibitorProfile(input: {
   return { error: null };
 }
 
+export async function applyToFair(eventId: string, note?: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const { data: existing } = await supabase
+    .from("exhibitors")
+    .select("company_name, description, logo_url, tags")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const company_name = existing?.company_name ?? "Firma";
+  const description  = existing?.description  ?? (note ?? "");
+  const logo_url     = existing?.logo_url     ?? null;
+  const tags         = existing?.tags         ?? [];
+
+  const { error } = await supabase.from("exhibitors").insert({
+    event_id: eventId,
+    owner_id: user.id,
+    company_name,
+    description,
+    logo_url,
+    tags,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "Bu fuara zaten kayıtlısın" };
+    return { error: error.message };
+  }
+
+  revalidatePath("/exhibitor/fairs");
+  return { error: null };
+}
+
 export async function updateExhibitorProfile(input: {
   id: string;
   company_name: string;
@@ -154,23 +190,29 @@ export async function getExhibitorDashboardStats() {
 
   const { data: exhibitor } = await supabase
     .from("exhibitors")
-    .select("id, event:events(end_date)")
+    .select("id, event:events(id, name, location, start_date, end_date, status)")
     .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!exhibitor) return null;
   const exhibitorId = exhibitor.id;
+
+  const ev = Array.isArray(exhibitor.event) ? exhibitor.event[0] : exhibitor.event;
 
   const [
     { data: leads },
     { data: matchScores },
     { count: scanCount },
     { data: conversions },
+    { data: survey },
   ] = await Promise.all([
     supabase.from("leads").select("score, visitor_id").eq("exhibitor_id", exhibitorId),
     supabase.from("match_scores").select("score").eq("exhibitor_id", exhibitorId).limit(100),
     supabase.from("qr_scans").select("*", { count: "exact", head: true }).eq("exhibitor_id", exhibitorId),
     supabase.from("lead_conversions").select("visitor_id, deal_status").eq("exhibitor_id", exhibitorId),
+    supabase.from("exhibitor_surveys").select("id, is_active").eq("exhibitor_id", exhibitorId).maybeSingle(),
   ]);
 
   const leadCount = leads?.length ?? 0;
@@ -186,11 +228,38 @@ export async function getExhibitorDashboardStats() {
   );
   const uncalledCount = (leads ?? []).filter(l => !calledVisitorIds.has(l.visitor_id)).length;
 
-  const ev = exhibitor.event as { end_date: string } | { end_date: string }[] | null;
-  const eventEndDate = Array.isArray(ev) ? (ev[0]?.end_date ?? null) : (ev?.end_date ?? null);
+  const eventEndDate = (ev as { end_date?: string } | null)?.end_date ?? null;
   const fairEnded = eventEndDate ? new Date(eventEndDate) < new Date() : false;
 
-  return { leadCount, scanCount: scanCount ?? 0, avgLeadScore, avgMatchScore, uncalledCount, fairEnded };
+  let surveyResponseCount = 0;
+  if (survey?.id) {
+    const { count } = await supabase
+      .from("survey_responses")
+      .select("*", { count: "exact", head: true })
+      .eq("survey_id", survey.id);
+    surveyResponseCount = count ?? 0;
+  }
+
+  const activeFair = ev && !fairEnded
+    ? {
+        name: (ev as { name?: string }).name ?? "",
+        location: (ev as { location?: string }).location ?? "",
+        start_date: (ev as { start_date?: string }).start_date ?? "",
+        end_date: eventEndDate ?? "",
+      }
+    : null;
+
+  return {
+    leadCount,
+    scanCount: scanCount ?? 0,
+    avgLeadScore,
+    avgMatchScore,
+    uncalledCount,
+    fairEnded,
+    surveyResponseCount,
+    surveyIsActive: survey?.is_active ?? false,
+    activeFair,
+  };
 }
 
 export async function deleteProduct(productId: string, exhibitorId: string) {

@@ -2,46 +2,20 @@
 
 import { EXHIBITOR_NAV } from "../_nav";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  LayoutDashboard,
-  Building2,
-  Package,
-  QrCode,
   Users,
-  TrendingUp,
-  Settings,
   UserCircle2,
   QrCode as QrCodeIcon,
   Pencil,
   Star,
-  MessageSquare,
-  Brain,
-  CalendarClock,
-  Store,
-  Workflow,
   Search,
 } from "lucide-react";
-
-const NAV_ITEMS = [
-  { label: "Panel",             href: "/exhibitor",                   icon: LayoutDashboard },
-  { label: "Marka Profili",     href: "/exhibitor/profile",           icon: Building2 },
-  { label: "QR Yarat",          href: "/exhibitor/qr",                icon: QrCode },
-  { label: "Ürünlerim",         href: "/exhibitor/products",          icon: Package },
-  { label: "Ziyaretçilerim",    href: "/exhibitor/leads",             icon: Users },
-  { label: "Mesajlar",          href: "/exhibitor/messages",          icon: MessageSquare },
-  { label: "Analiz AI",         href: "/exhibitor/analytics",         icon: Brain },
-  { label: "Yaklaşan Fuarlar",  href: "/exhibitor/upcoming-fairs",    icon: CalendarClock },
-  { label: "Fuar Standlarım",   href: "/exhibitor/my-booths",         icon: Store },
-  { label: "Randevu Talepleri", href: "/exhibitor/meeting-requests",  icon: CalendarClock },
-  { label: "Satış Pipeline'ı",  href: "/exhibitor/pipeline",          icon: Workflow },
-  { label: "ROI Raporu",        href: "/exhibitor/roi-report",        icon: TrendingUp },
-  { label: "Ayarlar",           href: "/exhibitor/settings",          icon: Settings },
-];
+import { updateLeadDealStatus } from "@/features/leads/actions";
 
 interface VisitorInfo {
   id: string;
@@ -91,6 +65,19 @@ export function LeadsClient({
   leads: LeadRow[];
 }) {
   const [search, setSearch] = useState("");
+  const [, startTransition] = useTransition();
+  const [statusMap, setStatusMap] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    leads.forEach(l => { if (l.deal_status) m[l.id] = l.deal_status; });
+    return m;
+  });
+
+  function handleStatusChange(leadId: string, visitorId: string, newStatus: string) {
+    setStatusMap(prev => ({ ...prev, [leadId]: newStatus }));
+    startTransition(async () => {
+      await updateLeadDealStatus(exhibitor.id, visitorId, newStatus);
+    });
+  }
 
   const filtered = leads.filter((lead) => {
     if (!search) return true;
@@ -209,11 +196,6 @@ export function LeadsClient({
                           <Star className="w-3 h-3 fill-current" /> {lead.score}
                         </span>
                       )}
-                      {lead.deal_status && DEAL_STATUS_LABEL[lead.deal_status] && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full border flex-shrink-0 ${DEAL_STATUS_LABEL[lead.deal_status].cls}`}>
-                          {DEAL_STATUS_LABEL[lead.deal_status].label}
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{v?.email}</p>
                     {v?.interests && v.interests.length > 0 && (
@@ -229,6 +211,27 @@ export function LeadsClient({
                       </div>
                     )}
                   </div>
+
+                  {/* Deal status select */}
+                  {v?.id && (
+                    <div className="flex-shrink-0">
+                      {(() => {
+                        const currentStatus = statusMap[lead.id] ?? lead.deal_status ?? "lead";
+                        const meta = DEAL_STATUS_LABEL[currentStatus] ?? DEAL_STATUS_LABEL.lead;
+                        return (
+                          <select
+                            value={currentStatus}
+                            onChange={(e) => handleStatusChange(lead.id, v.id, e.target.value)}
+                            className={`text-xs px-2 py-1 rounded-full border cursor-pointer outline-none bg-brand-dark/80 ${meta.cls}`}
+                          >
+                            {Object.entries(DEAL_STATUS_LABEL).map(([key, { label }]) => (
+                              <option key={key} value={key} className="bg-brand-dark text-white">{label}</option>
+                            ))}
+                          </select>
+                        );
+                      })()}
+                    </div>
+                  )}
 
                   {/* Date */}
                   <div className="text-right flex-shrink-0">
