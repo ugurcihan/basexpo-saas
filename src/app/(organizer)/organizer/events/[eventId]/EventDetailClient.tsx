@@ -1148,9 +1148,9 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                                 style={{ flexBasis: `calc(${layout.width_pct}% - 12px)`, minWidth: 120, height: layout.height_px }}
                                 className={`relative glass rounded-xl border ${bc} ${bgc} flex flex-col items-center justify-center overflow-hidden group cursor-grab active:cursor-grabbing select-none transition-opacity ${isDraggingThis ? "opacity-40" : ""}`}
                               >
-                                <div className="flex flex-col items-center justify-center w-full h-full px-6 pb-4 pt-2 pointer-events-none">
+                                <div className="flex items-center justify-center w-full h-full p-3 pointer-events-none">
                                   {logoSrc ? (
-                                    <img src={logoSrc} alt={sponsor.exhibitor?.company_name ?? ""} className="max-h-[65%] max-w-[85%] object-contain" />
+                                    <img src={logoSrc} alt={sponsor.exhibitor?.company_name ?? ""} className="max-h-full max-w-full object-contain" />
                                   ) : (
                                     <span className={`font-bold text-sm text-center leading-tight ${tc}`}>{sponsor.exhibitor?.company_name ?? "—"}</span>
                                   )}

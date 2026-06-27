@@ -24,13 +24,6 @@ interface BadgeElement {
   bold: boolean;
 }
 
-interface BadgeConfig {
-  templateId: string;
-  accentColor: string;
-  fontFamily: string;
-  elements: BadgeElement[];
-}
-
 interface Props { eventId: string; eventName: string; exhibitors: Exhibitor[]; halls: HallRow[] }
 
 /* ─── Templates ─────────────────────────────────────────────── */
@@ -165,6 +158,10 @@ const TEMPLATES = [
 
 type TemplateId = typeof TEMPLATES[number]["id"];
 
+/* Badge sabit boyutları — önizleme ve PDF tamamen aynı */
+const BADGE_W = 352;
+const BADGE_H = 232;
+
 const DEFAULT_ELEMENTS: BadgeElement[] = [
   { id: "name", x: 50, y: 40, fontSize: 15, bold: true  },
   { id: "role", x: 50, y: 57, fontSize: 10, bold: false },
@@ -181,9 +178,12 @@ function boothCode(exhibitorId: string | null, halls: HallRow[]): string {
   return "—";
 }
 
-/* ─── BadgeHTML component — rendered inside hidden capture div ─ */
+/* ─── BadgeHTML — hem önizleme hem PDF capture için kullanılır ─ */
 function BadgeHTML({
-  template, eventName, mainLine, subLine, subLabel, logoUrl, elements, qrDataUrl, qrEl, logoEl,
+  template, eventName, mainLine, subLine, subLabel,
+  logoUrl, elements, qrDataUrl, qrEl, logoEl,
+  /* Sürükleme desteği — sadece önizlemede geçilir */
+  onStartDrag, activeDrag,
 }: {
   template: typeof TEMPLATES[number];
   eventName: string;
@@ -195,6 +195,8 @@ function BadgeHTML({
   qrDataUrl: string;
   qrEl: { x: number; y: number; size: number };
   logoEl: { x: number; y: number; size: number };
+  onStartDrag?: (id: string) => (e: React.MouseEvent) => void;
+  activeDrag?: string | null;
 }) {
   const nameEl = elements.find(e => e.id === "name")!;
   const roleEl = elements.find(e => e.id === "role")!;
@@ -205,7 +207,7 @@ function BadgeHTML({
 
   return (
     <div style={{
-      width: 352, height: 232,
+      width: BADGE_W, height: BADGE_H,
       background: template.bodyBg,
       border: template.border,
       borderRadius: template.borderRadius,
@@ -214,7 +216,8 @@ function BadgeHTML({
       position: "relative",
       boxSizing: "border-box",
     }}>
-      {/* Geometrik dekor — mor/lavendar (taslak1/2) */}
+
+      {/* Geometrik dekor — Geometrik I/II */}
       {isGeo && (
         <>
           <div style={{ position:"absolute", top:0, right:0, width:140, height:140,
@@ -230,7 +233,7 @@ function BadgeHTML({
         </>
       )}
 
-      {/* Kırmızı dekor — köşe üçgenler (kirmizi1/2) */}
+      {/* Kırmızı dekor — Kırmızı I/II */}
       {isRed && (
         <>
           <div style={{ position:"absolute", top:0, right:0, width:70, height:70,
@@ -271,58 +274,83 @@ function BadgeHTML({
         </span>
       </div>
 
-      {/* Draggable text elements */}
-      {[
+      {/* Metin elementleri — sürüklenebilir (önizleme) veya statik (PDF) */}
+      {([
         { el: nameEl, text: mainLine || "Ad Soyad", color: template.bodyText },
         { el: roleEl, text: subLine  || "Görev / Unvan", color: template.bodyText },
         { el: subEl,  text: subLabel || "PERSONEL", color: template.subText },
-      ].map(({ el, text, color }) => (
-        <div key={el.id} style={{
-          position: "absolute",
-          left: `${el.x}%`, top: `${el.y}%`,
-          transform: "translate(-50%,-50%)",
-          fontSize: el.fontSize,
-          fontWeight: el.bold ? 700 : 400,
-          color,
-          whiteSpace: "nowrap",
-          maxWidth: "72%",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          textAlign: "center",
-        }}>
-          {text}
-        </div>
-      ))}
+      ]).map(({ el, text, color }) => {
+        const isDragging = activeDrag === el.id;
+        return (
+          <div
+            key={el.id}
+            onMouseDown={onStartDrag ? (e => { e.preventDefault(); onStartDrag(el.id)(e); }) : undefined}
+            style={{
+              position: "absolute",
+              left: `${el.x}%`, top: `${el.y}%`,
+              transform: "translate(-50%,-50%)",
+              fontSize: el.fontSize,
+              fontWeight: el.bold ? 700 : 400,
+              color,
+              whiteSpace: "nowrap",
+              maxWidth: "72%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              textAlign: "center",
+              cursor: onStartDrag ? (isDragging ? "grabbing" : "grab") : undefined,
+              padding: onStartDrag ? "2px 4px" : undefined,
+              borderRadius: onStartDrag ? 3 : undefined,
+              background: isDragging ? "rgba(99,102,241,0.12)" : "transparent",
+              outline: isDragging ? "1.5px solid #6366f1" : "none",
+            }}
+          >
+            {text}
+          </div>
+        );
+      })}
 
-      {/* Logo — serbest konumlandırılabilir */}
+      {/* Logo — sürüklenebilir */}
       {logoUrl && (
-        <div style={{
-          position: "absolute",
-          left: `${logoEl.x}%`, top: `${logoEl.y}%`,
-          transform: "translate(-50%,-50%)",
-          lineHeight: 0,
-        }}>
-          <img src={logoUrl} alt="logo"
+        <div
+          onMouseDown={onStartDrag ? (e => { e.preventDefault(); onStartDrag("logo")(e); }) : undefined}
+          style={{
+            position: "absolute",
+            left: `${logoEl.x}%`, top: `${logoEl.y}%`,
+            transform: "translate(-50%,-50%)",
+            lineHeight: 0,
+            cursor: onStartDrag ? (activeDrag === "logo" ? "grabbing" : "grab") : undefined,
+            padding: onStartDrag ? "2px 3px" : undefined,
+            borderRadius: onStartDrag ? 3 : undefined,
+            background: activeDrag === "logo" ? "rgba(99,102,241,0.12)" : "transparent",
+            outline: activeDrag === "logo" ? "1.5px solid #6366f1" : "none",
+          }}
+        >
+          <img
+            src={logoUrl} alt="logo"
             style={{ height: logoEl.size, objectFit: "contain", maxWidth: logoEl.size * 2 }}
             crossOrigin="anonymous"
           />
         </div>
       )}
 
-      {/* Kapı geçiş QR kodu — serbest konumlandırılabilir */}
+      {/* Kapı geçiş QR — sürüklenebilir */}
       {qrDataUrl && (
-        <div style={{
-          position: "absolute",
-          left: `${qrEl.x}%`, top: `${qrEl.y}%`,
-          transform: "translate(-50%,-50%)",
-          background: "#fff", padding: 2, borderRadius: 4,
-          lineHeight: 0,
-        }}>
+        <div
+          onMouseDown={onStartDrag ? (e => { e.preventDefault(); onStartDrag("qr")(e); }) : undefined}
+          style={{
+            position: "absolute",
+            left: `${qrEl.x}%`, top: `${qrEl.y}%`,
+            transform: "translate(-50%,-50%)",
+            background: "#fff", padding: 2, borderRadius: 4, lineHeight: 0,
+            cursor: onStartDrag ? (activeDrag === "qr" ? "grabbing" : "grab") : undefined,
+            outline: activeDrag === "qr" ? "1.5px solid #6366f1" : "none",
+          }}
+        >
           <img src={qrDataUrl} width={qrEl.size} height={qrEl.size} style={{ display: "block" }} />
         </div>
       )}
 
-      {/* Bottom divider + branding */}
+      {/* Alt çizgi + marka */}
       <div style={{
         position: "absolute", bottom: "12%", left: "5%", right: "5%",
         borderTop: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
@@ -337,50 +365,67 @@ function BadgeHTML({
   );
 }
 
-/* ─── Main Component ─────────────────────────────────────── */
+/* ─── Ana Bileşen ────────────────────────────────────────── */
 export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Props) {
-  /* -- Template & design state -- */
+  /* -- Şablon & tasarım -- */
   const [templateId, setTemplateId] = useState<TemplateId>("modern");
   const [elements, setElements]     = useState<BadgeElement[]>(DEFAULT_ELEMENTS);
   const [logoUrl, setLogoUrl]       = useState<string | null>(null);
 
-  /* -- Personel state -- */
+  /* -- Personel -- */
   const [staff, setStaff]       = useState<StaffRow[]>([]);
   const [draftName, setDraftName] = useState("");
   const [draftRole, setDraftRole] = useState("");
 
-  /* -- Firma çalışan state -- */
+  /* -- Firma çalışan -- */
   const [companyEmployees, setCompanyEmployees] = useState<Record<string, Employee[]>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [draftInputs, setDraftInputs] = useState<Record<string, { name: string; role: string }>>({});
 
-  /* -- Drag state -- */
+  /* -- Sürükleme -- */
   const [dragging, setDragging] = useState<string | null>(null);
-  const previewRef = useRef<HTMLDivElement>(null!);
 
-  /* -- PDF gen -- */
+  /* -- Önizleme ölçeği (responsive container) -- */
+  const previewWrapRef = useRef<HTMLDivElement>(null);
+  const previewInnerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(0.72);
+
+  /* -- PDF -- */
   const [genPending, setGenPending] = useState(false);
   const [captureData, setCaptureData] = useState({ name: "", role: "", sub: "" });
   const captureRef = useRef<HTMLDivElement>(null!);
 
-  /* -- Kapı geçiş QR -- */
+  /* -- Kapı QR -- */
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const qrCanvasRef = useRef<HTMLDivElement>(null!);
 
   /* -- Konumlandırılabilir elementler -- */
-  const [qrEl, setQrEl]   = useState({ x: 82, y: 78, size: 52 });
+  const [qrEl, setQrEl]     = useState({ x: 82, y: 78, size: 52 });
   const [logoEl, setLogoEl] = useState({ x: 14, y: 11, size: 28 });
 
   const template = TEMPLATES.find(t => t.id === templateId) ?? TEMPLATES[0];
 
-  /* ── Drag: window listeners ─────────────────────────────── */
+  /* ── Önizleme ölçeği — container genişliğine göre hesapla ── */
+  useEffect(() => {
+    const el = previewWrapRef.current;
+    if (!el) return;
+    const update = () => setPreviewScale(Math.min(1, el.offsetWidth / BADGE_W));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  /* ── Sürükleme: window listeners ────────────────────────── */
   useEffect(() => {
     if (!dragging) return;
     const move = (e: MouseEvent) => {
-      if (!previewRef.current) return;
-      const rect = previewRef.current.getBoundingClientRect();
+      // previewInnerRef = 352×232px div (transform:scale uygulı)
+      // getBoundingClientRect() scale sonrası görsel boyutu döner
+      if (!previewInnerRef.current) return;
+      const rect = previewInnerRef.current.getBoundingClientRect();
       const rawX = (e.clientX - rect.left) / rect.width * 100;
-      const rawY = (e.clientY - rect.top) / rect.height * 100;
+      const rawY = (e.clientY - rect.top)  / rect.height * 100;
       const x = Math.max(5, Math.min(95, rawX));
       if (dragging === "qr") {
         setQrEl(prev => ({ ...prev, x, y: Math.max(5, Math.min(92, rawY)) }));
@@ -397,10 +442,9 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
     return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
   }, [dragging]);
 
-  /* ── QR data URL (kapı geçiş) ──────────────────────────── */
+  /* ── Kapı geçiş QR data URL ─────────────────────────────── */
   useEffect(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://basexpo.site";
-    // Kısa timeout: hidden canvas mount sonrası okunur
     const t = setTimeout(() => {
       const canvas = qrCanvasRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
       if (canvas) setQrDataUrl(canvas.toDataURL("image/png"));
@@ -412,7 +456,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
     setElements(prev => prev.map(el => el.id === id ? { ...el, ...patch } : el));
   }
 
-  /* ── Logo upload ────────────────────────────────────────── */
+  /* ── Logo upload ─────────────────────────────────────────── */
   function handleLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
     const reader = new FileReader();
@@ -420,7 +464,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
     reader.readAsDataURL(f);
   }
 
-  /* ── Personel handlers ──────────────────────────────────── */
+  /* ── Personel ────────────────────────────────────────────── */
   function addStaff() {
     if (!draftName.trim()) return;
     setStaff(prev => [...prev, { id: crypto.randomUUID(), name: draftName.trim(), role: draftRole.trim() }]);
@@ -428,7 +472,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
   }
   function removeStaff(id: string) { setStaff(prev => prev.filter(s => s.id !== id)); }
 
-  /* ── Firma handlers ─────────────────────────────────────── */
+  /* ── Firma çalışan ───────────────────────────────────────── */
   function addEmployee(exhibitorId: string) {
     const input = draftInputs[exhibitorId];
     if (!input?.name?.trim()) return;
@@ -445,11 +489,11 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
     }));
   }
 
-  /* ── HTML2Canvas PDF generation ─────────────────────────── */
-  async function generatePDF(
+  /* ── PDF üretimi — html2canvas + jsPDF ──────────────────── */
+  const generatePDF = useCallback(async (
     items: { name: string; role: string; sub: string }[],
     filename: string
-  ) {
+  ) => {
     if (!items.length || !captureRef.current) return;
     setGenPending(true);
 
@@ -467,16 +511,21 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       setCaptureData({ name: item.name, role: item.role, sub: item.sub });
-      await new Promise(r => setTimeout(r, 120)); // React re-render
+      // React re-render için bekle
+      await new Promise(r => setTimeout(r, 180));
 
       const canvas = await html2canvas(captureRef.current, {
         scale: 3,
         useCORS: true,
-        backgroundColor: null,
+        allowTaint: false,
+        backgroundColor: template.bodyBg,
         logging: false,
+        imageTimeout: 5000,
+        width: BADGE_W,
+        height: BADGE_H,
       });
-      const imgData = canvas.toDataURL("image/png");
 
+      const imgData = canvas.toDataURL("image/png");
       const pos = i % (cols * rows);
       const col = pos % cols;
       const row = Math.floor(pos / cols);
@@ -489,7 +538,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
 
     doc.save(filename);
     setGenPending(false);
-  }
+  }, [template]);
 
   async function downloadStaffPDF() {
     await generatePDF(
@@ -518,7 +567,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
     if (items.length) await generatePDF(items, `${eventName}_tum_yaka.pdf`);
   }
 
-  /* ── Preview sample ─────────────────────────────────────── */
+  /* ── Önizleme örnek verileri ────────────────────────────── */
   const previewName = staff[0]?.name || draftName || "Ahmet Yılmaz";
   const previewRole = staff[0]?.role || draftRole || "Organizasyon Ekibi";
   const nameEl = elements.find(e => e.id === "name")!;
@@ -526,24 +575,28 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
   const subEl  = elements.find(e => e.id === "sub")!;
 
   const totalBadges = staff.length + Object.values(companyEmployees).reduce((s, arr) => s + arr.length, 0);
+  const qrOrigin = typeof window !== "undefined" ? window.location.origin : "https://basexpo.site";
 
   /* ───────────────────────────────────────────────────────────
      RENDER
   ─────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ position: "relative" }}>
 
-      {/* ── Gizli QR canvas (kapı geçiş QR data URL üretimi) ── */}
+      {/* ── Gizli QR canvas (kapı geçiş URL'si için) ────────── */}
       <div ref={qrCanvasRef} style={{ position: "fixed", left: -9999, top: 0, pointerEvents: "none" }}>
-        <QRCodeCanvas
-          value={`${typeof window !== "undefined" ? window.location.origin : "https://basexpo.site"}/e/${eventId}`}
-          size={88}
-          level="M"
-        />
+        <QRCodeCanvas value={`${qrOrigin}/e/${eventId}`} size={88} level="M" />
       </div>
 
-      {/* ── Gizli capture div (html2canvas için) ───────────── */}
-      <div style={{ position: "fixed", left: -9999, top: 0, zIndex: -1, pointerEvents: "none" }}>
+      {/* ── Gizli capture div — html2canvas için
+           position: absolute (fixed değil!) + visibility hidden
+           parent position: relative → "Son Fuarlar" wrapper'ı bu rolü üstleniyor        ── */}
+      <div style={{
+        position: "absolute",
+        left: -9999, top: 0,
+        visibility: "hidden",
+        pointerEvents: "none",
+      }}>
         <div ref={captureRef}>
           <BadgeHTML
             template={template}
@@ -556,11 +609,12 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
             qrDataUrl={qrDataUrl}
             qrEl={qrEl}
             logoEl={logoEl}
+            /* drag handler geçilmez → statik render */
           />
         </div>
       </div>
 
-      {/* ── Tasarım Editörü ──────────────────────────────── */}
+      {/* ── Tasarım Editörü ──────────────────────────────────── */}
       <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="glass rounded-2xl border border-white/8 p-5">
         <div className="flex items-center gap-2 mb-5">
           <Palette className="w-5 h-5 text-brand-violet" />
@@ -574,7 +628,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* ── Sol Panel ─────────────────────────────────── */}
+          {/* ── Sol Panel ──────────────────────────────────────── */}
           <div className="space-y-5">
 
             {/* Şablon Seçici */}
@@ -584,17 +638,12 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
                 {TEMPLATES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => {
-                      setTemplateId(t.id);
-                    }}
+                    onClick={() => setTemplateId(t.id)}
                     className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${
                       templateId === t.id ? "border-white/40 bg-white/10 scale-105" : "border-white/8 hover:border-white/20"
                     }`}
                   >
-                    <div
-                      className="w-12 h-8 rounded-lg"
-                      style={{ background: t.preview }}
-                    />
+                    <div className="w-12 h-8 rounded-lg" style={{ background: t.preview }} />
                     <span className="text-[10px] text-muted-foreground">{t.label}</span>
                   </button>
                 ))}
@@ -621,7 +670,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
               </div>
             </div>
 
-            {/* Font Boyutları + Drag */}
+            {/* Yazı Boyutları */}
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Yazı Boyutları</p>
               {([
@@ -647,7 +696,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
               ))}
             </div>
 
-            {/* Element Boyutları (QR + Logo) */}
+            {/* QR + Logo Boyutları */}
             <div className="space-y-2 pt-2 border-t border-white/8">
               <p className="text-xs font-medium text-muted-foreground">Element Boyutları</p>
               <div className="flex items-center gap-3">
@@ -674,162 +723,51 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
             </div>
           </div>
 
-          {/* ── Sağ Panel: Canlı Önizleme ────────────────── */}
+          {/* ── Sağ Panel: Canlı Önizleme ──────────────────────── */}
           <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground">Canlı Önizleme — sürükle &amp; bırak</p>
 
-            {/* Preview badge */}
-            {(() => {
-              const isGeo  = template.id === "taslak1" || template.id === "taslak2";
-              const isRed  = template.id === "kirmizi1" || template.id === "kirmizi2";
-              const isDark = template.id === "koyu" || isGeo || isRed;
-              return (
-                <div
-                  ref={previewRef}
-                  style={{
-                    position: "relative", width: "100%", aspectRatio: "88/58",
-                    background: template.bodyBg,
-                    border: template.border,
-                    borderRadius: template.borderRadius,
-                    overflow: "hidden",
-                    userSelect: dragging ? "none" : undefined,
-                    cursor: dragging ? "grabbing" : undefined,
-                    fontFamily: template.fontFamily,
-                  }}
-                  className="shadow-xl"
-                >
-                  {/* Geometrik dekor — mor/lavendar */}
-                  {isGeo && (
-                    <>
-                      <div style={{ position:"absolute", top:0, right:0, width:"40%", height:"60%",
-                        background:"#756fbf", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.35 }} />
-                      <div style={{ position:"absolute", top:0, right:0, width:"26%", height:"39%",
-                        background:"#b0a8db", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.45 }} />
-                      <div style={{ position:"absolute", top:0, right:0, width:"14%", height:"22%",
-                        background:"#ddcae9", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.6 }} />
-                      <div style={{ position:"absolute", bottom:0, left:0, width:"23%", height:"35%",
-                        background:"#756fbf", clipPath:"polygon(0 0,100% 100%,0 100%)", opacity:0.25 }} />
-                      <div style={{ position:"absolute", bottom:0, left:0, width:"11%", height:"17%",
-                        background:"#b0a8db", clipPath:"polygon(0 0,100% 100%,0 100%)", opacity:0.4 }} />
-                    </>
-                  )}
-
-                  {/* Kırmızı dekor — köşe üçgenler */}
-                  {isRed && (
-                    <>
-                      <div style={{ position:"absolute", top:0, right:0, width:"20%", height:"30%",
-                        background:"#010101", clipPath:"polygon(100% 0,100% 100%,0 0)" }} />
-                      <div style={{ position:"absolute", top:0, right:0, width:"12%", height:"18%",
-                        background:"#ffffff", clipPath:"polygon(100% 0,100% 100%,0 0)", opacity:0.12 }} />
-                      <div style={{ position:"absolute", top:0, left:0, width:"13%", height:"19%",
-                        background:"#010101", clipPath:"polygon(0 0,100% 0,0 100%)" }} />
-                      <div style={{ position:"absolute", top:0, left:0, width:"6%", height:"10%",
-                        background:"#ffffff", clipPath:"polygon(0 0,100% 0,0 100%)", opacity:0.15 }} />
-                      <div style={{ position:"absolute", bottom:0, right:0, width:"15%", height:"23%",
-                        background:"#010101", clipPath:"polygon(100% 0,100% 100%,0 100%)" }} />
-                      <div style={{ position:"absolute", bottom:0, left:0, width:"10%", height:"15%",
-                        background:"#010101", clipPath:"polygon(0 0,0 100%,100% 100%)" }} />
-                      <div style={{ position:"absolute", top:"18%", left:0, right:0, height:2,
-                        background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)" }} />
-                    </>
-                  )}
-                  {template.id === "kirmizi2" && (
-                    <div style={{ position:"absolute", left:0, right:0, top:"38%", height:"22%",
-                      background:"#010101" }} />
-                  )}
-
-                  {/* Header */}
-                  <div style={{
-                    position: "absolute", top: 0, left: 0, right: 0, height: "20%",
-                    background: (isGeo || isRed) ? "transparent" : template.headerBg,
-                    borderBottom: isGeo ? "1px solid #756fbf60" : "none",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    padding: "0 10px",
-                  }}>
-                    <span style={{
-                      fontSize: "8px", fontWeight: 700, color: template.headerText,
-                      letterSpacing: "0.05em", textTransform: "uppercase",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
-                      {eventName}
-                    </span>
-                  </div>
-
-                  {/* Draggable text elements */}
-                  {([
-                    { el: nameEl, text: previewName, color: template.bodyText },
-                    { el: roleEl, text: previewRole, color: template.bodyText },
-                    { el: subEl,  text: "PERSONEL",  color: template.subText  },
-                  ]).map(({ el, text, color }) => (
-                    <div
-                      key={el.id}
-                      style={{
-                        position: "absolute",
-                        left: `${el.x}%`, top: `${el.y}%`,
-                        transform: "translate(-50%,-50%)",
-                        fontSize: el.fontSize,
-                        fontWeight: el.bold ? 700 : 400,
-                        color,
-                        cursor: dragging === el.id ? "grabbing" : "grab",
-                        padding: "2px 4px",
-                        borderRadius: 3,
-                        background: dragging === el.id ? "rgba(99,102,241,0.12)" : "transparent",
-                        outline: dragging === el.id ? "1.5px solid #6366f1" : "none",
-                        whiteSpace: "nowrap", maxWidth: "72%", overflow: "hidden", textOverflow: "ellipsis",
-                      }}
-                      onMouseDown={e => { e.preventDefault(); setDragging(el.id); }}
-                    >
-                      {text}
-                    </div>
-                  ))}
-
-                  {/* Logo — sürüklenebilir */}
-                  {logoUrl && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: `${logoEl.x}%`, top: `${logoEl.y}%`,
-                        transform: "translate(-50%,-50%)",
-                        cursor: dragging === "logo" ? "grabbing" : "grab",
-                        padding: "2px 3px",
-                        borderRadius: 3,
-                        background: dragging === "logo" ? "rgba(99,102,241,0.12)" : "transparent",
-                        outline: dragging === "logo" ? "1.5px solid #6366f1" : "none",
-                        lineHeight: 0,
-                      }}
-                      onMouseDown={e => { e.preventDefault(); setDragging("logo"); }}
-                    >
-                      <img src={logoUrl} alt="logo" style={{ height: logoEl.size * 0.55, objectFit: "contain" }} />
-                    </div>
-                  )}
-
-                  {/* Kapı geçiş QR — sürüklenebilir */}
-                  {qrDataUrl && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: `${qrEl.x}%`, top: `${qrEl.y}%`,
-                        transform: "translate(-50%,-50%)",
-                        background: "#fff", padding: 1.5, borderRadius: 3, lineHeight: 0,
-                        cursor: dragging === "qr" ? "grabbing" : "grab",
-                        outline: dragging === "qr" ? "1.5px solid #6366f1" : "none",
-                      }}
-                      onMouseDown={e => { e.preventDefault(); setDragging("qr"); }}
-                    >
-                      <img src={qrDataUrl} width={Math.round(qrEl.size * 0.5)} height={Math.round(qrEl.size * 0.5)} style={{ display:"block" }} />
-                    </div>
-                  )}
-
-                  {/* Bottom */}
-                  <div style={{ position: "absolute", bottom: "12%", left: "5%", right: "5%",
-                    borderTop: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` }} />
-                  <div style={{ position: "absolute", bottom: "3%", left: 0, right: 0,
-                    textAlign: "center", fontSize: 7, color: isDark ? "#475569" : "#94a3b8" }}>
-                    BasExpo — Akıllı Fuar Sistemi
-                  </div>
-                </div>
-              );
-            })()}
+            {/*
+              Önizleme = BadgeHTML tam 352×232px render → CSS scale ile küçültülür
+              Böylece önizleme ≡ PDF çıktısı (WYSIWYG)
+            */}
+            <div
+              ref={previewWrapRef}
+              style={{
+                width: "100%",
+                height: Math.round(BADGE_H * previewScale),
+                position: "relative",
+                overflow: "hidden",
+              }}
+              className="shadow-xl rounded-lg"
+            >
+              <div
+                ref={previewInnerRef}
+                style={{
+                  position: "absolute",
+                  top: 0, left: 0,
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top left",
+                  userSelect: dragging ? "none" : undefined,
+                  cursor: dragging ? "grabbing" : undefined,
+                }}
+              >
+                <BadgeHTML
+                  template={template}
+                  eventName={eventName}
+                  mainLine={previewName}
+                  subLine={previewRole}
+                  subLabel="PERSONEL"
+                  logoUrl={logoUrl}
+                  elements={elements}
+                  qrDataUrl={qrDataUrl}
+                  qrEl={qrEl}
+                  logoEl={logoEl}
+                  onStartDrag={(id) => (_e) => setDragging(id)}
+                  activeDrag={dragging}
+                />
+              </div>
+            </div>
 
             <p className="text-[10px] text-muted-foreground/50 text-center">
               Bu şablon tüm yaka kartlarına uygulanır · Önizleme = PDF çıktısı (WYSIWYG)
@@ -838,7 +776,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         </div>
       </motion.div>
 
-      {/* ── Personel Listesi ─────────────────────────────── */}
+      {/* ── Personel Listesi ──────────────────────────────────── */}
       <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.04 }} className="glass rounded-2xl border border-white/8 p-5">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <div className="flex items-center gap-2">
@@ -863,25 +801,14 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         </div>
 
         <div className="flex gap-2 mb-3">
-          <input
-            value={draftName}
-            onChange={e => setDraftName(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addStaff()}
+          <input value={draftName} onChange={e => setDraftName(e.target.value)} onKeyDown={e => e.key === "Enter" && addStaff()}
             placeholder="Ad Soyad"
-            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50"
-          />
-          <input
-            value={draftRole}
-            onChange={e => setDraftRole(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addStaff()}
+            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50" />
+          <input value={draftRole} onChange={e => setDraftRole(e.target.value)} onKeyDown={e => e.key === "Enter" && addStaff()}
             placeholder="Görev"
-            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50"
-          />
-          <button
-            onClick={addStaff}
-            disabled={!draftName.trim()}
-            className="px-3 py-2 rounded-xl bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan hover:bg-brand-cyan/30 transition-colors disabled:opacity-40"
-          >
+            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50" />
+          <button onClick={addStaff} disabled={!draftName.trim()}
+            className="px-3 py-2 rounded-xl bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan hover:bg-brand-cyan/30 transition-colors disabled:opacity-40">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -903,7 +830,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         )}
       </motion.div>
 
-      {/* ── Firma Çalışan Yönetimi ───────────────────────── */}
+      {/* ── Firma Çalışan Yönetimi ────────────────────────────── */}
       <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.07 }} className="glass rounded-2xl border border-white/8 p-5">
         <div className="flex items-center gap-2 mb-4">
           <Building2 className="w-5 h-5 text-brand-indigo-light" />
@@ -921,7 +848,6 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
               const employees = companyEmployees[ex.id] ?? [];
               const input     = draftInputs[ex.id] ?? { name: "", role: "" };
               const isOpen    = expandedId === ex.id;
-
               return (
                 <div key={ex.id} className="rounded-xl border border-white/8 overflow-hidden">
                   <button
@@ -1003,7 +929,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         )}
       </motion.div>
 
-      {/* ── Tümünü İndir ─────────────────────────────────── */}
+      {/* ── Tümünü İndir ──────────────────────────────────────── */}
       {totalBadges > 0 && (
         <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.1 }}>
           <Button variant="gradient" className="w-full gap-2" onClick={downloadAll} disabled={genPending}>
@@ -1011,7 +937,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
             {genPending ? "PDF Oluşturuluyor..." : `Tümünü İndir — ${totalBadges} yaka kartı`}
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Seçili şablon tüm kartlara uygulanır · A4 sayfaya 2×4 = 8 kart · Türkçe karakterler desteklenir
+            A4 sayfaya 2×4 = 8 kart · Seçili şablon tüm kartlara uygulanır
           </p>
         </motion.div>
       )}

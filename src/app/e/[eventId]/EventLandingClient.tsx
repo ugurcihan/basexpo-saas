@@ -346,37 +346,47 @@ export function EventLandingClient({ event, sponsors, halls, organizer, profile,
 
         {/* Sponsor pyramid */}
         {sponsors.length > 0 && (
-          <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}>
-            <div className="flex items-center gap-2 mb-4">
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.11 }}>
+            <div className="flex items-center gap-2 mb-5">
               <Crown className="w-5 h-5 text-brand-gold" />
               <h2 className="font-semibold text-white">Sponsorlar</h2>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-5">
               {sortedTiers.map((tier) => {
                 const tierSponsors = sponsorsByTier[tier];
                 const tierName = tierSponsors[0]?.tier_name ?? `Seviye ${tier}`;
+                const tierMinHeight: Record<number, number> = { 1: 140, 2: 100, 3: 80, 4: 65 };
+                const headerColor =
+                  tier === 1 ? "text-slate-300" :
+                  tier === 2 ? "text-brand-gold" :
+                  tier === 3 ? "text-brand-cyan" : "text-orange-400";
                 return (
                   <div key={tier}>
-                    <p className="text-xs text-muted-foreground mb-1.5">{tierName}</p>
+                    {/* Tier divider header */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-px flex-1 bg-white/12" />
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${headerColor}`}>{tierName}</span>
+                      <div className="h-px flex-1 bg-white/12" />
+                    </div>
                     <div className="flex flex-row flex-wrap gap-3">
                       {tierSponsors.map((s) => {
                         const logoSrc = s.custom_logo_url || s.exhibitor?.logo_url;
                         const bp = `calc(${s.width_pct ?? 100}% - 12px)`;
-                        const hp = s.height_px ?? 80;
+                        const hp = Math.max(s.height_px ?? 80, tierMinHeight[s.tier] ?? 65);
                         return (
                           <div
                             key={s.id}
-                            className="glass rounded-xl border border-white/10 overflow-hidden flex items-center justify-center bg-white/5"
+                            className="rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm"
                             style={{ flexBasis: bp, maxWidth: bp, height: hp }}
                           >
                             {logoSrc ? (
                               <img
                                 src={logoSrc}
                                 alt={s.exhibitor?.company_name ?? "Sponsor"}
-                                className="w-full h-full object-contain p-2"
+                                className="w-full h-full object-contain p-3"
                               />
                             ) : (
-                              <span className="text-sm font-semibold text-white px-3 text-center leading-tight">
+                              <span className="text-sm font-semibold text-gray-700 px-3 text-center leading-tight">
                                 {s.exhibitor?.company_name ?? "—"}
                               </span>
                             )}

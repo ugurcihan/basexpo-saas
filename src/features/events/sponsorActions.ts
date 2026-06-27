@@ -13,11 +13,21 @@ export async function addSponsor(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Oturum açık değil." };
 
+  const tierDefaults: Record<number, { width_pct: number; height_px: number }> = {
+    1: { width_pct: 100, height_px: 160 },
+    2: { width_pct: 48,  height_px: 110 },
+    3: { width_pct: 31,  height_px: 85  },
+    4: { width_pct: 23,  height_px: 70  },
+  };
+  const defaults = tierDefaults[tier] ?? tierDefaults[4];
+
   const { error } = await supabase.from("event_sponsors").insert({
     event_id: eventId,
     exhibitor_id: exhibitorId,
     tier,
     tier_name: tierName,
+    width_pct: defaults.width_pct,
+    height_px:  defaults.height_px,
   });
 
   if (error) return { error: error.message };

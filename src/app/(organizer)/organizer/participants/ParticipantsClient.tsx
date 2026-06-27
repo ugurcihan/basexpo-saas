@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Users2, Building2, Search, CheckCircle2,
-  Clock, XCircle, Ticket, Calendar, Grid3X3, Check, X,
+  Clock, XCircle, Ticket, Calendar, Grid3X3, Check, X, Mail, Phone, MapPin,
 } from "lucide-react";
 import type { Profile } from "@/types";
 import { ORGANIZER_NAV } from "../_nav";
@@ -32,8 +32,11 @@ interface FirmRow {
   company_name: string;
   tags: string[];
   created_at: string;
+  contact_email: string | null;
+  city: string | null;
   event: EventRef | null;
   booths: BoothRef[];
+  owner: { full_name: string | null; email: string; phone_number: string | null } | null;
 }
 
 interface Props {
@@ -142,15 +145,15 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
   }
 
   const tabs = [
-    { id: "visitors" as const, label: "Ziyaretçiler", count: rows.length, icon: Users2 },
-    { id: "firms" as const,    label: "Firma Talepleri", count: firms.length, icon: Building2 },
+    { id: "visitors" as const, label: "Ziyaretçiler",       count: rows.length,  icon: Users2 },
+    { id: "firms" as const,    label: "Katılımcı Firmalar",  count: firms.length, icon: Building2 },
   ];
 
   return (
     <DashboardShell role="organizer" userName={profile.full_name || profile.email} navItems={ORGANIZER_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-brand-indigo/15 border border-brand-indigo/30 flex items-center justify-center">
               <Users2 className="w-5 h-5 text-brand-indigo-light" />
@@ -199,7 +202,7 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
 
         {/* Content */}
         {tab === "visitors" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               {[
@@ -229,7 +232,7 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
         )}
 
         {tab === "firms" && (
-          <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
             <div className="grid grid-cols-3 gap-4 mb-4">
               {[
                 { label: "Toplam Firma",   value: firms.length },
@@ -255,7 +258,14 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
                       <Building2 className="w-5 h-5 text-brand-gold" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white">{ex.company_name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-white">{ex.company_name}</p>
+                        {ex.city && (
+                          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                            <MapPin className="w-3 h-3" /> {ex.city}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-0.5">
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {ex.event?.name ?? "—"}</span>
                         {ex.booths.map((b) => (
@@ -264,9 +274,28 @@ export function ParticipantsClient({ profile, visitors, firms }: Props) {
                           </span>
                         ))}
                       </div>
+                      {/* İletişim bilgileri */}
+                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground/80">
+                        {(ex.contact_email || ex.owner?.email) && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                            {ex.contact_email || ex.owner?.email}
+                          </span>
+                        )}
+                        {ex.owner?.phone_number && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {ex.owner.phone_number}
+                          </span>
+                        )}
+                        {ex.owner?.full_name && (
+                          <span className="text-muted-foreground/60">
+                            Yetkili: {ex.owner.full_name}
+                          </span>
+                        )}
+                      </div>
                       {ex.tags.length > 0 && (
                         <div className="flex gap-1 mt-1.5 flex-wrap">
-                          {ex.tags.slice(0, 3).map((tag) => (
+                          {ex.tags.slice(0, 4).map((tag) => (
                             <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-white/8 text-muted-foreground">{tag}</span>
                           ))}
                         </div>

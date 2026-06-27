@@ -299,9 +299,19 @@ export function FairDetailClient({ role, userName, event, sponsors, participants
                           key={sponsor.id}
                           className={`${meta.cols} glass rounded-2xl border ${meta.border} ${meta.bg} p-5 flex flex-col items-center justify-center text-center gap-2`}
                         >
-                          <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center mb-1">
-                            <Building2 className="w-7 h-7 text-muted-foreground" />
-                          </div>
+                          {sponsor.exhibitor?.logo_url ? (
+                            <div className="rounded-xl bg-white overflow-hidden mb-1" style={{ height: 56, width: 120 }}>
+                              <img
+                                src={sponsor.exhibitor.logo_url}
+                                alt={sponsor.exhibitor.company_name}
+                                className="w-full h-full object-contain p-1.5"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center mb-1">
+                              <Building2 className="w-7 h-7 text-muted-foreground" />
+                            </div>
+                          )}
                           <p className={`font-bold ${meta.labelSize} ${meta.color}`}>
                             {sponsor.exhibitor?.company_name ?? "—"}
                           </p>

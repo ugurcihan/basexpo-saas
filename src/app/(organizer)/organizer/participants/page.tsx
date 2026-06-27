@@ -30,7 +30,7 @@ export default async function ParticipantsPage() {
     eventIds.length > 0
       ? supabase
           .from("exhibitors")
-          .select("id, company_name, tags, created_at, event:events(id, name), booths(id, code)")
+          .select("id, company_name, tags, created_at, contact_email, city, event:events(id, name), booths(id, code), owner:profiles!exhibitors_owner_id_fkey(full_name, email, phone_number)")
           .in("event_id", eventIds)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
