@@ -373,9 +373,10 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
   const [logoUrl, setLogoUrl]       = useState<string | null>(null);
 
   /* -- Personel -- */
-  const [staff, setStaff]       = useState<StaffRow[]>([]);
-  const [draftName, setDraftName] = useState("");
-  const [draftRole, setDraftRole] = useState("");
+  const [staff, setStaff]         = useState<StaffRow[]>([]);
+  const [draftName, setDraftName]   = useState("");
+  const [draftRole, setDraftRole]   = useState("");
+  const [staffSubLabel, setStaffSubLabel] = useState("PERSONEL");
 
   /* -- Firma çalışan -- */
   const [companyEmployees, setCompanyEmployees] = useState<Record<string, Employee[]>>({});
@@ -444,7 +445,6 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
 
   /* ── Kapı geçiş QR data URL ─────────────────────────────── */
   useEffect(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://basexpo.site";
     const t = setTimeout(() => {
       const canvas = qrCanvasRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
       if (canvas) setQrDataUrl(canvas.toDataURL("image/png"));
@@ -542,7 +542,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
 
   async function downloadStaffPDF() {
     await generatePDF(
-      staff.map(s => ({ name: s.name, role: s.role || "Organizasyon Ekibi", sub: "PERSONEL" })),
+      staff.map(s => ({ name: s.name, role: s.role || "Organizasyon Ekibi", sub: staffSubLabel || "PERSONEL" })),
       `${eventName}_personel_yaka.pdf`
     );
   }
@@ -563,7 +563,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         items.push({ name: ex.company_name, role: e.name, sub: e.role || "Firma Temsilcisi" })
       );
     });
-    staff.forEach(s => items.push({ name: s.name, role: s.role || "Organizasyon Ekibi", sub: "PERSONEL" }));
+    staff.forEach(s => items.push({ name: s.name, role: s.role || "Organizasyon Ekibi", sub: staffSubLabel || "PERSONEL" }));
     if (items.length) await generatePDF(items, `${eventName}_tum_yaka.pdf`);
   }
 
@@ -589,12 +589,10 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
       </div>
 
       {/* ── Gizli capture div — html2canvas için
-           position: absolute (fixed değil!) + visibility hidden
-           parent position: relative → "Son Fuarlar" wrapper'ı bu rolü üstleniyor        ── */}
+           visibility:hidden boş canvas verir; position:fixed + uzak koordinat kullan  ── */}
       <div style={{
-        position: "absolute",
+        position: "fixed",
         left: -9999, top: 0,
-        visibility: "hidden",
         pointerEvents: "none",
       }}>
         <div ref={captureRef}>
@@ -668,6 +666,19 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Alt Etiket (Personel için) */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Personel Alt Etiket</p>
+              <input
+                value={staffSubLabel}
+                onChange={e => setStaffSubLabel(e.target.value.toUpperCase())}
+                placeholder="PERSONEL"
+                maxLength={20}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-violet/50 tracking-widest uppercase"
+              />
+              <p className="text-[10px] text-muted-foreground/50 mt-1">Personel yaka kartlarında alt satırda çıkar (ör: PERSONEL, STAFF, GÜVENLİK)</p>
             </div>
 
             {/* Yazı Boyutları */}
@@ -757,7 +768,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
                   eventName={eventName}
                   mainLine={previewName}
                   subLine={previewRole}
-                  subLabel="PERSONEL"
+                  subLabel={staffSubLabel || "PERSONEL"}
                   logoUrl={logoUrl}
                   elements={elements}
                   qrDataUrl={qrDataUrl}
