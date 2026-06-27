@@ -1,42 +1,19 @@
 "use client";
 
+import { EXHIBITOR_NAV } from "./_nav";
+
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
-  LayoutDashboard,
   Building2,
-  Package,
   QrCode,
-  Users,
-  TrendingUp,
-  Settings,
-  MessageSquare,
-  Brain,
-  CalendarClock,
-  Store,
-  Workflow,
   Bell,
   ArrowRight,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
-
-const NAV_ITEMS = [
-  { label: "Panel",             href: "/exhibitor",                   icon: LayoutDashboard },
-  { label: "Marka Profili",     href: "/exhibitor/profile",           icon: Building2 },
-  { label: "QR Yarat",          href: "/exhibitor/qr",                icon: QrCode },
-  { label: "Ürünlerim",         href: "/exhibitor/products",          icon: Package },
-  { label: "Ziyaretçilerim",    href: "/exhibitor/leads",             icon: Users },
-  { label: "Mesajlar",          href: "/exhibitor/messages",          icon: MessageSquare },
-  { label: "Analiz AI",         href: "/exhibitor/analytics",         icon: Brain },
-  { label: "Yaklaşan Fuarlar",  href: "/exhibitor/upcoming-fairs",    icon: CalendarClock },
-  { label: "Fuar Standlarım",   href: "/exhibitor/my-booths",         icon: Store },
-  { label: "Randevu Talepleri", href: "/exhibitor/meeting-requests",  icon: CalendarClock },
-  { label: "Satış Pipeline'ı",  href: "/exhibitor/pipeline",          icon: Workflow },
-  { label: "ROI Raporu",        href: "/exhibitor/roi-report",        icon: TrendingUp },
-  { label: "Ayarlar",           href: "/exhibitor/settings",          icon: Settings },
-];
 
 interface DashboardStats {
   leadCount: number;
@@ -64,7 +41,7 @@ export function ExhibitorDashboard({
   const showFollowUpBanner = stats?.fairEnded && (stats?.uncalledCount ?? 0) > 0;
 
   return (
-    <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+    <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={EXHIBITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-8">
 
         {/* Welcome */}
@@ -125,14 +102,14 @@ export function ExhibitorDashboard({
         >
           <div className="glass rounded-2xl border border-brand-cyan/20 p-8 flex flex-col items-center text-center">
             <div className="w-14 h-14 rounded-2xl bg-brand-cyan/15 border border-brand-cyan/30 flex items-center justify-center mb-4">
-              <Building2 className="w-7 h-7 text-brand-cyan" />
+              <CreditCard className="w-7 h-7 text-brand-cyan" />
             </div>
-            <h3 className="font-display text-lg font-semibold text-white mb-2">Firma Profili</h3>
+            <h3 className="font-display text-lg font-semibold text-white mb-2">Dijital Kartvizit</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Logo, açıklama ve etiket ekle. AI eşleşmesi profiline göre çalışır.
+              Yetkili kişi, telefon, website bilgilerini gir. QR tarandığında gösterilir.
             </p>
             <Button variant="gradient" size="sm" asChild>
-              <Link href="/exhibitor/profile">Profili Düzenle</Link>
+              <Link href="/exhibitor/card">Kartviziti Düzenle</Link>
             </Button>
           </div>
 
@@ -142,10 +119,10 @@ export function ExhibitorDashboard({
             </div>
             <h3 className="font-display text-lg font-semibold text-white mb-2">QR Lead Capture</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Benzersiz QR kodunu al, standında sergile, lead&apos;leri anında topla.
+              Fuara özel QR kodunu al, standında sergile, lead&apos;leri anında topla.
             </p>
             <Button variant="gradient" size="sm" asChild>
-              <Link href="/exhibitor/qr">QR Kodumu Gör</Link>
+              <Link href="/exhibitor/card?tab=qr">QR Kodlarım</Link>
             </Button>
           </div>
         </motion.div>

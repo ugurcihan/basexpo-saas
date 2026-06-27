@@ -64,6 +64,9 @@ export async function updateExhibitorProfile(input: {
   website?: string | null;
   phone?: string | null;
   city?: string | null;
+  contact_name?: string | null;
+  job_title?: string | null;
+  linkedin_url?: string | null;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -79,6 +82,9 @@ export async function updateExhibitorProfile(input: {
       website: input.website ?? null,
       phone: input.phone ?? null,
       city: input.city ?? null,
+      contact_name: input.contact_name ?? null,
+      job_title: input.job_title ?? null,
+      linkedin_url: input.linkedin_url ?? null,
     })
     .eq("id", input.id)
     .eq("owner_id", user.id);
@@ -87,7 +93,22 @@ export async function updateExhibitorProfile(input: {
 
   revalidatePath("/exhibitor");
   revalidatePath("/exhibitor/profile");
+  revalidatePath("/exhibitor/card");
   return { error: null };
+}
+
+export async function getAllMyExhibitorProfiles() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("exhibitors")
+    .select("id, company_name, qr_token, contact_name, job_title, linkedin_url, website, phone, city, logo_url, tags, description, event:events(id, name, location, start_date, end_date)")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
 }
 
 export async function getExhibitorProducts(exhibitorId: string) {

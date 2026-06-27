@@ -11,6 +11,7 @@ export async function getExhibitorByToken(token: string) {
     .from("exhibitors")
     .select(`
       id, company_name, description, logo_url, tags, qr_token, event_id,
+      contact_name, job_title, linkedin_url, phone, website,
       event:events(id, name, location, start_date, end_date, gallery_urls),
       products(id, name, description, image_url)
     `)

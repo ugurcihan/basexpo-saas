@@ -164,6 +164,7 @@ total_points  → toplam puan eşiği
 020_organizer_profile_follows.sql
 021_loyalty_and_badges.sql       ← badge_definitions + visitor_badges + loyalty_points (RLS dahil)
 022_reward_winners.sql           ← reward_tiers.max_winners + reward_winners tablosu
+023_digital_card_and_surveys.sql ← exhibitors: contact_name, job_title, linkedin_url + exhibitor_surveys, survey_questions, survey_responses
 ```
 
 ---

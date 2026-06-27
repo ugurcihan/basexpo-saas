@@ -1,5 +1,7 @@
 "use client";
 
+import { EXHIBITOR_NAV } from "../_nav";
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -104,7 +106,7 @@ export function LeadsClient({
   const highScore = leads.filter((l) => l.score >= 70).length;
 
   return (
-    <DashboardShell role="exhibitor" userName="" navItems={NAV_ITEMS}>
+    <DashboardShell role="exhibitor" userName="" navItems={EXHIBITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div initial={{ y: 12 }} animate={{ y: 0 }} className="flex items-center justify-between">

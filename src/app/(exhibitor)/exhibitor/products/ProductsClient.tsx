@@ -1,5 +1,7 @@
 "use client";
 
+import { EXHIBITOR_NAV } from "../_nav";
+
 import { useState, useTransition, useRef } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -125,7 +127,7 @@ export function ProductsClient({
   }
 
   return (
-    <DashboardShell role="exhibitor" userName="" navItems={NAV_ITEMS}>
+    <DashboardShell role="exhibitor" userName="" navItems={EXHIBITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div

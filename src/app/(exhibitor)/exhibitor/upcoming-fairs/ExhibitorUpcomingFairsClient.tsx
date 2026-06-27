@@ -1,5 +1,7 @@
 "use client";
 
+import { EXHIBITOR_NAV } from "../_nav";
+
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -55,7 +57,7 @@ export function ExhibitorUpcomingFairsClient({ profile, events, myEventIds }: Pr
   const myEventSet = new Set(myEventIds);
 
   return (
-    <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+    <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={EXHIBITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center gap-3 mb-2">

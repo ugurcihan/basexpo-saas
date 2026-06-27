@@ -5,7 +5,7 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   CalendarDays, Building2, QrCode, Users2,
-  Plus, Wrench, BarChart2, MessageSquare,
+  Plus, BarChart2, MessageSquare,
   MapPin, ChevronRight, ClipboardList, Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,6 @@ export function OrganizerDashboard({ profile, stats, events, pendingApprovals }:
   const quickLinks = [
     { label: "Fuarlarım",        href: "/organizer/events",                 icon: CalendarDays,  color: "brand-indigo", badge: 0 },
     { label: "Katılımcılar",     href: "/organizer/participants",           icon: Users2,        color: "brand-cyan",   badge: 0 },
-    { label: "Araçlar",          href: "/organizer/tools",                  icon: Wrench,        color: "brand-gold",   badge: 0 },
     { label: "Raporlar",         href: "/organizer/reports",                icon: BarChart2,     color: "brand-violet", badge: 0 },
     { label: "Katılım İstekleri", href: "/organizer/participation-requests", icon: ClipboardList, color: "brand-cyan",  badge: pendingApprovals },
     { label: "Mesajlar",         href: "/organizer/messages",               icon: MessageSquare, color: "brand-indigo", badge: 0 },
