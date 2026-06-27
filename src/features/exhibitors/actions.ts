@@ -61,6 +61,9 @@ export async function updateExhibitorProfile(input: {
   description: string;
   logo_url: string | null;
   tags: string[];
+  website?: string | null;
+  phone?: string | null;
+  city?: string | null;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -73,6 +76,9 @@ export async function updateExhibitorProfile(input: {
       description: input.description,
       logo_url: input.logo_url,
       tags: input.tags,
+      website: input.website ?? null,
+      phone: input.phone ?? null,
+      city: input.city ?? null,
     })
     .eq("id", input.id)
     .eq("owner_id", user.id);

@@ -36,6 +36,8 @@ import {
   CalendarClock,
   Store,
   Workflow,
+  Globe,
+  Phone,
 } from "lucide-react";
 import { createExhibitorProfile, updateExhibitorProfile } from "@/features/exhibitors/actions";
 import { generateExhibitorEmbedding } from "@/features/ai/actions";
@@ -75,6 +77,9 @@ interface ExhibitorWithEvent {
   tags: string[];
   qr_token: string;
   paid_at: string | null;
+  website: string | null;
+  phone: string | null;
+  city: string | null;
   event: {
     id: string;
     name: string;
@@ -97,6 +102,9 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
   const [logoUrl, setLogoUrl] = useState<string | null>(exhibitor?.logo_url ?? null);
   const [tags, setTags] = useState<string[]>(exhibitor?.tags ?? []);
   const [tagInput, setTagInput] = useState("");
+  const [website, setWebsite] = useState(exhibitor?.website ?? "");
+  const [phone, setPhone] = useState(exhibitor?.phone ?? "");
+  const [city, setCity] = useState(exhibitor?.city ?? "");
   const [selectedEventId, setSelectedEventId] = useState(exhibitor?.event.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -152,6 +160,9 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
           description,
           logo_url: logoUrl,
           tags,
+          website: website || null,
+          phone: phone || null,
+          city: city || null,
         });
       } else {
         result = await createExhibitorProfile({
@@ -173,7 +184,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
     <DashboardShell role="exhibitor" userName="" navItems={NAV_ITEMS}>
       <div className="p-6 lg:p-8 max-w-2xl space-y-6">
         {/* Header */}
-        <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
           <h1 className="font-display text-2xl font-bold text-white">
             {exhibitor ? "Firma Profilim" : "Profil Oluştur"}
           </h1>
@@ -191,7 +202,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
 
         <motion.div
           initial={{ y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ y: 0 }}
           transition={{ delay: 0.1 }}
           className="glass rounded-2xl border border-white/8 p-6 space-y-5"
         >
@@ -337,6 +348,43 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
             </p>
           </div>
 
+          {/* İletişim bilgileri */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="website" className="flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Web Sitesi
+              </Label>
+              <Input
+                id="website"
+                placeholder="https://firmam.com"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Telefon
+              </Label>
+              <Input
+                id="phone"
+                placeholder="+90 5xx xxx xx xx"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city" className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Şehir
+            </Label>
+            <Input
+              id="city"
+              placeholder="İstanbul"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
+
           {/* Error / success */}
           {error && (
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -363,7 +411,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
         {exhibitor && (
           <motion.div
             initial={{ y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ y: 0 }}
             transition={{ delay: 0.15 }}
           >
             <PaymentSection
@@ -378,7 +426,7 @@ export function ProfileClient({ exhibitor, availableEvents }: Props) {
         {exhibitor && (
           <motion.div
             initial={{ y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ y: 0 }}
             transition={{ delay: 0.2 }}
             className="glass rounded-2xl border border-brand-violet/15 p-5 flex items-start gap-4"
           >

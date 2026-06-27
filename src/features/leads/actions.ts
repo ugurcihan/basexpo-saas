@@ -41,29 +41,36 @@ export async function createLeadFromScan(exhibitorId: string) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, interests")
     .eq("id", user.id)
     .single();
 
   if (profile?.role !== "visitor") return { error: "visitor_only" };
 
+  // Exhibitor'ı önce çek: skor hesabı + heatmap için
+  const { data: exhibitor } = await supabase
+    .from("exhibitors")
+    .select("event_id, tags, booths:booths(id)")
+    .eq("id", exhibitorId)
+    .single();
+
+  // İlgi alanı × etiket örtüşmesinden lead skoru hesapla (10 base + 20 per overlap, max 100)
+  const interests = (profile?.interests ?? []) as string[];
+  const tags = ((exhibitor?.tags ?? []) as string[]).map((t: string) => t.toLowerCase());
+  const overlap = interests.filter((i: string) => tags.includes(i.toLowerCase())).length;
+  const score = Math.min(100, 10 + overlap * 20);
+
   const { error } = await supabase.from("leads").insert({
     exhibitor_id: exhibitorId,
     visitor_id: user.id,
     source: "qr",
+    score,
   });
 
   if (error) {
     if (error.code === "23505") return { error: null, alreadyExists: true };
     return { error: error.message };
   }
-
-  // Heatmap için ayrıca qr_scans'a kayıt at (booth_id + event_id'yi exhibitor'dan çek)
-  const { data: exhibitor } = await supabase
-    .from("exhibitors")
-    .select("event_id, booths:booths(id)")
-    .eq("id", exhibitorId)
-    .single();
 
   if (exhibitor) {
     const boothId = (exhibitor.booths as { id: string }[] | null)?.[0]?.id ?? null;
@@ -74,7 +81,6 @@ export async function createLeadFromScan(exhibitorId: string) {
       event_id: exhibitor.event_id,
     });
 
-    // Puan: her unique exhibitor ziyaretine +20 (duplicate index ile korunuyor)
     if (exhibitor.event_id) {
       await earnPoints(exhibitor.event_id, "booth_visit", 20, exhibitorId);
     }
@@ -131,12 +137,22 @@ export async function checkInToBoothScan(boothId: string) {
   const eventId = (booth.hall as unknown as { event_id: string } | null)?.event_id ?? null;
   const exhibitorId = booth.exhibitor_id as string | null;
 
-  // Exhibitor varsa lead oluştur
+  // Exhibitor varsa lead oluştur (skor: ziyaretçi ilgileri × firma etiket örtüşmesi)
   if (exhibitorId) {
+    const [{ data: visitorProfile }, { data: exhibitorData }] = await Promise.all([
+      supabase.from("profiles").select("interests").eq("id", user.id).single(),
+      supabase.from("exhibitors").select("tags").eq("id", exhibitorId).single(),
+    ]);
+    const interests = ((visitorProfile?.interests ?? []) as string[]);
+    const tags = ((exhibitorData?.tags ?? []) as string[]).map((t: string) => t.toLowerCase());
+    const overlap = interests.filter((i: string) => tags.includes(i.toLowerCase())).length;
+    const leadScore = Math.min(100, 10 + overlap * 20);
+
     const { error: leadError } = await supabase.from("leads").insert({
       exhibitor_id: exhibitorId,
       visitor_id: user.id,
       source: "qr",
+      score: leadScore,
     });
     if (leadError && leadError.code !== "23505") {
       return { error: leadError.message, isGolden: false, bonusPoints: 0 };
