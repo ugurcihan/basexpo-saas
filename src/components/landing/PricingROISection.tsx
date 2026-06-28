@@ -276,7 +276,7 @@ export function PricingROISection() {
             {COMPARISON.map((row, i) => (
               <motion.div
                 key={row.label}
-                initial={{ opacity: 0, x: -16 }}
+                initial={{ x: -16 }}
                 whileInView={{ x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
