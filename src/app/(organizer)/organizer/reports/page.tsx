@@ -21,7 +21,7 @@ export default async function ReportsPage() {
       ? supabase.from("qr_scans").select("booth_id, scanned_at, event_id").in("event_id", eventIds)
       : Promise.resolve({ data: [] }),
     eventIds.length > 0
-      ? supabase.from("exhibitors").select("id, company_name, booths(id, code)").in("event_id", eventIds)
+      ? supabase.from("exhibitors").select("id, company_name").in("event_id", eventIds)
       : Promise.resolve({ data: [] }),
     eventIds.length > 0
       ? supabase.from("event_registrations").select("id, event_id, status").in("event_id", eventIds)
@@ -40,15 +40,20 @@ export default async function ReportsPage() {
   });
   const hourlyData = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: hourly[h] ?? 0 }));
 
-  // Top 5 booths (for analytics tab)
+  // Top 5 booths — build exhibitor_id→company map, then booth_id→label from events data
   const boothScanCount: Record<string, number> = {};
   scans.forEach((s) => {
     if (s.booth_id) boothScanCount[s.booth_id] = (boothScanCount[s.booth_id] ?? 0) + 1;
   });
+  const exhibitorIdToCompany: Record<string, string> = {};
+  exhibitors.forEach((ex) => { exhibitorIdToCompany[ex.id] = ex.company_name; });
   const boothIdToCompany: Record<string, string> = {};
-  exhibitors.forEach((ex) => {
-    (ex.booths as { id: string; code: string }[]).forEach((b) => {
-      boothIdToCompany[b.id] = `${ex.company_name} (${b.code})`;
+  (events ?? []).forEach((ev) => {
+    (ev.halls as { booths: { id: string; code: string; exhibitor_id: string | null }[] }[]).forEach((hall) => {
+      (hall.booths ?? []).forEach((b) => {
+        const company = b.exhibitor_id ? (exhibitorIdToCompany[b.exhibitor_id] ?? "") : "";
+        boothIdToCompany[b.id] = company ? `${company} (${b.code})` : b.code;
+      });
     });
   });
   const topBooths = Object.entries(boothScanCount)

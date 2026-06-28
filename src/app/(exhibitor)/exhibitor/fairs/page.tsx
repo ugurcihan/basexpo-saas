@@ -18,8 +18,7 @@ export default async function FairsPage() {
       .from("exhibitors")
       .select(`
         id, company_name, qr_token, status,
-        event:events(id, name, location, start_date, end_date, status),
-        booths:booths(id, code)
+        event:events(id, name, location, start_date, end_date, status)
       `)
       .eq("owner_id", profile.id)
       .order("created_at", { ascending: false }),

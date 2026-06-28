@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Mail, Clock, Shield, Wrench } from "lucide-react";
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "İletişim — BasExpo",
   description: "BasExpo ile iletişime geçin. Genel sorular, KVKK başvuruları ve teknik destek.",

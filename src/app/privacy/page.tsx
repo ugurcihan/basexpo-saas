@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+
+export const dynamic = "force-static";
 import { LegalPageLayout, LegalSection } from "@/components/legal/LegalPageLayout";
 
 export const metadata: Metadata = {

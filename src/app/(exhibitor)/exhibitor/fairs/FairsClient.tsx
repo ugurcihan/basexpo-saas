@@ -24,14 +24,12 @@ import type { Profile } from "@/types";
 import type { FirmMeetingRequest } from "@/features/connections/actions";
 
 interface EventInfo { id: string; name: string; location: string; start_date: string; end_date: string; status: string }
-interface BoothInfo { id: string; code: string }
 interface ExhibitorRow {
   id: string;
   company_name: string;
   qr_token: string;
   status: string | null;
   event: EventInfo | EventInfo[] | null;
-  booths: BoothInfo | BoothInfo[] | null;
 }
 interface OrganizerInfo { full_name: string | null; email: string }
 interface UpcomingEvent {
@@ -71,10 +69,7 @@ function getEvent(e: EventInfo | EventInfo[] | null): EventInfo | null {
   if (!e) return null;
   return Array.isArray(e) ? (e[0] ?? null) : e;
 }
-function getBooths(b: BoothInfo | BoothInfo[] | null): BoothInfo[] {
-  if (!b) return [];
-  return Array.isArray(b) ? b : [b];
-}
+
 function getOrganizer(o: OrganizerInfo | OrganizerInfo[] | null): OrganizerInfo | null {
   if (!o) return null;
   return Array.isArray(o) ? (o[0] ?? null) : o;
@@ -401,7 +396,6 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
             ) : (
               eventExhibitors.map((ex, i) => {
                 const ev = getEvent(ex.event);
-                const booths = getBooths(ex.booths);
                 const s = STATUS_MAP[ev?.status ?? "draft"] ?? STATUS_MAP.draft;
                 const appStatus = ex.status ? (APPLICATION_STATUS[ex.status] ?? null) : null;
                 return (
@@ -426,11 +420,6 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                         <MapPin className="w-3 h-3" /> {ev?.location}
                         {ev?.start_date && <> · {formatDate(ev.start_date)}</>}
                       </p>
-                      {booths.length > 0 && (
-                        <p className="text-xs text-brand-cyan mt-0.5 flex items-center gap-1">
-                          <Store className="w-3 h-3" /> Stand: {booths.map(b => b.code).join(", ")}
-                        </p>
-                      )}
                     </div>
                     {ex.status !== "pending" && ex.status !== "rejected" && (
                       <div className="flex items-center gap-2 flex-shrink-0">
