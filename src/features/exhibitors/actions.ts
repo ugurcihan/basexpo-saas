@@ -66,6 +66,21 @@ export async function applyToFair(eventId: string, note?: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Giriş yapmalısın" };
 
+  // Check for existing application (prevents duplicates)
+  const { data: existingApp } = await supabase
+    .from("exhibitors")
+    .select("id, status")
+    .eq("owner_id", user.id)
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (existingApp) {
+    if (existingApp.status === "pending")  return { error: "Bu fuara başvurun zaten değerlendiriliyor" };
+    if (existingApp.status === "approved") return { error: "Bu fuara zaten kayıtlısın" };
+    if (existingApp.status === "rejected") return { error: "Bu fuara başvurunuz daha önce reddedildi" };
+    return { error: "Bu fuara zaten kayıtlısın" };
+  }
+
   const { data: existing } = await supabase
     .from("exhibitors")
     .select("company_name, description, logo_url, tags")
@@ -356,6 +371,52 @@ export async function getExhibitorDashboardStats() {
     surveyIsActive: survey?.is_active ?? false,
     activeFair,
   };
+}
+
+export async function createStandaloneExhibitor(label: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın", exhibitorId: null, qrToken: null };
+
+  const { data: existing } = await supabase
+    .from("exhibitors")
+    .select("company_name, description, logo_url, tags, contact_name, job_title, linkedin_url, website, phone")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase.from("exhibitors").insert({
+    event_id: null,
+    owner_id: user.id,
+    company_name: label || (existing?.company_name ?? "Bağımsız QR"),
+    description: existing?.description ?? "",
+    logo_url: existing?.logo_url ?? null,
+    tags: existing?.tags ?? [],
+    status: "approved",
+  }).select("id, qr_token").single();
+
+  if (error) return { error: error.message, exhibitorId: null, qrToken: null };
+
+  revalidatePath("/exhibitor/fairs");
+  return { error: null, exhibitorId: data.id, qrToken: data.qr_token };
+}
+
+export async function deleteStandaloneExhibitor(exhibitorId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const { error } = await supabase
+    .from("exhibitors")
+    .delete()
+    .eq("id", exhibitorId)
+    .eq("owner_id", user.id)
+    .is("event_id", null);
+
+  if (error) return { error: error.message };
+  revalidatePath("/exhibitor/fairs");
+  return { error: null };
 }
 
 export async function deleteProduct(productId: string, exhibitorId: string) {
