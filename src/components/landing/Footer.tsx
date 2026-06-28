@@ -44,11 +44,11 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              AI destekli fuar platformu. Organizatörler için ücretsiz, firmalar için güçlü.
+              Fuarın dijital omurgası. Lead yakalama, AI eşleşme ve ROI takibi — tek platformda.
             </p>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-brand-cyan animate-pulse" />
-              <span className="text-xs text-muted-foreground">Organizatöre ücretsiz · Firmaya ROI</span>
+              <span className="text-xs text-muted-foreground">AI Destekli · KVKK Uyumlu · Türkiye'nin Fuar Platformu</span>
             </div>
           </motion.div>
 
