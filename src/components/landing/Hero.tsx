@@ -299,8 +299,8 @@ export function Hero() {
 
           {/* Right column — floating visual cards */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ x: 40 }}
+            animate={{ x: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="relative flex items-center justify-center h-96 lg:h-[520px]"
           >
@@ -367,8 +367,8 @@ export function Hero() {
 
       {/* Scroll indicator */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ y: 8 }}
+        animate={{ y: 0 }}
         transition={{ delay: 0.8 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
       >
