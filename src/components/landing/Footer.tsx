@@ -29,7 +29,7 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
           {/* Brand column */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ y: 20 }}
             whileInView={{ y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
@@ -56,7 +56,7 @@ export function Footer() {
           {Object.entries(LINKS).map(([category, links], colIndex) => (
             <motion.div
               key={category}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ y: 20 }}
               whileInView={{ y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: (colIndex + 1) * 0.1 }}
