@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import {
   MapPin, Calendar, CheckCircle2, LogIn, Building2, Package,
   AlertCircle, Tag, Zap, Trophy, ChevronDown, ChevronUp,
-  Phone, Globe, Linkedin, Mail, ClipboardList, Send,
+  Phone, Globe, Linkedin, Mail, ClipboardList, Send, Play, UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createLeadFromScan } from "@/features/leads/actions";
@@ -16,7 +16,8 @@ import { submitSurveyResponses } from "@/features/surveys/actions";
 import type { UserRole } from "@/types";
 import type { RewardTierWithStats } from "@/features/loyalty/actions";
 
-interface Product { id: string; name: string; description: string; image_url: string | null }
+interface Product { id: string; name: string; description: string; image_url: string | null; video_url?: string | null }
+interface Contact { id: string; full_name: string; email: string | null; phone: string | null; job_title: string | null; contact_type: "official" | "booth" }
 type EventRow = { id: string; name: string; location: string; start_date: string; end_date: string; gallery_urls?: string[] };
 
 interface SurveyQuestion {
@@ -43,6 +44,7 @@ interface ExhibitorData {
   website: string | null;
   event: EventRow | EventRow[];
   products: Product[];
+  contacts?: Contact[];
 }
 
 function getEvent(e: EventRow | EventRow[]): EventRow | null {
@@ -170,6 +172,68 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
               </div>
             )}
           </div>
+
+          {/* Yetkili Kişiler */}
+          {(() => {
+            const officialContacts = (exhibitor.contacts ?? []).filter(c => c.contact_type === "official");
+            const boothContacts = (exhibitor.contacts ?? []).filter(c => c.contact_type === "booth");
+            const hasContacts = officialContacts.length > 0 || boothContacts.length > 0;
+            if (!hasContacts) return null;
+            return (
+              <div className="px-6 py-4 border-t border-white/8 space-y-4">
+                {officialContacts.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5" /> Yetkili Kişiler
+                    </p>
+                    <div className="space-y-2">
+                      {officialContacts.map(c => (
+                        <div key={c.id} className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{c.full_name}</p>
+                            {c.job_title && <p className="text-xs text-muted-foreground truncate">{c.job_title}</p>}
+                          </div>
+                          {c.email && (
+                            <a
+                              href={`mailto:${c.email}`}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-brand-cyan/10 border border-brand-cyan/25 hover:bg-brand-cyan/20 transition-colors text-xs text-brand-cyan flex-shrink-0"
+                            >
+                              <Mail className="w-3 h-3" /> Mail At
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {boothContacts.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-brand-violet-light" /> Stant Yetkilileri
+                    </p>
+                    <div className="space-y-2">
+                      {boothContacts.map(c => (
+                        <div key={c.id} className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{c.full_name}</p>
+                            {c.job_title && <p className="text-xs text-muted-foreground truncate">{c.job_title}</p>}
+                          </div>
+                          {c.email && (
+                            <a
+                              href={`mailto:${c.email}`}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-brand-violet/10 border border-brand-violet/25 hover:bg-brand-violet/20 transition-colors text-xs text-brand-violet-light flex-shrink-0"
+                            >
+                              <Mail className="w-3 h-3" /> Mail At
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Açıklama + etiketler */}
           {(exhibitor.description || exhibitor.tags.length > 0) && (
@@ -422,16 +486,30 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
                   <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/8 overflow-hidden flex-shrink-0">
                     {product.image_url ? (
                       <Image src={product.image_url} alt={product.name} width={40} height={40} className="object-cover w-full h-full" />
+                    ) : product.video_url ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Play className="w-4 h-4 text-brand-cyan/60" />
+                      </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Package className="w-4 h-4 text-muted-foreground/30" />
                       </div>
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-white truncate">{product.name}</p>
                     {product.description && (
                       <p className="text-xs text-muted-foreground truncate">{product.description}</p>
+                    )}
+                    {product.video_url && (
+                      <a
+                        href={product.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-0.5 text-xs text-brand-cyan hover:underline"
+                      >
+                        <Play className="w-2.5 h-2.5" /> Tanıtım Videosu
+                      </a>
                     )}
                   </div>
                 </div>

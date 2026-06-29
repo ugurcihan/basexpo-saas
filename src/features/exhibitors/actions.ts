@@ -273,6 +273,7 @@ export async function createProduct(input: {
   name: string;
   description: string;
   image_url: string | null;
+  video_url: string | null;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -291,6 +292,87 @@ export async function createProduct(input: {
   if (error) return { error: error.message };
 
   revalidatePath("/exhibitor/products");
+  return { error: null };
+}
+
+export async function getExhibitorContacts(exhibitorId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("exhibitor_contacts")
+    .select("id, full_name, email, phone, job_title, contact_type, sort_order")
+    .eq("exhibitor_id", exhibitorId)
+    .order("contact_type")
+    .order("sort_order");
+  return data ?? [];
+}
+
+export async function upsertContact(input: {
+  id?: string;
+  exhibitor_id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  job_title: string | null;
+  contact_type: "official" | "booth";
+  sort_order: number;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const { data: exhibitor } = await supabase
+    .from("exhibitors")
+    .select("id")
+    .eq("id", input.exhibitor_id)
+    .eq("owner_id", user.id)
+    .single();
+  if (!exhibitor) return { error: "Yetki yok" };
+
+  if (input.id) {
+    const { error } = await supabase
+      .from("exhibitor_contacts")
+      .update({
+        full_name: input.full_name,
+        email: input.email,
+        phone: input.phone,
+        job_title: input.job_title,
+        contact_type: input.contact_type,
+        sort_order: input.sort_order,
+      })
+      .eq("id", input.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("exhibitor_contacts")
+      .insert({
+        exhibitor_id: input.exhibitor_id,
+        full_name: input.full_name,
+        email: input.email,
+        phone: input.phone,
+        job_title: input.job_title,
+        contact_type: input.contact_type,
+        sort_order: input.sort_order,
+      });
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/exhibitor/card");
+  return { error: null };
+}
+
+export async function deleteContact(contactId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  // RLS policy on exhibitor_contacts enforces ownership via exhibitors.owner_id = auth.uid()
+  const { error } = await supabase
+    .from("exhibitor_contacts")
+    .delete()
+    .eq("id", contactId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/exhibitor/card");
   return { error: null };
 }
 

@@ -14,10 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Building2, Upload, X, Check, AlertCircle, Plus, Globe, Phone,
   Linkedin, QrCode, Download, Copy, ClipboardList, ToggleLeft,
-  ToggleRight, Trash2, ChevronDown, ChevronUp, Eye,
+  ToggleRight, Trash2, ChevronDown, ChevronUp, Eye, Mail, UserCheck,
 } from "lucide-react";
 import {
-  updateExhibitorProfile,
+  updateExhibitorProfile, getExhibitorContacts, upsertContact, deleteContact,
 } from "@/features/exhibitors/actions";
 import {
   createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion, getSurveyResults,
@@ -129,7 +129,7 @@ export function CardClient({ profile, exhibitors, availableEvents, initialSurvey
               <SurveyTab exhibitorId={primary.id} initialSurvey={initialSurvey} />
             )}
             {tab === "results" && (
-              <SurveyResultsTab surveyId={initialSurvey?.id ?? null} />
+              <SurveyResultsTab surveyId={initialSurvey?.id ?? null} surveyTitle={initialSurvey?.title ?? "Anket"} />
             )}
             {tab === "preview" && (
               <PreviewTab exhibitor={primary} survey={initialSurvey} />
@@ -138,6 +138,131 @@ export function CardClient({ profile, exhibitors, availableEvents, initialSurvey
         )}
       </div>
     </DashboardShell>
+  );
+}
+
+// ─── Contact types ────────────────────────────────────────────
+interface Contact {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  job_title: string | null;
+  contact_type: "official" | "booth";
+  sort_order: number;
+}
+
+// ─── ContactRow ───────────────────────────────────────────────
+function ContactRow({ contact, onDelete }: { contact: Contact; onDelete: (id: string) => void }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-white/8 bg-white/3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white truncate">{contact.full_name}</p>
+        {contact.job_title && (
+          <p className="text-xs text-muted-foreground truncate">{contact.job_title}</p>
+        )}
+        {(contact.email || contact.phone) && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {contact.email && (
+              <span className="text-xs text-brand-cyan truncate">{contact.email}</span>
+            )}
+            {contact.phone && (
+              <span className="text-xs text-muted-foreground">{contact.phone}</span>
+            )}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onDelete(contact.id)}
+        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ─── AddContactForm ───────────────────────────────────────────
+function AddContactForm({
+  exhibitorId,
+  contactType,
+  sortOrder,
+  onAdded,
+}: {
+  exhibitorId: string;
+  contactType: "official" | "booth";
+  sortOrder: number;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  function handleAdd() {
+    if (!fullName.trim()) { setErr("Ad Soyad zorunlu"); return; }
+    setErr(null);
+    startTransition(async () => {
+      const result = await upsertContact({
+        exhibitor_id: exhibitorId,
+        full_name: fullName.trim(),
+        email: email || null,
+        phone: phone || null,
+        job_title: jobTitle || null,
+        contact_type: contactType,
+        sort_order: sortOrder,
+      });
+      if (result.error) { setErr(result.error); return; }
+      setFullName(""); setEmail(""); setPhone(""); setJobTitle("");
+      setOpen(false);
+      onAdded();
+    });
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-white/12 hover:border-white/25 text-xs text-muted-foreground hover:text-white transition-colors"
+      >
+        <Plus className="w-3.5 h-3.5" /> Kişi Ekle
+      </button>
+    );
+  }
+
+  return (
+    <div className="p-3 rounded-xl border border-brand-indigo/25 bg-brand-indigo/5 space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Ad Soyad *</Label>
+          <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Ali Yılmaz" className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Unvan</Label>
+          <Input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Satış Müdürü" className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">E-posta</Label>
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ali@firma.com" className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Telefon</Label>
+          <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+90 5xx..." className="h-8 text-sm" />
+        </div>
+      </div>
+      {err && <p className="text-xs text-red-400">{err}</p>}
+      <div className="flex gap-2">
+        <Button type="button" variant="gradient" size="sm" onClick={handleAdd} disabled={isPending}>
+          {isPending ? "Ekleniyor..." : "Ekle"}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setErr(null); }}>İptal</Button>
+      </div>
+    </div>
   );
 }
 
@@ -159,6 +284,27 @@ function CardTab({ exhibitor, router }: { exhibitor: ExhibitorRow; router: Retur
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+
+  useEffect(() => {
+    getExhibitorContacts(exhibitor.id).then((data) => {
+      setContacts(data as Contact[]);
+      setContactsLoaded(true);
+    });
+  }, [exhibitor.id]);
+
+  function handleDeleteContact(contactId: string) {
+    deleteContact(contactId).then(() => {
+      setContacts(prev => prev.filter(c => c.id !== contactId));
+    });
+  }
+
+  function reloadContacts() {
+    getExhibitorContacts(exhibitor.id).then((data) => {
+      setContacts(data as Contact[]);
+    });
+  }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -242,19 +388,53 @@ function CardTab({ exhibitor, router }: { exhibitor: ExhibitorRow; router: Retur
         <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Firmanız hakkında kısa bilgi..." />
       </div>
 
-      {/* Yetkili kişi */}
+      {/* Yetkili Kişiler — çoklu */}
       <div className="border-t border-white/8 pt-4 space-y-3">
-        <p className="text-sm font-semibold text-white">Yetkili Kişi</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>İsim Soyisim</Label>
-            <Input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Ali Yılmaz" />
-          </div>
-          <div className="space-y-2">
-            <Label>Unvan / Görev</Label>
-            <Input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Satış Direktörü" />
-          </div>
+        <div className="flex items-center gap-2">
+          <UserCheck className="w-4 h-4 text-brand-cyan" />
+          <p className="text-sm font-semibold text-white">Yetkili Kişiler</p>
+          <span className="text-xs text-muted-foreground">(Firma geneli — maks 5)</span>
         </div>
+        {contactsLoaded && (
+          <div className="space-y-2">
+            {contacts.filter(c => c.contact_type === "official").map(c => (
+              <ContactRow key={c.id} contact={c} onDelete={handleDeleteContact} />
+            ))}
+            {contacts.filter(c => c.contact_type === "official").length < 5 && (
+              <AddContactForm
+                exhibitorId={exhibitor.id}
+                contactType="official"
+                sortOrder={contacts.filter(c => c.contact_type === "official").length}
+                onAdded={reloadContacts}
+              />
+            )}
+          </div>
+        )}
+        {!contactsLoaded && <p className="text-xs text-muted-foreground">Yükleniyor...</p>}
+      </div>
+
+      {/* Stant Yetkilileri — çoklu */}
+      <div className="border-t border-white/8 pt-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <UserCheck className="w-4 h-4 text-brand-violet-light" />
+          <p className="text-sm font-semibold text-white">Stant Yetkilileri</p>
+          <span className="text-xs text-muted-foreground">(Fuardaki stant sorumlusu — maks 5)</span>
+        </div>
+        {contactsLoaded && (
+          <div className="space-y-2">
+            {contacts.filter(c => c.contact_type === "booth").map(c => (
+              <ContactRow key={c.id} contact={c} onDelete={handleDeleteContact} />
+            ))}
+            {contacts.filter(c => c.contact_type === "booth").length < 5 && (
+              <AddContactForm
+                exhibitorId={exhibitor.id}
+                contactType="booth"
+                sortOrder={contacts.filter(c => c.contact_type === "booth").length}
+                onAdded={reloadContacts}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* İletişim */}
@@ -650,7 +830,7 @@ type SurveyResult = {
   counts: Record<string, number>;
 };
 
-function SurveyResultsTab({ surveyId }: { surveyId: string | null }) {
+function SurveyResultsTab({ surveyId, surveyTitle }: { surveyId: string | null; surveyTitle: string }) {
   const [results, setResults] = useState<SurveyResult[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -689,6 +869,10 @@ function SurveyResultsTab({ surveyId }: { surveyId: string | null }) {
 
   return (
     <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <ClipboardList className="w-4 h-4 text-brand-violet-light" />
+        <h3 className="font-semibold text-white text-sm">{surveyTitle} — Sonuçlar</h3>
+      </div>
       {results.map((q) => {
         const total = q.total || 1;
         const answers = q.question_type === "yes_no"
