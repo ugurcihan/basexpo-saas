@@ -46,6 +46,7 @@ src/
 │   │   ├── favorites/             # Favorilerim
 │   │   ├── connections/           # Bağlantılarım
 │   │   ├── meetings/              # Toplantılarım
+│   │   ├── contacts/              # Kartvizit Defterim (/visitor/contacts)
 │   │   └── settings/              # Ayarlar
 │   ├── (exhibitor)/exhibitor/     # Firma paneli (/exhibitor/**)
 │   ├── (organizer)/organizer/     # Organizatör paneli (/organizer/**)
@@ -122,6 +123,8 @@ meeting_status:    pending | accepted | declined
 | badge_definitions | Rozet tanımları | name, icon, condition_type, condition_value, event_id (null=global) |
 | visitor_badges | Kazanılan rozetler | visitor_id, badge_id, event_id, earned_at |
 | loyalty_points | Sadakat puanı logu | visitor_id, event_id, points, reason, exhibitor_id |
+| standalone_interactions | Video/anket etkileşim puanı | exhibitor_id, visitor_id, interaction ("video"\|"survey"), points — UNIQUE(exhibitor_id, visitor_id, interaction) |
+| visitor_firm_notes | Ziyaretçi kartvizit defteri | visitor_id, exhibitor_id, contact_id (nullable FK), personal_note, status ("new"\|"contacted"\|"pending"\|"done") — UNIQUE(visitor_id, exhibitor_id) |
 | reward_tiers | Ödül eşikleri | event_id, points_required, reward_title, max_winners (null=sınırsız) |
 | reward_winners | Ödül kazananları | tier_id, visitor_id, rank, claimed_at |
 
@@ -183,6 +186,8 @@ total_points  → toplam puan eşiği
 027_media_and_contacts.sql          ← products.video_url + exhibitor_contacts tablosu (official/booth, maks 5'er)
 028_exhibitor_invitations.sql       ← exhibitor_invitations tablosu (organizatör→firma fuar daveti)
 029_nullable_event_id_qr_scans.sql  ← qr_scans.event_id NULL yapıldı (bağımsız QR taramaları için)
+030_standalone_gamification.sql     ← exhibitors: video_url, video_points, survey_points, custom_reward + standalone_interactions tablosu
+031_visitor_firm_notes.sql          ← visitor_firm_notes tablosu (kartvizit defteri, UNIQUE visitor+exhibitor)
 ```
 
 ---
@@ -336,7 +341,7 @@ npx tsc --noEmit   # TypeScript kontrol
 | Bağımsız QR istatistikleri | `getStandaloneQRStats` / `getStandaloneQRExportData` — `exhibitors/actions.ts` |
 | Organizatör davet sistemi | `src/app/(organizer)/organizer/invitations/` + `exhibitors/actions.ts` |
 | Sadakat/ödül işlemi | `src/features/loyalty/actions.ts` veya `organizerActions.ts` |
-| Yeni DB tablosu | `supabase/migrations/030_açıklama.sql` (RLS ekle! Sonraki migration numarası: **030**) |
+| Yeni DB tablosu | `supabase/migrations/032_açıklama.sql` (RLS ekle! Sonraki migration numarası: **032**) |
 | Yeni server action | `src/features/[alan]/actions.ts` |
 | Landing sayfası bölümü | `src/components/landing/` |
 | Yeni UI bileşeni | `src/components/ui/` (Shadcn standardında) |
@@ -383,6 +388,8 @@ npx tsc --noEmit   # TypeScript kontrol
   - Firma tarafı: Fuarlarım → Randevular sekmesinde "Davetler" bölümü (kabul et → otomatik başvuru)
   - Randevular tab badge'i: bekleyen davet + randevu sayısını birlikte gösterir
 - **Yetkili Kişiler & Stant Yetkilileri** (`exhibitor_contacts`): firma başına max 5'er kişi, Kartvizit sekmesinden CRUD
+- **Video + Puan Sistemi** (`standalone_interactions`): firma video URL + puan ayarı; ziyaretçi video izle / anketi doldur → puan kazan
+- **Kartvizit Defteri** (`visitor_firm_notes`): Ziyaretçi paneli `/visitor/contacts` — taradığı firmalar fuar bazında gruplu, yetkili kişi seç, not al, durum belirle ("Yeni/İletişime Geçtim/Beklemede/Tamamlandı"), CSV + vCard indir; tüm visitor nav'larına "Kartvizitler" eklendi (shared `_nav.ts`)
 
 ### Faz C — Büyüme
 1. **Post-fuar AI PDF raporu** — organizatör + firma için ayrı, `@react-pdf/renderer`

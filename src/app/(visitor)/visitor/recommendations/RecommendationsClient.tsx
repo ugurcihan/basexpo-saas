@@ -1,4 +1,5 @@
 "use client";
+import { VISITOR_NAV } from "../_nav";
 
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,17 +29,6 @@ import { addFavorite, removeFavorite } from "@/features/favorites/actions";
 import { RequestMeetingModal } from "@/components/meeting/RequestMeetingModal";
 import type { Profile } from "@/types";
 
-const NAV_ITEMS = [
-  { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
-  { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
-  { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
-  { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
-  { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
-  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
-  { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
-  { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
-];
 
 function scoreColor(score: number): string {
   if (score >= 0.75) return "text-green-400";
@@ -148,7 +138,7 @@ export function RecommendationsClient({
         />
       )}
 
-      <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+      <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={VISITOR_NAV}>
         <div className="p-6 lg:p-8 space-y-6">
           {/* Header */}
           <motion.div initial={{ y: 12 }} animate={{ opacity: 1, y: 0 }}>

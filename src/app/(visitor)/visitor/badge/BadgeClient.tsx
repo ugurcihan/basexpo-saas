@@ -1,4 +1,5 @@
 "use client";
+import { VISITOR_NAV } from "../_nav";
 
 import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -23,18 +24,6 @@ import {
 } from "lucide-react";
 import type { Profile } from "@/types";
 
-const NAV_ITEMS = [
-  { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
-  { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
-  { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
-  { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "QR Badge'im",      href: "/visitor/badge",             icon: QrCode },
-  { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
-  { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
-  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
-  { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
-  { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
-];
 
 export function BadgeClient({ profile }: { profile: Profile }) {
   const [copied, setCopied] = useState(false);
@@ -78,7 +67,7 @@ export function BadgeClient({ profile }: { profile: Profile }) {
   }
 
   return (
-    <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+    <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={VISITOR_NAV}>
       <div className="p-6 lg:p-8 max-w-md space-y-6">
         <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
           <h1 className="font-display text-2xl font-bold text-white">QR Badge&apos;im</h1>

@@ -1,4 +1,5 @@
 "use client";
+import { VISITOR_NAV } from "../_nav";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,17 +21,6 @@ import {
   getExhibitorByToken,
 } from "@/features/leads/actions";
 
-const NAV_ITEMS = [
-  { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
-  { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
-  { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
-  { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
-  { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
-  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
-  { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
-  { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
-];
 
 interface RegistrationRow {
   id: string;
@@ -291,7 +281,7 @@ export function TicketsClient({ profile, registrations }: Props) {
   return (
     <>
     {scannerOpen && <VisitorBoothScanner onClose={() => setScannerOpen(false)} />}
-    <DashboardShell role="visitor" userName={visitorName} navItems={NAV_ITEMS}>
+    <DashboardShell role="visitor" userName={visitorName} navItems={VISITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center gap-3 mb-2">

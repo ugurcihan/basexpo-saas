@@ -1,4 +1,5 @@
 "use client";
+import { VISITOR_NAV } from "../_nav";
 
 import { motion } from "framer-motion";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -11,18 +12,6 @@ import {
 import type { Profile } from "@/types";
 import type { HallWithMap } from "@/features/events/hallMapActions";
 
-const NAV_ITEMS = [
-  { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
-  { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
-  { label: "Biletlerim",       href: "/visitor/tickets",          icon: Ticket },
-  { label: "AI Öneriler",      href: "/visitor/recommendations",  icon: Sparkles },
-  { label: "Favorilerim",      href: "/visitor/favorites",        icon: Heart },
-  { label: "Fuar Haritası",    href: "/visitor/floor-map",        icon: Map },
-  { label: "Bağlantılarım",    href: "/visitor/connections",      icon: Users },
-  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
-  { label: "Toplantılarım",    href: "/visitor/meetings",         icon: CalendarClock },
-  { label: "Ayarlar",          href: "/visitor/settings",         icon: Settings },
-];
 
 interface Props {
   profile: Profile;
@@ -32,7 +21,7 @@ interface Props {
 
 export function VisitorFloorMapClient({ profile, halls, eventName }: Props) {
   return (
-    <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={NAV_ITEMS}>
+    <DashboardShell role="visitor" userName={profile.full_name || profile.email} navItems={VISITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         <motion.div initial={{ y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center gap-3">

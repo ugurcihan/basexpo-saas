@@ -1,4 +1,5 @@
 "use client";
+import { VISITOR_NAV } from "./_nav";
 
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -17,17 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
 
-const NAV_ITEMS = [
-  { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
-  { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
-  { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
-  { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
-  { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
-  { label: "Puanlarım",      href: "/visitor/loyalty",          icon: Trophy },
-  { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
-  { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
-];
 
 const AI_PLACEHOLDER = [
   { name: "TechVision A.Ş.", tags: ["SaaS", "AI"], score: 94, color: "brand-indigo" },
@@ -40,7 +30,7 @@ export function VisitorDashboard({ profile }: { profile: Profile }) {
     <DashboardShell
       role="visitor"
       userName={profile.full_name || profile.email}
-      navItems={NAV_ITEMS}
+      navItems={VISITOR_NAV}
     >
       <div className="p-6 lg:p-8 space-y-8">
         {/* Welcome */}

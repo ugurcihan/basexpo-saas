@@ -1,4 +1,5 @@
 "use client";
+import { VISITOR_NAV } from "../_nav";
 
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -11,17 +12,6 @@ import {
 import type { Profile } from "@/types";
 import type { LoyaltyStats, RewardTierWithStats, WonReward, LeaderboardEntry } from "@/features/loyalty/actions";
 
-const NAV_ITEMS = [
-  { label: "Panel",            href: "/visitor",                  icon: LayoutDashboard },
-  { label: "Yaklaşan Fuarlar", href: "/visitor/upcoming-fairs",   icon: CalendarDays },
-  { label: "Biletlerim",       href: "/visitor/tickets",           icon: Ticket },
-  { label: "AI Öneriler",      href: "/visitor/recommendations",   icon: Sparkles },
-  { label: "Favorilerim",      href: "/visitor/favorites",         icon: Heart },
-  { label: "Bağlantılarım",    href: "/visitor/connections",       icon: Users },
-  { label: "Puanlarım",        href: "/visitor/loyalty",           icon: Trophy },
-  { label: "Toplantılarım",    href: "/visitor/meetings",          icon: CalendarClock },
-  { label: "Ayarlar",          href: "/visitor/settings",          icon: Settings },
-];
 
 const REASON_CONFIG: Record<string, { label: string; icon: typeof QrCode; color: string }> = {
   checkin:     { label: "Fuar Girişi",     icon: MapPin,      color: "text-brand-cyan" },
@@ -214,7 +204,7 @@ export function LoyaltyClient({
   const selectedEvent = eventsWithPoints.find((e) => e.event_id === selectedEventId);
 
   return (
-    <DashboardShell role="visitor" userName={profile.full_name ?? ""} navItems={NAV_ITEMS}>
+    <DashboardShell role="visitor" userName={profile.full_name ?? ""} navItems={VISITOR_NAV}>
       <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
         <motion.div initial={{ y: 12 }} animate={{ y: 0 }}>
