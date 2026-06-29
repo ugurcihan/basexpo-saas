@@ -49,7 +49,8 @@ src/
 │   │   └── settings/              # Ayarlar
 │   ├── (exhibitor)/exhibitor/     # Firma paneli (/exhibitor/**)
 │   ├── (organizer)/organizer/     # Organizatör paneli (/organizer/**)
-│   │   └── events/[eventId]/      # Fuar detay (EventDetailClient.tsx)
+│   │   ├── events/[eventId]/      # Fuar detay (EventDetailClient.tsx)
+│   │   └── invitations/           # Firma keşfet + davet gönder (InvitationsClient.tsx)
 │   ├── scan/[token]/              # Public: firma QR → lead oluşturur
 │   ├── scan/booth/[token]/        # Public: stant QR → checkInToBoothScan (+20 puan)
 │   ├── golden-scan/[token]/       # Public: çekiliş QR → golden_qr_scans
@@ -64,7 +65,8 @@ src/
 ├── features/                      # Server Actions — tüm DB işlemleri buradan
 │   ├── ai/actions.ts              # OpenAI embedding + match_exhibitors()
 │   ├── events/                    # actions, hallActions, goldenQRActions, registrationActions
-│   ├── exhibitors/actions.ts      # Firma profil + ürün CRUD
+│   ├── exhibitors/actions.ts      # Firma profil + ürün CRUD, bağımsız QR, davet sistemi, QR rapor/export
+│   ├── surveys/actions.ts         # Anket CRUD (createOrGetSurvey, addQuestion, getSurveyResults...)
 │   ├── leads/actions.ts           # Lead yakalama + skorlama
 │   ├── connections/actions.ts     # P2P bağlantı istekleri
 │   ├── loyalty/
@@ -99,15 +101,20 @@ meeting_status:    pending | accepted | declined
 | events | Fuar tanımları | organizer_id, status, capacity, gallery_urls[] |
 | halls | Fuar salonları | event_id, floor |
 | booths | Stant alanları | hall_id, code, exhibitor_id (nullable) |
-| exhibitors | Firma profilleri | owner_id, qr_token (unique), embedding(1536), event_id (nullable) |
-| products | Firma ürünleri | exhibitor_id, name, image_url |
+| exhibitors | Firma profilleri | owner_id, qr_token (unique), embedding(1536), **event_id (nullable — NULL = Bağımsız QR)** |
+| products | Firma ürünleri | exhibitor_id, name, image_url, video_url |
+| exhibitor_contacts | Firma yetkili kişileri | exhibitor_id, full_name, contact_type ("official"\|"booth"), sort_order |
+| exhibitor_surveys | Firma anket başlıkları | exhibitor_id, title, is_active |
+| survey_questions | Anket soruları | survey_id, question_text, question_type ("yes_no"\|"multiple_choice"), options[] |
+| survey_responses | Anket yanıtları | survey_id, question_id, visitor_id, response_value — UNIQUE(question_id, visitor_id) |
+| exhibitor_invitations | Organizatör→firma davet | event_id, from_organizer_id, to_user_id, message, status ("pending"\|"accepted"\|"rejected") — UNIQUE(event_id, to_user_id) |
 | leads | Lead kayıtları | exhibitor_id, visitor_id, source, score |
 | connections | P2P bağlantılar | from_user, to_user, status |
 | match_scores | AI eşleşme | visitor_id, exhibitor_id, score |
 | meetings | Toplantılar | from_user, to_user, proposed_at, status |
 | event_registrations | Fuar kayıtları | event_id, visitor_id, ticket_code, kvkk_consent |
 | event_sponsors | Sponsor katmanları | event_id, exhibitor_id, tier (1-4) |
-| qr_scans | QR tarama logu (ısı haritası) | exhibitor_id, booth_id, visitor_id, event_id |
+| qr_scans | QR tarama logu (ısı haritası) | exhibitor_id, booth_id, visitor_id, **event_id (nullable — standalone scan için NULL)** |
 | notifications | Bildirimler | recipient_id, type, is_read |
 | golden_qr_codes | Çekiliş QR kodları | token (unique hex), is_active, scan_limit |
 | golden_qr_scans | Çekiliş katılım | golden_qr_id, visitor_id (unique birlikte) |
@@ -117,6 +124,11 @@ meeting_status:    pending | accepted | declined
 | loyalty_points | Sadakat puanı logu | visitor_id, event_id, points, reason, exhibitor_id |
 | reward_tiers | Ödül eşikleri | event_id, points_required, reward_title, max_winners (null=sınırsız) |
 | reward_winners | Ödül kazananları | tier_id, visitor_id, rank, claimed_at |
+
+**Bağımsız QR (Standalone Exhibitor) kuralı:**
+- `exhibitors.event_id = NULL` → o kayıt bağımsız QR (fuara bağlı değil)
+- `exhibitors.status = "approved"` — standalone'lar otomatik approved oluşur
+- `qr_scans.event_id = NULL` → standalone QR taraması (migration 029'dan itibaren nullable)
 
 **RLS Kuralı:** Her tablo RLS aktif olmalı. Policy adı şablonu: `"tablename: açıklama"`
 Yeni tablo eklenince mutlaka RLS politikaları yazılmalı.
@@ -149,9 +161,9 @@ total_points  → toplam puan eşiği
 005_phase7_payments.sql
 006_sponsors_and_registrations.sql
 007_heatmap_notifications_golden_qr.sql
-008_fix_rls_and_schema.sql       ← capacity kolonu + event_registrations tablosu
-009_brand_and_checkin.sql        ← firma marka alanları + fair_checkins + KVKK
-010_badges_and_loyalty.sql       ← rozet + sadakat sistemi (eski, yerini 021 aldı)
+008_fix_rls_and_schema.sql          ← capacity kolonu + event_registrations tablosu
+009_brand_and_checkin.sql           ← firma marka alanları + fair_checkins + KVKK
+010_badges_and_loyalty.sql          ← rozet + sadakat sistemi (eski, yerini 021 aldı)
 011_push_subscriptions.sql
 012_kvkk_favorites_meetings_v2.sql
 013_lead_conversions_and_profiles.sql
@@ -162,9 +174,15 @@ total_points  → toplam puan eşiği
 018_map_columns_sponsor_layout.sql
 019_events_requires_approval.sql
 020_organizer_profile_follows.sql
-021_loyalty_and_badges.sql       ← badge_definitions + visitor_badges + loyalty_points (RLS dahil)
-022_reward_winners.sql           ← reward_tiers.max_winners + reward_winners tablosu
-023_digital_card_and_surveys.sql ← exhibitors: contact_name, job_title, linkedin_url + exhibitor_surveys, survey_questions, survey_responses
+021_loyalty_and_badges.sql          ← badge_definitions + visitor_badges + loyalty_points (RLS dahil)
+022_reward_winners.sql              ← reward_tiers.max_winners + reward_winners tablosu
+023_digital_card_and_surveys.sql    ← exhibitors: contact_name, job_title, linkedin_url + exhibitor_surveys, survey_questions, survey_responses
+024_exhibitor_approval_status.sql   ← exhibitors.status kolonu
+025_exhibitor_missing_columns.sql   ← exhibitors: website, phone, city, contact_email
+026_exhibitor_unique_constraint.sql ← exhibitors UNIQUE INDEX (owner_id, event_id) — NULL event_id hariç
+027_media_and_contacts.sql          ← products.video_url + exhibitor_contacts tablosu (official/booth, maks 5'er)
+028_exhibitor_invitations.sql       ← exhibitor_invitations tablosu (organizatör→firma fuar daveti)
+029_nullable_event_id_qr_scans.sql  ← qr_scans.event_id NULL yapıldı (bağımsız QR taramaları için)
 ```
 
 ---
@@ -313,8 +331,12 @@ npx tsc --noEmit   # TypeScript kontrol
 |------------------------|-------------|
 | Yeni organizatör sayfası | `src/app/(organizer)/organizer/[yeni]/` |
 | Yeni firma özelliği | `src/app/(exhibitor)/exhibitor/[yeni]/` + `src/features/exhibitors/actions.ts` |
+| Dijital Kartvizit sekme/bileşen | `src/app/(exhibitor)/exhibitor/card/CardClient.tsx` |
+| Anket oluşturma/düzenleme | `src/features/surveys/actions.ts` (createOrGetSurvey, addQuestion...) |
+| Bağımsız QR istatistikleri | `getStandaloneQRStats` / `getStandaloneQRExportData` — `exhibitors/actions.ts` |
+| Organizatör davet sistemi | `src/app/(organizer)/organizer/invitations/` + `exhibitors/actions.ts` |
 | Sadakat/ödül işlemi | `src/features/loyalty/actions.ts` veya `organizerActions.ts` |
-| Yeni DB tablosu | `supabase/migrations/00N_açıklama.sql` (RLS ekle!) |
+| Yeni DB tablosu | `supabase/migrations/030_açıklama.sql` (RLS ekle! Sonraki migration numarası: **030**) |
 | Yeni server action | `src/features/[alan]/actions.ts` |
 | Landing sayfası bölümü | `src/components/landing/` |
 | Yeni UI bileşeni | `src/components/ui/` (Shadcn standardında) |
@@ -351,6 +373,16 @@ npx tsc --noEmit   # TypeScript kontrol
   - WYSIWYG: önizleme = PDF çıktısı
 - Stant QR tarama fix: `getBoothByQrToken` admin client kullanıyor (RLS bypass — public veri)
 - Dashboard güncelleme: QR Taramaları stat, bekleyen onay banner'ı, Katılım İstekleri hızlı erişim
+- **Dijital Kartvizit — Önizleme sekmesi:** Ziyaretçinin gördüğü tam sayfa (yetkili kişiler, stant yetkilileri, ürünler, anket)
+- **Bağımsız QR sistemi** (`exhibitors.event_id = NULL`):
+  - Dijital Kartvizit → "Bağımsız QR" sekmesinde oluştur/sil
+  - Her kart: Düzenle (inline form), Rapor (tarama/tekil ziyaretçi/anket sayısı), Anket (per-QR özel), Excel İndir (CSV)
+  - "Fuar QR Kodları" sekmesi artık yalnız fuara bağlı QR'ları gösteriyor
+- **Organizatör → Firma Davet Sistemi** (`exhibitor_invitations`):
+  - `/organizer/invitations`: sektör/tag filtresiyle firma keşfet, davet mesajı yaz, gönder
+  - Firma tarafı: Fuarlarım → Randevular sekmesinde "Davetler" bölümü (kabul et → otomatik başvuru)
+  - Randevular tab badge'i: bekleyen davet + randevu sayısını birlikte gösterir
+- **Yetkili Kişiler & Stant Yetkilileri** (`exhibitor_contacts`): firma başına max 5'er kişi, Kartvizit sekmesinden CRUD
 
 ### Faz C — Büyüme
 1. **Post-fuar AI PDF raporu** — organizatör + firma için ayrı, `@react-pdf/renderer`
