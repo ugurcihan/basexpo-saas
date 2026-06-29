@@ -2,7 +2,7 @@
 
 import { EXHIBITOR_NAV } from "../_nav";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,18 +10,17 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { QRCodeSVG } from "qrcode.react";
 import {
-  CalendarClock, MapPin, Calendar, ChevronRight, CheckCircle2,
-  XCircle, Clock, UserCircle2, QrCode, Store, X, Send,
-  Users, Tag, Info, Mail, Building2, Plus, Copy, ExternalLink, Trash2, CreditCard,
+  CalendarClock, MapPin, Calendar, CheckCircle2,
+  XCircle, Clock, UserCircle2, QrCode, X, Send,
+  Users, Tag, Info, Mail, Building2, CreditCard,
 } from "lucide-react";
 import { respondToMeeting } from "@/features/connections/actions";
-import { applyToFair, createStandaloneExhibitor, deleteStandaloneExhibitor } from "@/features/exhibitors/actions";
+import { applyToFair, respondToInvitation } from "@/features/exhibitors/actions";
 import type { Profile } from "@/types";
 import type { FirmMeetingRequest } from "@/features/connections/actions";
+import type { InvitationRow } from "@/features/exhibitors/actions";
 
 interface EventInfo { id: string; name: string; location: string; start_date: string; end_date: string; status: string }
 interface ExhibitorRow {
@@ -51,13 +50,13 @@ interface Props {
   myExhibitors: ExhibitorRow[];
   upcomingEvents: UpcomingEvent[];
   meetingRequests: FirmMeetingRequest[];
+  invitations: InvitationRow[];
 }
 
 const TABS = [
-  { key: "registered",  label: "Fuarlarım" },
-  { key: "upcoming",    label: "Yaklaşan Fuarlar" },
-  { key: "standalone",  label: "Bağımsız QR" },
-  { key: "meetings",    label: "Randevular" },
+  { key: "registered", label: "Fuarlarım" },
+  { key: "upcoming",   label: "Yaklaşan Fuarlar" },
+  { key: "meetings",   label: "Randevular" },
 ] as const;
 type Tab = typeof TABS[number]["key"];
 
@@ -87,85 +86,6 @@ const APPLICATION_STATUS: Record<string, { label: string; color: string; icon: R
   approved: { label: "Onaylandı",     color: "text-green-400 bg-green-500/15 border-green-500/25",   icon: CheckCircle2 },
   rejected: { label: "Reddedildi",    color: "text-red-400 bg-red-500/15 border-red-500/25",         icon: XCircle },
 };
-
-// ── Standalone QR card ──────────────────────────────────────────
-function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: string) => void }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [deleting, startDelete] = useTransition();
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}/scan/${ex.qr_token}`);
-  }, [ex.qr_token]);
-
-  function copy() {
-    if (!url) return;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <motion.div
-      initial={{ y: 14 }}
-      animate={{ y: 0 }}
-      className="glass rounded-xl border border-white/8 p-5"
-    >
-      <div className="flex items-start gap-5">
-        {/* QR Code */}
-        <div className="flex-shrink-0 p-2.5 bg-white rounded-xl shadow-md">
-          {url ? (
-            <QRCodeSVG value={url} size={100} level="M" fgColor="#1a1a2e" bgColor="white" />
-          ) : (
-            <div className="w-[100px] h-[100px] rounded-lg bg-gray-100 animate-pulse" />
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <p className="font-semibold text-white">{ex.company_name}</p>
-            <Badge className="text-[10px] bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25">Bağımsız</Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Herhangi bir etkinlikte, kongre veya toplantıda kullanılabilir.
-          </p>
-
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={copy}>
-              {copied ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? "Kopyalandı!" : "Linki Kopyala"}
-            </Button>
-            <Link href={`/scan/${ex.qr_token}`} target="_blank">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
-                <ExternalLink className="w-3 h-3" /> Önizle
-              </Button>
-            </Link>
-            <Link href="/exhibitor/card?tab=survey">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-brand-violet/30 text-brand-violet-light hover:bg-brand-violet/10">
-                Anket Ekle
-              </Button>
-            </Link>
-            <Link href="/exhibitor/card">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
-                <QrCode className="w-3 h-3" /> Kartviziti Düzenle
-              </Button>
-            </Link>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs gap-1.5 border-red-500/20 text-red-400 hover:bg-red-500/10"
-              disabled={deleting}
-              onClick={() => startDelete(async () => { await deleteStandaloneExhibitor(ex.id); onDelete(ex.id); })}
-            >
-              <Trash2 className="w-3 h-3" /> Sil
-            </Button>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 // ── Event detail modal ──────────────────────────────────────────
 function EventDetailModal({
@@ -271,11 +191,12 @@ function EventDetailModal({
 }
 
 // ── Main client ─────────────────────────────────────────────────
-export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequests }: Props) {
+export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequests, invitations: initialInvitations }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("registered");
   const [isPending, startTransition] = useTransition();
   const [requests, setRequests] = useState(meetingRequests);
+  const [invitations, setInvitations] = useState(initialInvitations);
   const [applyingTo, setApplyingTo] = useState<UpcomingEvent | null>(null);
   const [applyNote, setApplyNote] = useState("");
   const [applySuccess, setApplySuccess] = useState<string | null>(null);
@@ -283,15 +204,7 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [selectedEvent, setSelectedEvent] = useState<UpcomingEvent | null>(null);
 
-  // Standalone QR state
-  const [standaloneLabel, setStandaloneLabel] = useState("");
-  const [standaloneCreating, startStandaloneCreate] = useTransition();
-  const [standaloneError, setStandaloneError] = useState<string | null>(null);
-  const [localStandalone, setLocalStandalone] = useState<ExhibitorRow[]>([]);
-
-  const eventExhibitors   = myExhibitors.filter(ex => getEvent(ex.event) !== null);
-  const standaloneFromDB  = myExhibitors.filter(ex => getEvent(ex.event) === null);
-  const standaloneAll     = [...standaloneFromDB, ...localStandalone];
+  const eventExhibitors = myExhibitors.filter(ex => getEvent(ex.event) !== null);
 
   const myEventIds = new Set<string>();
   const pendingEventIds = new Set<string>();
@@ -308,6 +221,14 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
     startTransition(async () => {
       await respondToMeeting(id, action);
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status: action } : r));
+    });
+  }
+
+  function handleRespondInvitation(id: string, status: "accepted" | "rejected") {
+    startTransition(async () => {
+      await respondToInvitation(id, status);
+      setInvitations(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv));
+      if (status === "accepted") router.refresh();
     });
   }
 
@@ -328,27 +249,11 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
     });
   }
 
-  function handleCreateStandalone() {
-    const label = standaloneLabel.trim() || (profile.full_name ? `${profile.full_name} — Bağımsız QR` : "Bağımsız QR");
-    startStandaloneCreate(async () => {
-      const { error, qrToken } = await createStandaloneExhibitor(label);
-      if (error) {
-        setStandaloneError(error);
-      } else {
-        setStandaloneError(null);
-        setStandaloneLabel("");
-        router.refresh();
-      }
-    });
-  }
-
-  function handleDeleteStandalone(id: string) {
-    setLocalStandalone(prev => prev.filter(e => e.id !== id));
-    router.refresh();
-  }
-
-  const pendingMeetings = requests.filter(r => r.status === "pending");
-  const pastMeetings    = requests.filter(r => r.status !== "pending");
+  const pendingMeetings   = requests.filter(r => r.status === "pending");
+  const pastMeetings      = requests.filter(r => r.status !== "pending");
+  const pendingInvitations = invitations.filter(inv => inv.status === "pending");
+  const pastInvitations    = invitations.filter(inv => inv.status !== "pending");
+  const totalPending = pendingMeetings.length + pendingInvitations.length;
 
   return (
     <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={EXHIBITOR_NAV}>
@@ -371,9 +276,9 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                 }`}
               >
                 {t.label}
-                {t.key === "meetings" && pendingMeetings.length > 0 && (
+                {t.key === "meetings" && totalPending > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                    {pendingMeetings.length}
+                    {totalPending}
                   </span>
                 )}
               </button>
@@ -498,135 +403,166 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
           </motion.div>
         )}
 
-        {/* ── Bağımsız QR ─────────────────────────────────────── */}
-        {tab === "standalone" && (
-          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-5">
-            {/* Info banner */}
-            <div className="glass rounded-xl border border-brand-cyan/20 p-4 flex gap-3">
-              <QrCode className="w-5 h-5 text-brand-cyan flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground leading-relaxed">
-                <span className="text-white font-medium">Bağımsız QR</span> — Herhangi bir fuara bağlı olmayan dijital kartvizit QR kodları oluştur.
-                Kongreler, workshoplar, iş toplantıları veya sosyal etkinliklerde kullanabilirsin.
-                QR tarandığında ziyaretçiler dijital kartvizitin görür; anket ekleyebilirsin.
-              </div>
-            </div>
-
-            {/* Create new */}
-            <div className="glass rounded-xl border border-white/10 p-5 space-y-3">
-              <p className="text-sm font-semibold text-white">Yeni Bağımsız QR Oluştur</p>
-              <div className="flex gap-3">
-                <Input
-                  placeholder='Etiket — örn. "Kongre 2026", "Genel QR" (isteğe bağlı)'
-                  value={standaloneLabel}
-                  onChange={e => setStandaloneLabel(e.target.value)}
-                  className="flex-1"
-                  onKeyDown={e => { if (e.key === "Enter") handleCreateStandalone(); }}
-                />
-                <Button
-                  variant="gradient"
-                  className="gap-2 flex-shrink-0"
-                  disabled={standaloneCreating}
-                  onClick={handleCreateStandalone}
-                >
-                  <Plus className="w-4 h-4" />
-                  {standaloneCreating ? "Oluşturuluyor..." : "Oluştur"}
-                </Button>
-              </div>
-              {standaloneError && (
-                <p className="text-xs text-red-400">{standaloneError}</p>
-              )}
-            </div>
-
-            {/* Existing standalones */}
-            {standaloneAll.length === 0 ? (
-              <div className="glass rounded-2xl border border-white/8 p-10 text-center">
-                <Building2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">Henüz bağımsız QR yok. Yukarıdan oluşturabilirsin.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {standaloneAll.map((ex, i) => (
-                  <StandaloneQRCard key={ex.id} ex={ex} onDelete={handleDeleteStandalone} />
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* ── Randevular ─────────────────────────────────────── */}
+        {/* ── Randevular & Davetler ───────────────────────────── */}
         {tab === "meetings" && (
-          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
-            {pendingMeetings.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bekleyen</p>
-                {pendingMeetings.map((r, i) => (
-                  <motion.div key={r.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.05 }}
-                    className="glass rounded-xl border border-amber-500/20 p-4 space-y-3"
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-6">
+
+            {/* ─ Davetler ─ */}
+            {(pendingInvitations.length > 0 || pastInvitations.length > 0) && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  Organizatör Davetleri
+                  {pendingInvitations.length > 0 && (
+                    <Badge className="text-[10px] bg-brand-indigo/20 text-brand-indigo-light border-brand-indigo/30">
+                      {pendingInvitations.length} yeni
+                    </Badge>
+                  )}
+                </p>
+
+                {pendingInvitations.map((inv, i) => (
+                  <motion.div key={inv.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.05 }}
+                    className="glass rounded-xl border border-brand-indigo/25 p-4 space-y-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-brand-violet/15 border border-brand-violet/20 flex items-center justify-center flex-shrink-0">
-                        <UserCircle2 className="w-4 h-4 text-brand-violet-light" />
+                      <div className="w-8 h-8 rounded-full bg-brand-indigo/15 border border-brand-indigo/20 flex items-center justify-center flex-shrink-0">
+                        <Mail className="w-4 h-4 text-brand-indigo-light" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white text-sm">{r.visitor?.full_name ?? "Ziyaretçi"}</p>
+                        <p className="font-medium text-white text-sm">{inv.event?.name ?? "Fuar"}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Calendar className="w-3 h-3" />
-                          {new Date(r.proposed_at).toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+                          {inv.event?.start_date ? formatDate(inv.event.start_date) : ""}
+                          {inv.event?.location && <> · {inv.event.location}</>}
                         </p>
-                        {r.note && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">&quot;{r.note}&quot;</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Organizatör: {inv.organizer?.full_name ?? "Bilinmiyor"}
+                        </p>
+                        {inv.message && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">&quot;{inv.message}&quot;</p>
                         )}
                       </div>
-                      <Badge className="text-xs bg-amber-500/15 border-amber-500/25 text-amber-400 flex-shrink-0">
-                        <Clock className="w-3 h-3 mr-1" />Bekliyor
+                      <Badge className="text-xs bg-brand-indigo/15 border-brand-indigo/25 text-brand-indigo-light flex-shrink-0">
+                        Davet
                       </Badge>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="gradient" className="flex-1" disabled={isPending} onClick={() => handleRespond(r.id, "accepted")}>
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Onayla
+                      <Button size="sm" variant="gradient" className="flex-1" disabled={isPending}
+                        onClick={() => handleRespondInvitation(inv.id, "accepted")}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Kabul Et & Başvur
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10" disabled={isPending} onClick={() => handleRespond(r.id, "declined")}>
+                      <Button size="sm" variant="outline" className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
+                        disabled={isPending} onClick={() => handleRespondInvitation(inv.id, "rejected")}
+                      >
                         <XCircle className="w-3.5 h-3.5" /> Reddet
                       </Button>
                     </div>
                   </motion.div>
                 ))}
+
+                {pastInvitations.map((inv, i) => (
+                  <motion.div key={inv.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.04 }}
+                    className="glass rounded-xl border border-white/8 p-4 flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white text-sm">{inv.event?.name ?? "Fuar"}</p>
+                      <p className="text-xs text-muted-foreground">{inv.organizer?.full_name ?? ""}</p>
+                    </div>
+                    {inv.status === "accepted" ? (
+                      <Badge variant="cyan" className="text-xs flex-shrink-0"><CheckCircle2 className="w-3 h-3 mr-1" />Kabul Edildi</Badge>
+                    ) : (
+                      <Badge className="text-xs bg-red-500/15 border-red-500/25 text-red-400 flex-shrink-0"><XCircle className="w-3 h-3 mr-1" />Reddedildi</Badge>
+                    )}
+                  </motion.div>
+                ))}
               </div>
             )}
 
-            {pastMeetings.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Geçmiş</p>
-                {pastMeetings.map((r, i) => {
-                  const isAccepted = r.status === "accepted";
-                  return (
-                    <motion.div key={r.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.04 }}
-                      className="glass rounded-xl border border-white/8 p-4 flex items-center gap-3"
+            {/* ─ Randevular ─ */}
+            <div className="space-y-3">
+              {(pendingInvitations.length > 0 || pastInvitations.length > 0) && (
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ziyaretçi Randevuları</p>
+              )}
+
+              {pendingMeetings.length > 0 && (
+                <div className="space-y-2">
+                  {!pendingInvitations.length && !pastInvitations.length && (
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bekleyen</p>
+                  )}
+                  {pendingMeetings.map((r, i) => (
+                    <motion.div key={r.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.05 }}
+                      className="glass rounded-xl border border-amber-500/20 p-4 space-y-3"
                     >
-                      <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                        <UserCircle2 className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-brand-violet/15 border border-brand-violet/20 flex items-center justify-center flex-shrink-0">
+                          <UserCircle2 className="w-4 h-4 text-brand-violet-light" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white text-sm">{r.visitor?.full_name ?? "Ziyaretçi"}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(r.proposed_at).toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                          {r.note && (
+                            <p className="text-xs text-muted-foreground mt-1 italic">&quot;{r.note}&quot;</p>
+                          )}
+                        </div>
+                        <Badge className="text-xs bg-amber-500/15 border-amber-500/25 text-amber-400 flex-shrink-0">
+                          <Clock className="w-3 h-3 mr-1" />Bekliyor
+                        </Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white text-sm">{r.visitor?.full_name ?? "Ziyaretçi"}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(r.proposed_at).toLocaleDateString("tr-TR")}</p>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="gradient" className="flex-1" disabled={isPending} onClick={() => handleRespond(r.id, "accepted")}>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Onayla
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10" disabled={isPending} onClick={() => handleRespond(r.id, "declined")}>
+                          <XCircle className="w-3.5 h-3.5" /> Reddet
+                        </Button>
                       </div>
-                      {isAccepted ? (
-                        <Badge variant="cyan" className="text-xs flex-shrink-0"><CheckCircle2 className="w-3 h-3 mr-1" />Onaylandı</Badge>
-                      ) : (
-                        <Badge className="text-xs bg-red-500/15 border-red-500/25 text-red-400 flex-shrink-0"><XCircle className="w-3 h-3 mr-1" />Reddedildi</Badge>
-                      )}
                     </motion.div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            {requests.length === 0 && (
-              <div className="glass rounded-2xl border border-white/8 p-10 text-center">
-                <Calendar className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">Henüz randevu talebi yok.</p>
-              </div>
-            )}
+              {pastMeetings.length > 0 && (
+                <div className="space-y-2">
+                  {!pendingInvitations.length && !pastInvitations.length && (
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Geçmiş</p>
+                  )}
+                  {pastMeetings.map((r, i) => {
+                    const isAccepted = r.status === "accepted";
+                    return (
+                      <motion.div key={r.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.04 }}
+                        className="glass rounded-xl border border-white/8 p-4 flex items-center gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                          <UserCircle2 className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white text-sm">{r.visitor?.full_name ?? "Ziyaretçi"}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(r.proposed_at).toLocaleDateString("tr-TR")}</p>
+                        </div>
+                        {isAccepted ? (
+                          <Badge variant="cyan" className="text-xs flex-shrink-0"><CheckCircle2 className="w-3 h-3 mr-1" />Onaylandı</Badge>
+                        ) : (
+                          <Badge className="text-xs bg-red-500/15 border-red-500/25 text-red-400 flex-shrink-0"><XCircle className="w-3 h-3 mr-1" />Reddedildi</Badge>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {requests.length === 0 && invitations.length === 0 && (
+                <div className="glass rounded-2xl border border-white/8 p-10 text-center">
+                  <Calendar className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">Henüz randevu veya davet yok.</p>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </div>

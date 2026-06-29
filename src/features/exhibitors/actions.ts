@@ -502,6 +502,148 @@ export async function deleteStandaloneExhibitor(exhibitorId: string) {
   return { error: null };
 }
 
+// ─── EXHIBITOR INVITATIONS ──────────────────────────────────────
+
+export interface InvitationRow {
+  id: string;
+  event_id: string;
+  from_organizer_id: string;
+  to_user_id: string;
+  message: string | null;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+  event: { id: string; name: string; start_date: string; location: string } | null;
+  organizer: { full_name: string | null; email: string } | null;
+}
+
+export async function sendExhibitorInvitation(input: {
+  event_id: string;
+  to_user_id: string;
+  message?: string;
+}): Promise<{ error: string | null }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const { error } = await supabase.from("exhibitor_invitations").insert({
+    event_id: input.event_id,
+    from_organizer_id: user.id,
+    to_user_id: input.to_user_id,
+    message: input.message ?? null,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "Bu firmaya bu etkinlik için zaten davet gönderildi" };
+    return { error: error.message };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: event } = await admin
+    .from("events")
+    .select("name")
+    .eq("id", input.event_id)
+    .single();
+
+  await admin.from("notifications").insert({
+    recipient_id: input.to_user_id,
+    sender_id: user.id,
+    type: "alert",
+    title: "Fuar Daveti Aldınız",
+    body: `"${event?.name ?? "Fuar"}" fuarına davet edildiniz. Fuarlarım → Randevular sekmesinden görüntüleyebilirsiniz.`,
+    event_id: input.event_id,
+  });
+
+  revalidatePath("/organizer/invitations");
+  return { error: null };
+}
+
+export async function getEventInvitations(event_id: string): Promise<InvitationRow[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("exhibitor_invitations")
+    .select(`
+      id, event_id, from_organizer_id, to_user_id, message, status, created_at,
+      event:events(id, name, start_date, location),
+      organizer:profiles!exhibitor_invitations_from_organizer_id_fkey(full_name, email)
+    `)
+    .eq("event_id", event_id)
+    .eq("from_organizer_id", user.id)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map(normalize);
+}
+
+export async function getMyInvitations(): Promise<InvitationRow[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("exhibitor_invitations")
+    .select(`
+      id, event_id, from_organizer_id, to_user_id, message, status, created_at,
+      event:events(id, name, start_date, location),
+      organizer:profiles!exhibitor_invitations_from_organizer_id_fkey(full_name, email)
+    `)
+    .eq("to_user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map(normalize);
+}
+
+export async function respondToInvitation(
+  invitationId: string,
+  status: "accepted" | "rejected",
+): Promise<{ error: string | null }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Giriş yapmalısın" };
+
+  const { data: inv, error: fetchErr } = await supabase
+    .from("exhibitor_invitations")
+    .select("event_id, from_organizer_id")
+    .eq("id", invitationId)
+    .eq("to_user_id", user.id)
+    .single();
+
+  if (fetchErr || !inv) return { error: "Davet bulunamadı" };
+
+  const { error } = await supabase
+    .from("exhibitor_invitations")
+    .update({ status })
+    .eq("id", invitationId)
+    .eq("to_user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  if (status === "accepted") {
+    await applyToFair(inv.event_id);
+  }
+
+  revalidatePath("/exhibitor/fairs");
+  revalidatePath("/organizer/invitations");
+  return { error: null };
+}
+
+function normalize(row: Record<string, unknown>): InvitationRow {
+  const ev = row.event as { id: string; name: string; start_date: string; location: string } | Array<{ id: string; name: string; start_date: string; location: string }> | null;
+  const org = row.organizer as { full_name: string | null; email: string } | Array<{ full_name: string | null; email: string }> | null;
+  return {
+    id: row.id as string,
+    event_id: row.event_id as string,
+    from_organizer_id: row.from_organizer_id as string,
+    to_user_id: row.to_user_id as string,
+    message: row.message as string | null,
+    status: row.status as "pending" | "accepted" | "rejected",
+    created_at: row.created_at as string,
+    event: ev ? (Array.isArray(ev) ? (ev[0] ?? null) : ev) : null,
+    organizer: org ? (Array.isArray(org) ? (org[0] ?? null) : org) : null,
+  };
+}
+
 export async function deleteProduct(productId: string, exhibitorId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

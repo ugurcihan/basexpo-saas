@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getProfile, createSupabaseServerClient } from "@/lib/supabase-server";
 import { getExhibitorMeetingRequests } from "@/features/connections/actions";
+import { getMyInvitations } from "@/features/exhibitors/actions";
 import { FairsClient } from "./FairsClient";
 
 export default async function FairsPage() {
@@ -13,6 +14,7 @@ export default async function FairsPage() {
     { data: myExhibitors },
     { data: upcomingEvents },
     meetingRequests,
+    invitations,
   ] = await Promise.all([
     supabase
       .from("exhibitors")
@@ -32,6 +34,7 @@ export default async function FairsPage() {
       .in("status", ["published", "active"])
       .order("start_date", { ascending: true }),
     getExhibitorMeetingRequests(),
+    getMyInvitations(),
   ]);
 
   return (
@@ -40,6 +43,7 @@ export default async function FairsPage() {
       myExhibitors={myExhibitors ?? []}
       upcomingEvents={upcomingEvents ?? []}
       meetingRequests={meetingRequests}
+      invitations={invitations}
     />
   );
 }

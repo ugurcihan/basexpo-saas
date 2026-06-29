@@ -16,15 +16,17 @@ import {
   Building2, Upload, X, Check, AlertCircle, Plus, Globe, Phone,
   Linkedin, QrCode, Download, Copy, ClipboardList, ToggleLeft,
   ToggleRight, Trash2, ChevronDown, ChevronUp, Eye, Mail, UserCheck,
-  Play, Package,
+  Play, Package, ExternalLink,
 } from "lucide-react";
 import {
   updateExhibitorProfile, getExhibitorContacts, upsertContact, deleteContact, getExhibitorProducts,
+  createStandaloneExhibitor, deleteStandaloneExhibitor,
 } from "@/features/exhibitors/actions";
 import {
   createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion, getSurveyResults,
 } from "@/features/surveys/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/types";
 
@@ -72,11 +74,12 @@ interface Props {
 }
 
 const TABS = [
-  { key: "card",    label: "Kartvizit" },
-  { key: "qr",     label: "QR Kodlarım" },
-  { key: "survey", label: "Anket" },
-  { key: "results",label: "Sonuçlar" },
-  { key: "preview",label: "Önizleme" },
+  { key: "card",       label: "Kartvizit" },
+  { key: "qr",        label: "QR Kodlarım" },
+  { key: "standalone", label: "Bağımsız QR" },
+  { key: "survey",    label: "Anket" },
+  { key: "results",   label: "Sonuçlar" },
+  { key: "preview",   label: "Önizleme" },
 ] as const;
 
 type Tab = typeof TABS[number]["key"];
@@ -138,6 +141,9 @@ export function CardClient({ profile, exhibitors, availableEvents, initialSurvey
             )}
             {tab === "qr" && (
               <QRTab exhibitors={exhibitors} />
+            )}
+            {tab === "standalone" && (
+              <StandaloneTab exhibitors={exhibitors} profile={profile} router={router} />
             )}
             {tab === "survey" && (
               <SurveyTab exhibitorId={primary.id} initialSurvey={initialSurvey} />
@@ -649,7 +655,145 @@ function QRTab({ exhibitors }: { exhibitors: ExhibitorRow[] }) {
       {exhibitors.length === 0 && (
         <div className="glass rounded-2xl border border-white/8 p-10 text-center">
           <QrCode className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">Henüz QR kod yok. Bir fuara kayıt ol veya Fuarlarım'dan bağımsız QR oluştur.</p>
+          <p className="text-muted-foreground text-sm">Henüz QR kod yok. Bir fuara kayıt ol veya &quot;Bağımsız QR&quot; sekmesinden yeni QR oluştur.</p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Tab: Bağımsız QR ────────────────────────────────────────
+function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: string) => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [deleting, startDelete] = useTransition();
+
+  useEffect(() => {
+    setUrl(`${window.location.origin}/scan/${ex.qr_token}`);
+  }, [ex.qr_token]);
+
+  function copy() {
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <motion.div initial={{ y: 14 }} animate={{ y: 0 }} className="glass rounded-xl border border-white/8 p-5">
+      <div className="flex items-start gap-5">
+        <div className="flex-shrink-0 p-2.5 bg-white rounded-xl shadow-md">
+          {url ? (
+            <QRCodeSVG value={url} size={100} level="M" fgColor="#1a1a2e" bgColor="white" />
+          ) : (
+            <div className="w-[100px] h-[100px] rounded-lg bg-gray-100 animate-pulse" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="font-semibold text-white">{ex.company_name}</p>
+            <Badge className="text-[10px] bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25">Bağımsız</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Herhangi bir etkinlikte, kongre veya toplantıda kullanılabilir.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={copy}>
+              {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? "Kopyalandı!" : "Linki Kopyala"}
+            </Button>
+            <Link href={`/scan/${ex.qr_token}`} target="_blank">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
+                <ExternalLink className="w-3 h-3" /> Önizle
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1.5 border-red-500/20 text-red-400 hover:bg-red-500/10"
+              disabled={deleting}
+              onClick={() => startDelete(async () => { await deleteStandaloneExhibitor(ex.id); onDelete(ex.id); })}
+            >
+              <Trash2 className="w-3 h-3" /> Sil
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function StandaloneTab({ exhibitors, profile, router }: { exhibitors: ExhibitorRow[]; profile: Profile; router: ReturnType<typeof useRouter> }) {
+  const [standaloneLabel, setStandaloneLabel] = useState("");
+  const [creating, startCreate] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [localNew, setLocalNew] = useState<ExhibitorRow[]>([]);
+
+  function getEvent(ex: ExhibitorRow) {
+    const ev = ex.event;
+    if (!ev) return null;
+    return Array.isArray(ev) ? ev[0] ?? null : ev;
+  }
+
+  const fromDB  = exhibitors.filter(ex => getEvent(ex) === null);
+  const all = [...fromDB, ...localNew];
+
+  function handleCreate() {
+    const label = standaloneLabel.trim() || (profile.full_name ? `${profile.full_name} — Bağımsız QR` : "Bağımsız QR");
+    startCreate(async () => {
+      const { error: err, qrToken } = await createStandaloneExhibitor(label);
+      if (err) {
+        setError(err);
+      } else {
+        setError(null);
+        setStandaloneLabel("");
+        router.refresh();
+      }
+    });
+  }
+
+  function handleDelete(id: string) {
+    setLocalNew(prev => prev.filter(e => e.id !== id));
+    router.refresh();
+  }
+
+  return (
+    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-5">
+      <div className="glass rounded-xl border border-brand-cyan/20 p-4 flex gap-3">
+        <QrCode className="w-5 h-5 text-brand-cyan flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-muted-foreground leading-relaxed">
+          <span className="text-white font-medium">Bağımsız QR</span> — Herhangi bir fuara bağlı olmayan dijital kartvizit QR kodları oluştur.
+          Kongreler, workshoplar, iş toplantıları veya sosyal etkinliklerde kullanabilirsin.
+          QR tarandığında ziyaretçiler dijital kartvizitin görür; anket ekleyebilirsin.
+        </div>
+      </div>
+
+      <div className="glass rounded-xl border border-white/10 p-5 space-y-3">
+        <p className="text-sm font-semibold text-white">Yeni Bağımsız QR Oluştur</p>
+        <div className="flex gap-3">
+          <input
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-indigo/50"
+            placeholder='Etiket — örn. "Kongre 2026", "Genel QR" (isteğe bağlı)'
+            value={standaloneLabel}
+            onChange={e => setStandaloneLabel(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleCreate(); }}
+          />
+          <Button variant="gradient" className="gap-2 flex-shrink-0" disabled={creating} onClick={handleCreate}>
+            <Plus className="w-4 h-4" />
+            {creating ? "Oluşturuluyor..." : "Oluştur"}
+          </Button>
+        </div>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </div>
+
+      {all.length === 0 ? (
+        <div className="glass rounded-2xl border border-white/8 p-10 text-center">
+          <Building2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Henüz bağımsız QR yok. Yukarıdan oluşturabilirsin.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {all.map(ex => (
+            <StandaloneQRCard key={ex.id} ex={ex} onDelete={handleDelete} />
+          ))}
         </div>
       )}
     </motion.div>
