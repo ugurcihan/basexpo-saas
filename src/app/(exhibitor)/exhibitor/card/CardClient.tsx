@@ -139,22 +139,52 @@ export function CardClient({ profile, exhibitors, availableEvents, initialSurvey
             </motion.div>
 
             {tab === "card" && (
-              <CardTab exhibitor={primary} router={router} />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-muted-foreground">
+                  <Building2 className="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                  <span><span className="text-white font-medium">Ana Profil</span> — Tüm QR kodlarınız (fuar + bağımsız) için ortak bilgiler. Logo, açıklama, ürünler ve yetkili kişiler buradan yönetilir.</span>
+                </div>
+                <CardTab exhibitor={primary} router={router} />
+              </div>
             )}
             {tab === "qr" && (
-              <QRTab exhibitors={exhibitors} />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-muted-foreground">
+                  <QrCode className="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                  <span><span className="text-white font-medium">Fuar QR Kodları</span> — Katıldığınız fuarlara özgü QR'lar. PNG indirin veya URL kopyalayın. Bağımsız etkinlikler için &quot;Bağımsız QR&quot; sekmesini kullanın.</span>
+                </div>
+                <QRTab exhibitors={exhibitors} />
+              </div>
             )}
             {tab === "standalone" && (
               <StandaloneTab exhibitors={exhibitors} profile={profile} router={router} />
             )}
             {tab === "survey" && (
-              <SurveyTab exhibitorId={primary.id} initialSurvey={initialSurvey} />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-muted-foreground">
+                  <ClipboardList className="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                  <span><span className="text-white font-medium">Ana Profil Anketi</span> — Yalnız fuar QR&apos;larında gösterilir. Her bağımsız QR&apos;ın kendi anketi için o QR kartındaki &quot;Anket&quot; bölümünü kullanın. Maks 5 soru.</span>
+                </div>
+                <SurveyTab exhibitorId={primary.id} initialSurvey={initialSurvey} />
+              </div>
             )}
             {tab === "results" && (
-              <SurveyResultsTab surveyId={initialSurvey?.id ?? null} surveyTitle={initialSurvey?.title ?? "Anket"} />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-muted-foreground">
+                  <BarChart2 className="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                  <span><span className="text-white font-medium">Anket Sonuçları</span> — Ana profil anketine gelen yanıtlar (fuar QR&apos;larından). Bağımsız QR yanıtları için o QR kartındaki &quot;Rapor&quot; bölümünü açın.</span>
+                </div>
+                <SurveyResultsTab surveyId={initialSurvey?.id ?? null} surveyTitle={initialSurvey?.title ?? "Anket"} />
+              </div>
             )}
             {tab === "preview" && (
-              <PreviewTab exhibitor={primary} survey={initialSurvey} />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-muted-foreground">
+                  <Eye className="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                  <span><span className="text-white font-medium">Önizleme</span> — Ziyaretçilerin QR taradığında gördüğü sayfa. Anket aktifse sorular altta gösterilir.</span>
+                </div>
+                <PreviewTab exhibitor={primary} survey={initialSurvey} />
+              </div>
             )}
           </>
         )}
@@ -672,6 +702,8 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
   const [showReport, setShowReport] = useState(false);
   const [stats, setStats] = useState<QRStats | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [surveyResults, setSurveyResults] = useState<SurveyResult[] | null>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   // Survey panel
   const [showSurvey, setShowSurvey] = useState(false);
@@ -717,10 +749,42 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
     setShowReport(true);
     if (!stats) {
       setReportLoading(true);
-      const data = await getStandaloneQRStats(ex.id);
-      setStats(data);
+      const [statsData, surveyData] = await Promise.all([
+        getStandaloneQRStats(ex.id),
+        getExhibitorSurvey(ex.id).then(async (s) => {
+          if (!s?.id) return [];
+          return getSurveyResults(s.id);
+        }),
+      ]);
+      setStats(statsData);
+      setSurveyResults(surveyData as SurveyResult[]);
       setReportLoading(false);
     }
+  }
+
+  function handleQRDownload() {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const canvas = document.createElement("canvas");
+    const size = 512;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const img = new window.Image();
+    const svgBlob = new Blob([svg.outerHTML], { type: "image/svg+xml" });
+    const blobUrl = URL.createObjectURL(svgBlob);
+    img.onload = () => {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      URL.revokeObjectURL(blobUrl);
+      const a = document.createElement("a");
+      a.download = `${ex.company_name}-qr.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    };
+    img.src = blobUrl;
   }
 
   function handleExcelExport() {
@@ -749,7 +813,7 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
     <motion.div initial={{ y: 14 }} animate={{ y: 0 }} className="glass rounded-xl border border-white/8 p-5 space-y-4">
       {/* Ana satır */}
       <div className="flex items-start gap-5">
-        <div className="flex-shrink-0 p-2.5 bg-white rounded-xl shadow-md">
+        <div ref={qrRef} className="flex-shrink-0 p-2.5 bg-white rounded-xl shadow-md">
           {url ? (
             <QRCodeSVG value={url} size={96} level="M" fgColor="#1a1a2e" bgColor="white" />
           ) : (
@@ -771,6 +835,9 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
             <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={copy}>
               {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
               {copied ? "Kopyalandı!" : "Linki Kopyala"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={handleQRDownload} disabled={!url}>
+              <Download className="w-3 h-3" /> QR PNG
             </Button>
             <Link href={`/scan/${ex.qr_token}`} target="_blank">
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
@@ -871,27 +938,73 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
 
       {/* Rapor bölümü */}
       {showReport && (
-        <motion.div initial={{ y: 8 }} animate={{ y: 0 }} className="border-t border-white/8 pt-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">QR Raporu</p>
+        <motion.div initial={{ y: 8 }} animate={{ y: 0 }} className="border-t border-white/8 pt-4 space-y-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">QR Raporu</p>
           {reportLoading ? (
-            <div className="grid grid-cols-3 gap-3">
-              {[0,1,2].map(i => <div key={i} className="h-14 rounded-lg bg-white/5 animate-pulse" />)}
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                {[0,1,2].map(i => <div key={i} className="h-14 rounded-lg bg-white/5 animate-pulse" />)}
+              </div>
+              <div className="h-20 rounded-lg bg-white/5 animate-pulse" />
             </div>
           ) : stats ? (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="glass rounded-lg border border-white/8 p-3 text-center">
-                <p className="text-xl font-bold text-white">{stats.scan_count}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Tarama</p>
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="glass rounded-lg border border-white/8 p-3 text-center">
+                  <p className="text-xl font-bold text-white">{stats.scan_count}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Tarama</p>
+                </div>
+                <div className="glass rounded-lg border border-white/8 p-3 text-center">
+                  <p className="text-xl font-bold text-brand-cyan">{stats.unique_visitors}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Tekil Kişi</p>
+                </div>
+                <div className="glass rounded-lg border border-white/8 p-3 text-center">
+                  <p className="text-xl font-bold text-brand-violet-light">{stats.survey_fill_count}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Anket Dolduran</p>
+                </div>
               </div>
-              <div className="glass rounded-lg border border-white/8 p-3 text-center">
-                <p className="text-xl font-bold text-brand-cyan">{stats.unique_visitors}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Tekil Kişi</p>
-              </div>
-              <div className="glass rounded-lg border border-white/8 p-3 text-center">
-                <p className="text-xl font-bold text-brand-violet-light">{stats.survey_fill_count}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Anket Dolduran</p>
-              </div>
-            </div>
+
+              {surveyResults && surveyResults.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Anket Cevapları</p>
+                  {surveyResults.map(q => {
+                    const answers = q.question_type === "yes_no"
+                      ? ["Evet", "Hayır"]
+                      : (q.options ?? Object.keys(q.counts));
+                    const total = q.total || 1;
+                    return (
+                      <div key={q.id} className="glass rounded-lg border border-white/8 p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-medium text-white">{q.question_text}</p>
+                          <span className="text-[11px] text-muted-foreground flex-shrink-0">{q.total} yanıt</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {answers.map(answer => {
+                            const count = q.counts[answer] ?? 0;
+                            const pct = Math.round((count / total) * 100);
+                            return (
+                              <div key={answer} className="space-y-0.5">
+                                <div className="flex justify-between text-[11px]">
+                                  <span className="text-muted-foreground">{answer}</span>
+                                  <span className="text-white font-medium">{count} ({pct}%)</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-white/6 overflow-hidden">
+                                  <div className="h-full rounded-full bg-gradient-to-r from-brand-indigo to-brand-violet"
+                                    style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {surveyResults && surveyResults.length === 0 && (
+                <p className="text-xs text-muted-foreground">Bu QR&apos;a henüz anket eklenmemiş veya yanıt yok.</p>
+              )}
+            </>
           ) : null}
         </motion.div>
       )}
