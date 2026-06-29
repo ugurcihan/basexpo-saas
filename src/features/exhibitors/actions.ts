@@ -253,6 +253,7 @@ export async function getAllMyExhibitorProfiles() {
     .from("exhibitors")
     .select("id, company_name, qr_token, contact_name, job_title, linkedin_url, website, phone, city, logo_url, tags, description, event:events(id, name, location, start_date, end_date)")
     .eq("owner_id", user.id)
+    .order("event_id", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   return data ?? [];

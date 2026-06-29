@@ -4,7 +4,13 @@ import { getAllMyExhibitorProfiles, getAvailableEvents } from "@/features/exhibi
 import { getExhibitorSurvey } from "@/features/surveys/actions";
 import { CardClient } from "./CardClient";
 
-export default async function DigitalCardPage() {
+export default async function DigitalCardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string; tab?: string }>;
+}) {
+  const { id: primaryId, tab: initialTab } = await searchParams;
+
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "exhibitor") redirect("/login");
@@ -12,8 +18,10 @@ export default async function DigitalCardPage() {
   const exhibitors = await getAllMyExhibitorProfiles();
   const availableEvents = await getAvailableEvents();
 
-  const primaryExhibitor = exhibitors[0] ?? null;
-  const survey = primaryExhibitor ? await getExhibitorSurvey(primaryExhibitor.id) : null;
+  const targetExhibitor = primaryId
+    ? (exhibitors.find(e => e.id === primaryId) ?? exhibitors[0] ?? null)
+    : exhibitors[0] ?? null;
+  const survey = targetExhibitor ? await getExhibitorSurvey(targetExhibitor.id) : null;
 
   return (
     <CardClient
@@ -21,6 +29,8 @@ export default async function DigitalCardPage() {
       exhibitors={exhibitors}
       availableEvents={availableEvents}
       initialSurvey={survey}
+      primaryId={primaryId ?? null}
+      initialTab={initialTab ?? null}
     />
   );
 }

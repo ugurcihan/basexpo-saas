@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +58,8 @@ interface Props {
   exhibitors: ExhibitorRow[];
   availableEvents: EventInfo[];
   initialSurvey: Survey | null;
+  primaryId: string | null;
+  initialTab: string | null;
 }
 
 const TABS = [
@@ -69,11 +72,13 @@ const TABS = [
 
 type Tab = typeof TABS[number]["key"];
 
-export function CardClient({ profile, exhibitors, availableEvents, initialSurvey }: Props) {
+export function CardClient({ profile, exhibitors, availableEvents, initialSurvey, primaryId, initialTab }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("card");
+  const [tab, setTab] = useState<Tab>((initialTab as Tab) ?? "card");
 
-  const primary = exhibitors[0] ?? null;
+  const primary = primaryId
+    ? (exhibitors.find(e => e.id === primaryId) ?? exhibitors[0] ?? null)
+    : exhibitors[0] ?? null;
 
   return (
     <DashboardShell role="exhibitor" userName={profile.full_name || profile.email} navItems={EXHIBITOR_NAV}>
@@ -554,57 +559,90 @@ function QRTab({ exhibitors }: { exhibitors: ExhibitorRow[] }) {
     img.src = url;
   }
 
-  return (
-    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Her fuar için ayrı QR kod — standınıza yapıştırın, ziyaretçi taradığında dijital kartvizitiniz açılır.
-      </p>
-      {exhibitors.map((ex, i) => {
-        const ev = getEvent(ex);
-        const scanUrl = mounted ? `${window.location.origin}/scan/${ex.qr_token}` : "";
-        return (
-          <motion.div
-            key={ex.id}
-            initial={{ y: 14 }}
-            animate={{ y: 0 }}
-            transition={{ delay: i * 0.06 }}
-            className="glass rounded-2xl border border-white/8 p-6 flex flex-col sm:flex-row items-center gap-6"
-          >
-            {/* QR */}
-            <div
-              ref={el => { qrRefs.current[ex.id] = el; }}
-              className="p-4 bg-white rounded-xl shadow-[0_0_24px_rgba(99,102,241,0.2)] flex-shrink-0"
-            >
-              {mounted ? (
-                <QRCodeSVG value={scanUrl} size={160} level="H" includeMargin={false} fgColor="#0A0F1E" bgColor="#FFFFFF" />
-              ) : (
-                <div className="w-40 h-40 bg-gray-100 rounded-lg animate-pulse" />
-              )}
-            </div>
+  function QRCard({ ex, index }: { ex: ExhibitorRow; index: number }) {
+    const ev = getEvent(ex);
+    const scanUrl = mounted ? `${window.location.origin}/scan/${ex.qr_token}` : "";
+    return (
+      <motion.div
+        key={ex.id}
+        initial={{ y: 14 }}
+        animate={{ y: 0 }}
+        transition={{ delay: index * 0.06 }}
+        className="glass rounded-2xl border border-white/8 p-6 flex flex-col sm:flex-row items-center gap-6"
+      >
+        {/* QR */}
+        <div
+          ref={el => { qrRefs.current[ex.id] = el; }}
+          className="p-4 bg-white rounded-xl shadow-[0_0_24px_rgba(99,102,241,0.2)] flex-shrink-0"
+        >
+          {mounted ? (
+            <QRCodeSVG value={scanUrl} size={160} level="H" includeMargin={false} fgColor="#0A0F1E" bgColor="#FFFFFF" />
+          ) : (
+            <div className="w-40 h-40 bg-gray-100 rounded-lg animate-pulse" />
+          )}
+        </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0 text-center sm:text-left">
-              {ev && (
-                <>
-                  <p className="font-display font-bold text-white text-lg">{ev.name}</p>
-                  <p className="text-muted-foreground text-sm mb-1">
-                    {ev.location} · {new Date(ev.start_date).toLocaleDateString("tr-TR")}
-                  </p>
-                </>
-              )}
-              <div className="flex items-center gap-2 justify-center sm:justify-start mt-3">
-                <Button variant="gradient" size="sm" onClick={() => handleDownload(ex)}>
-                  <Download className="w-3.5 h-3.5" /> PNG İndir
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleCopy(ex.qr_token, ex.id)}>
-                  {copiedId === ex.id ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedId === ex.id ? "Kopyalandı" : "URL Kopyala"}
-                </Button>
-              </div>
+        {/* Info */}
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          {ev ? (
+            <>
+              <p className="font-display font-bold text-white text-lg">{ev.name}</p>
+              <p className="text-muted-foreground text-sm mb-1">
+                {ev.location} · {new Date(ev.start_date).toLocaleDateString("tr-TR")}
+              </p>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+              <p className="font-semibold text-white">{ex.company_name}</p>
+              <Badge className="text-[10px] bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25">Bağımsız</Badge>
             </div>
-          </motion.div>
-        );
-      })}
+          )}
+          <div className="flex items-center gap-2 justify-center sm:justify-start mt-3">
+            <Button variant="gradient" size="sm" onClick={() => handleDownload(ex)}>
+              <Download className="w-3.5 h-3.5" /> PNG İndir
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleCopy(ex.qr_token, ex.id)}>
+              {copiedId === ex.id ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedId === ex.id ? "Kopyalandı" : "URL Kopyala"}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const eventBased    = exhibitors.filter(ex => getEvent(ex) !== null);
+  const standaloneQRs = exhibitors.filter(ex => getEvent(ex) === null);
+
+  return (
+    <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-6">
+      {eventBased.length > 0 && (
+        <div className="space-y-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Fuar QR Kodları
+          </p>
+          {eventBased.map((ex, i) => <QRCard key={ex.id} ex={ex} index={i} />)}
+        </div>
+      )}
+
+      {standaloneQRs.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Bağımsız QR Kodları
+            </p>
+            <Badge className="text-[10px] bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25">Fuar Dışı</Badge>
+          </div>
+          {standaloneQRs.map((ex, i) => <QRCard key={ex.id} ex={ex} index={i} />)}
+        </div>
+      )}
+
+      {exhibitors.length === 0 && (
+        <div className="glass rounded-2xl border border-white/8 p-10 text-center">
+          <QrCode className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Henüz QR kod yok. Bir fuara kayıt ol veya Fuarlarım'dan bağımsız QR oluştur.</p>
+        </div>
+      )}
     </motion.div>
   );
 }

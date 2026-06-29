@@ -16,7 +16,7 @@ import { QRCodeSVG } from "qrcode.react";
 import {
   CalendarClock, MapPin, Calendar, ChevronRight, CheckCircle2,
   XCircle, Clock, UserCircle2, QrCode, Store, X, Send,
-  Users, Tag, Info, Mail, Building2, Plus, Copy, ExternalLink, Trash2,
+  Users, Tag, Info, Mail, Building2, Plus, Copy, ExternalLink, Trash2, CreditCard,
 } from "lucide-react";
 import { respondToMeeting } from "@/features/connections/actions";
 import { applyToFair, createStandaloneExhibitor, deleteStandaloneExhibitor } from "@/features/exhibitors/actions";
@@ -421,21 +421,25 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
                         {ev?.start_date && <> · {formatDate(ev.start_date)}</>}
                       </p>
                     </div>
-                    {ex.status !== "pending" && ex.status !== "rejected" && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Link
-                          href={`/scan/${ex.qr_token}`}
-                          target="_blank"
-                          className="p-2 rounded-lg text-muted-foreground hover:text-brand-cyan hover:bg-brand-cyan/10 transition-colors"
-                          title="QR Sayfasını Gör"
-                        >
-                          <QrCode className="w-4 h-4" />
-                        </Link>
-                        <Link href="/exhibitor/card" className="text-xs text-brand-indigo-light hover:underline flex items-center gap-1">
-                          QR <ChevronRight className="w-3 h-3" />
-                        </Link>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {ex.status === "approved" && (
+                        <>
+                          <Link
+                            href={`/scan/${ex.qr_token}`}
+                            target="_blank"
+                            className="p-2 rounded-lg text-muted-foreground hover:text-brand-cyan hover:bg-brand-cyan/10 transition-colors"
+                            title="QR Sayfasını Gör"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </Link>
+                          <Link href={`/exhibitor/card?id=${ex.id}`}>
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
+                              <CreditCard className="w-3 h-3" /> Kartvizit Düzenle
+                            </Button>
+                          </Link>
+                        </>
+                      )}
+                    </div>
                   </motion.div>
                 );
               })
