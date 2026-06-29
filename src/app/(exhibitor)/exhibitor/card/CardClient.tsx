@@ -16,9 +16,10 @@ import {
   Building2, Upload, X, Check, AlertCircle, Plus, Globe, Phone,
   Linkedin, QrCode, Download, Copy, ClipboardList, ToggleLeft,
   ToggleRight, Trash2, ChevronDown, ChevronUp, Eye, Mail, UserCheck,
+  Play, Package,
 } from "lucide-react";
 import {
-  updateExhibitorProfile, getExhibitorContacts, upsertContact, deleteContact,
+  updateExhibitorProfile, getExhibitorContacts, upsertContact, deleteContact, getExhibitorProducts,
 } from "@/features/exhibitors/actions";
 import {
   createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion, getSurveyResults,
@@ -43,6 +44,14 @@ interface ExhibitorRow {
   description: string;
   event: EventInfo | EventInfo[];
 }
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  video_url: string | null;
+}
+
 interface SurveyQuestion {
   id: string;
   question_text: string;
@@ -952,6 +961,17 @@ function SurveyResultsTab({ surveyId, surveyTitle }: { surveyId: string | null; 
 
 // ─── Tab: Önizleme ────────────────────────────────────────────
 function PreviewTab({ exhibitor, survey }: { exhibitor: ExhibitorRow; survey: Survey | null }) {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    getExhibitorContacts(exhibitor.id).then(data => setContacts(data as Contact[]));
+    getExhibitorProducts(exhibitor.id).then(data => setProducts(data as Product[]));
+  }, [exhibitor.id]);
+
+  const officialContacts = contacts.filter(c => c.contact_type === "official");
+  const boothContacts    = contacts.filter(c => c.contact_type === "booth");
+
   return (
     <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
       <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -959,7 +979,7 @@ function PreviewTab({ exhibitor, survey }: { exhibitor: ExhibitorRow; survey: Su
       </p>
 
       <div className="max-w-sm mx-auto glass rounded-2xl border border-white/8 overflow-hidden">
-        {/* Business card header */}
+        {/* Header */}
         <div className="p-6 bg-gradient-to-br from-brand-indigo/20 to-brand-violet/10 border-b border-white/8">
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -971,16 +991,11 @@ function PreviewTab({ exhibitor, survey }: { exhibitor: ExhibitorRow; survey: Su
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-display font-bold text-white text-lg leading-tight">{exhibitor.company_name}</p>
-              {exhibitor.contact_name && (
-                <p className="text-brand-cyan text-sm mt-0.5">{exhibitor.contact_name}</p>
-              )}
-              {exhibitor.job_title && (
-                <p className="text-muted-foreground text-xs">{exhibitor.job_title}</p>
-              )}
+              {exhibitor.city && <p className="text-muted-foreground text-xs mt-0.5">{exhibitor.city}</p>}
             </div>
           </div>
 
-          {/* Contact buttons */}
+          {/* İletişim butonları */}
           {(exhibitor.phone || exhibitor.website || exhibitor.linkedin_url) && (
             <div className="flex gap-2 mt-4 flex-wrap">
               {exhibitor.phone && (
@@ -1002,7 +1017,7 @@ function PreviewTab({ exhibitor, survey }: { exhibitor: ExhibitorRow; survey: Su
           )}
         </div>
 
-        {/* Description + tags */}
+        {/* Açıklama + etiketler */}
         {(exhibitor.description || exhibitor.tags.length > 0) && (
           <div className="p-4 border-b border-white/8 space-y-2">
             {exhibitor.description && (
@@ -1018,6 +1033,87 @@ function PreviewTab({ exhibitor, survey }: { exhibitor: ExhibitorRow; survey: Su
           </div>
         )}
 
+        {/* Yetkili Kişiler */}
+        {officialContacts.length > 0 && (
+          <div className="p-4 border-b border-white/8">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Yetkili Kişiler</p>
+            <div className="space-y-2">
+              {officialContacts.map(c => (
+                <div key={c.id} className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{c.full_name}</p>
+                    {c.job_title && <p className="text-[11px] text-muted-foreground truncate">{c.job_title}</p>}
+                  </div>
+                  {c.email && (
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-cyan/15 border border-brand-cyan/25 text-[11px] text-brand-cyan flex-shrink-0">
+                      <Mail className="w-2.5 h-2.5" /> Mail At
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stant Yetkilileri */}
+        {boothContacts.length > 0 && (
+          <div className="p-4 border-b border-white/8">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Stant Yetkilileri</p>
+            <div className="space-y-2">
+              {boothContacts.map(c => (
+                <div key={c.id} className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{c.full_name}</p>
+                    {c.job_title && <p className="text-[11px] text-muted-foreground truncate">{c.job_title}</p>}
+                  </div>
+                  {c.email && (
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-violet/15 border border-brand-violet/25 text-[11px] text-brand-violet-light flex-shrink-0">
+                      <Mail className="w-2.5 h-2.5" /> Mail At
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ürünler */}
+        {products.length > 0 && (
+          <div className="p-4 border-b border-white/8">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ürünler</p>
+            <div className="space-y-2">
+              {products.slice(0, 3).map(p => (
+                <div key={p.id} className="flex items-center gap-3 py-1.5">
+                  {/* Thumbnail */}
+                  <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {p.image_url ? (
+                      <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-cover w-full h-full" />
+                    ) : p.video_url ? (
+                      <Play className="w-4 h-4 text-brand-cyan/60" />
+                    ) : (
+                      <Package className="w-4 h-4 text-muted-foreground/40" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{p.name}</p>
+                    {p.description && (
+                      <p className="text-[11px] text-muted-foreground line-clamp-1">{p.description}</p>
+                    )}
+                    {p.video_url && (
+                      <span className="flex items-center gap-1 text-[11px] text-brand-cyan mt-0.5">
+                        <Play className="w-2.5 h-2.5" /> Tanıtım Videosu
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {products.length > 3 && (
+                <p className="text-[11px] text-muted-foreground">+{products.length - 3} ürün daha</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Check-in */}
         <div className="p-4 border-b border-white/8">
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-cyan/15 border border-brand-cyan/25">
@@ -1029,7 +1125,7 @@ function PreviewTab({ exhibitor, survey }: { exhibitor: ExhibitorRow; survey: Su
           </div>
         </div>
 
-        {/* Survey preview */}
+        {/* Anket önizleme */}
         {survey && survey.is_active && survey.questions.length > 0 && (
           <div className="p-4">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Anket</p>
