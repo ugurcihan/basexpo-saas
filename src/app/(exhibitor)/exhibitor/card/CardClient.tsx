@@ -16,14 +16,16 @@ import {
   Building2, Upload, X, Check, AlertCircle, Plus, Globe, Phone,
   Linkedin, QrCode, Download, Copy, ClipboardList, ToggleLeft,
   ToggleRight, Trash2, ChevronDown, ChevronUp, Eye, Mail, UserCheck,
-  Play, Package, ExternalLink,
+  Play, Package, ExternalLink, Pencil, BarChart2, FileDown,
 } from "lucide-react";
 import {
   updateExhibitorProfile, getExhibitorContacts, upsertContact, deleteContact, getExhibitorProducts,
   createStandaloneExhibitor, deleteStandaloneExhibitor,
+  getStandaloneQRStats, getStandaloneQRExportData,
 } from "@/features/exhibitors/actions";
 import {
   createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion, getSurveyResults,
+  getExhibitorSurvey,
 } from "@/features/surveys/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import Link from "next/link";
@@ -75,7 +77,7 @@ interface Props {
 
 const TABS = [
   { key: "card",       label: "Kartvizit" },
-  { key: "qr",        label: "QR Kodlarım" },
+  { key: "qr",        label: "Fuar QR Kodları" },
   { key: "standalone", label: "Bağımsız QR" },
   { key: "survey",    label: "Anket" },
   { key: "results",   label: "Sonuçlar" },
@@ -626,36 +628,19 @@ function QRTab({ exhibitors }: { exhibitors: ExhibitorRow[] }) {
     );
   }
 
-  const eventBased    = exhibitors.filter(ex => getEvent(ex) !== null);
-  const standaloneQRs = exhibitors.filter(ex => getEvent(ex) === null);
+  const eventBased = exhibitors.filter(ex => getEvent(ex) !== null);
 
   return (
     <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-6">
-      {eventBased.length > 0 && (
+      {eventBased.length > 0 ? (
         <div className="space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Fuar QR Kodları
-          </p>
           {eventBased.map((ex, i) => <QRCard key={ex.id} ex={ex} index={i} />)}
         </div>
-      )}
-
-      {standaloneQRs.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Bağımsız QR Kodları
-            </p>
-            <Badge className="text-[10px] bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25">Fuar Dışı</Badge>
-          </div>
-          {standaloneQRs.map((ex, i) => <QRCard key={ex.id} ex={ex} index={i} />)}
-        </div>
-      )}
-
-      {exhibitors.length === 0 && (
+      ) : (
         <div className="glass rounded-2xl border border-white/8 p-10 text-center">
           <QrCode className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">Henüz QR kod yok. Bir fuara kayıt ol veya &quot;Bağımsız QR&quot; sekmesinden yeni QR oluştur.</p>
+          <p className="text-muted-foreground text-sm">Henüz fuar QR kodu yok. Bir fuara kayıt olunca QR kodun burada görünür.</p>
+          <p className="text-xs text-muted-foreground mt-1">Fuar dışı QR için &quot;Bağımsız QR&quot; sekmesini kullan.</p>
         </div>
       )}
     </motion.div>
@@ -663,10 +648,36 @@ function QRTab({ exhibitors }: { exhibitors: ExhibitorRow[] }) {
 }
 
 // ─── Tab: Bağımsız QR ────────────────────────────────────────
+
+interface QRStats { scan_count: number; unique_visitors: number; survey_fill_count: number }
+
 function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: string) => void }) {
+  const router = useRouter();
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [deleting, startDelete] = useTransition();
+
+  // Edit
+  const [isEditing, setIsEditing] = useState(false);
+  const [editCompany, setEditCompany] = useState(ex.company_name);
+  const [editContact, setEditContact] = useState(ex.contact_name ?? "");
+  const [editJob, setEditJob] = useState(ex.job_title ?? "");
+  const [editPhone, setEditPhone] = useState(ex.phone ?? "");
+  const [editWebsite, setEditWebsite] = useState(ex.website ?? "");
+  const [editCity, setEditCity] = useState(ex.city ?? "");
+  const [saving, startSave] = useTransition();
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+
+  // Report
+  const [showReport, setShowReport] = useState(false);
+  const [stats, setStats] = useState<QRStats | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  // Survey panel
+  const [showSurvey, setShowSurvey] = useState(false);
+
+  // Export
+  const [exporting, startExport] = useTransition();
 
   useEffect(() => {
     setUrl(`${window.location.origin}/scan/${ex.qr_token}`);
@@ -679,23 +690,84 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleSave() {
+    setSaveErr(null);
+    startSave(async () => {
+      const result = await updateExhibitorProfile({
+        id: ex.id,
+        company_name: editCompany.trim() || ex.company_name,
+        description: ex.description,
+        logo_url: ex.logo_url,
+        tags: ex.tags,
+        phone: editPhone || null,
+        website: editWebsite || null,
+        city: editCity || null,
+        contact_name: editContact || null,
+        job_title: editJob || null,
+        linkedin_url: ex.linkedin_url,
+      });
+      if (result.error) { setSaveErr(result.error); return; }
+      setIsEditing(false);
+      router.refresh();
+    });
+  }
+
+  async function toggleReport() {
+    if (showReport) { setShowReport(false); return; }
+    setShowReport(true);
+    if (!stats) {
+      setReportLoading(true);
+      const data = await getStandaloneQRStats(ex.id);
+      setStats(data);
+      setReportLoading(false);
+    }
+  }
+
+  function handleExcelExport() {
+    startExport(async () => {
+      const data = await getStandaloneQRExportData(ex.id);
+      const lines: string[] = [];
+      lines.push("=== TARAMALAR ===");
+      lines.push("Tarih,Ziyaretçi Adı,Ziyaretçi E-posta");
+      data.scans.forEach(s => {
+        lines.push(`"${new Date(s.scanned_at).toLocaleString("tr-TR")}","${s.visitor_name ?? "Misafir"}","${s.visitor_email ?? ""}"`);
+      });
+      lines.push("", "=== ANKET YANITLARI ===");
+      lines.push("Ziyaretçi E-posta,Soru,Yanıt,Tarih");
+      data.surveyResponses.forEach(r => {
+        lines.push(`"${r.visitor_email ?? ""}","${r.question_text}","${r.response_value}","${new Date(r.created_at).toLocaleString("tr-TR")}"`);
+      });
+      const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${ex.company_name}-qr-raporu.csv`;
+      a.click();
+    });
+  }
+
   return (
-    <motion.div initial={{ y: 14 }} animate={{ y: 0 }} className="glass rounded-xl border border-white/8 p-5">
+    <motion.div initial={{ y: 14 }} animate={{ y: 0 }} className="glass rounded-xl border border-white/8 p-5 space-y-4">
+      {/* Ana satır */}
       <div className="flex items-start gap-5">
         <div className="flex-shrink-0 p-2.5 bg-white rounded-xl shadow-md">
           {url ? (
-            <QRCodeSVG value={url} size={100} level="M" fgColor="#1a1a2e" bgColor="white" />
+            <QRCodeSVG value={url} size={96} level="M" fgColor="#1a1a2e" bgColor="white" />
           ) : (
-            <div className="w-[100px] h-[100px] rounded-lg bg-gray-100 animate-pulse" />
+            <div className="w-24 h-24 rounded-lg bg-gray-100 animate-pulse" />
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-0.5">
             <p className="font-semibold text-white">{ex.company_name}</p>
             <Badge className="text-[10px] bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25">Bağımsız</Badge>
           </div>
+          {(ex.contact_name || ex.job_title) && (
+            <p className="text-xs text-muted-foreground mb-1">{[ex.contact_name, ex.job_title].filter(Boolean).join(" · ")}</p>
+          )}
           <p className="text-xs text-muted-foreground mb-3">Herhangi bir etkinlikte, kongre veya toplantıda kullanılabilir.</p>
-          <div className="flex flex-wrap gap-2">
+
+          {/* Satır 1: temel eylemler */}
+          <div className="flex flex-wrap gap-2 mb-2">
             <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={copy}>
               {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
               {copied ? "Kopyalandı!" : "Linki Kopyala"}
@@ -705,6 +777,43 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
                 <ExternalLink className="w-3 h-3" /> Önizle
               </Button>
             </Link>
+            <Button
+              size="sm"
+              variant={isEditing ? "gradient" : "outline"}
+              className="h-7 text-xs gap-1.5"
+              onClick={() => setIsEditing(v => !v)}
+            >
+              <Pencil className="w-3 h-3" /> {isEditing ? "Düzenleniyor..." : "Düzenle"}
+            </Button>
+          </div>
+
+          {/* Satır 2: rapor / anket / export / sil */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={showReport ? "gradient" : "outline"}
+              className="h-7 text-xs gap-1.5"
+              onClick={toggleReport}
+            >
+              <BarChart2 className="w-3 h-3" /> Rapor
+            </Button>
+            <Button
+              size="sm"
+              variant={showSurvey ? "gradient" : "outline"}
+              className="h-7 text-xs gap-1.5"
+              onClick={() => setShowSurvey(v => !v)}
+            >
+              <ClipboardList className="w-3 h-3" /> Anket
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1.5"
+              disabled={exporting}
+              onClick={handleExcelExport}
+            >
+              <FileDown className="w-3 h-3" /> {exporting ? "Hazırlanıyor..." : "Excel İndir"}
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -717,7 +826,252 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
           </div>
         </div>
       </div>
+
+      {/* Düzenle formu */}
+      {isEditing && (
+        <motion.div initial={{ y: 8 }} animate={{ y: 0 }}
+          className="border-t border-white/8 pt-4 space-y-3"
+        >
+          <p className="text-xs font-semibold text-white uppercase tracking-wider">QR Bilgilerini Düzenle</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs">Firma / Etiket Adı</Label>
+              <Input value={editCompany} onChange={e => setEditCompany(e.target.value)} placeholder={ex.company_name} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Yetkili Adı</Label>
+              <Input value={editContact} onChange={e => setEditContact(e.target.value)} placeholder="Ali Yılmaz" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Unvan</Label>
+              <Input value={editJob} onChange={e => setEditJob(e.target.value)} placeholder="Satış Müdürü" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Telefon</Label>
+              <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="+90 5xx..." className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Şehir</Label>
+              <Input value={editCity} onChange={e => setEditCity(e.target.value)} placeholder="İstanbul" className="h-8 text-sm" />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs">Web Sitesi</Label>
+              <Input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} placeholder="https://firmam.com" className="h-8 text-sm" />
+            </div>
+          </div>
+          {saveErr && <p className="text-xs text-red-400">{saveErr}</p>}
+          <div className="flex gap-2">
+            <Button variant="gradient" size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setSaveErr(null); }}>İptal</Button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Rapor bölümü */}
+      {showReport && (
+        <motion.div initial={{ y: 8 }} animate={{ y: 0 }} className="border-t border-white/8 pt-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">QR Raporu</p>
+          {reportLoading ? (
+            <div className="grid grid-cols-3 gap-3">
+              {[0,1,2].map(i => <div key={i} className="h-14 rounded-lg bg-white/5 animate-pulse" />)}
+            </div>
+          ) : stats ? (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="glass rounded-lg border border-white/8 p-3 text-center">
+                <p className="text-xl font-bold text-white">{stats.scan_count}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Tarama</p>
+              </div>
+              <div className="glass rounded-lg border border-white/8 p-3 text-center">
+                <p className="text-xl font-bold text-brand-cyan">{stats.unique_visitors}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Tekil Kişi</p>
+              </div>
+              <div className="glass rounded-lg border border-white/8 p-3 text-center">
+                <p className="text-xl font-bold text-brand-violet-light">{stats.survey_fill_count}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Anket Dolduran</p>
+              </div>
+            </div>
+          ) : null}
+        </motion.div>
+      )}
+
+      {/* Anket bölümü */}
+      {showSurvey && (
+        <motion.div initial={{ y: 8 }} animate={{ y: 0 }} className="border-t border-white/8 pt-4">
+          <MiniSurveyPanel exhibitorId={ex.id} />
+        </motion.div>
+      )}
     </motion.div>
+  );
+}
+
+// ─── MiniSurveyPanel ──────────────────────────────────────────
+function MiniSurveyPanel({ exhibitorId }: { exhibitorId: string }) {
+  const [survey, setSurvey] = useState<Survey | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [showAdd, setShowAdd] = useState(false);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [newType, setNewType] = useState<"yes_no" | "multiple_choice">("yes_no");
+  const [newOptions, setNewOptions] = useState(["", ""]);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    getExhibitorSurvey(exhibitorId).then(data => {
+      setSurvey(data as Survey | null);
+      setLoaded(true);
+    });
+  }, [exhibitorId]);
+
+  async function ensureSurvey() {
+    if (survey) return survey.id;
+    const result = await createOrGetSurvey(exhibitorId);
+    if (result.error || !result.surveyId) { setErr(result.error ?? "Hata"); return null; }
+    const ns: Survey = { id: result.surveyId, title: "Anket", is_active: true, questions: [] };
+    setSurvey(ns);
+    return result.surveyId;
+  }
+
+  function handleToggle() {
+    if (!survey) return;
+    startTransition(async () => {
+      await toggleSurvey(survey.id, !survey.is_active);
+      setSurvey(prev => prev ? { ...prev, is_active: !prev.is_active } : prev);
+    });
+  }
+
+  function handleAddQuestion() {
+    if (!newQuestion.trim()) { setErr("Soru metni boş bırakılamaz"); return; }
+    if (newType === "multiple_choice" && newOptions.filter(o => o.trim()).length < 2) {
+      setErr("En az 2 seçenek giriniz"); return;
+    }
+    if ((survey?.questions.length ?? 0) >= 5) { setErr("En fazla 5 soru"); return; }
+    setErr(null);
+    startTransition(async () => {
+      const surveyId = await ensureSurvey();
+      if (!surveyId) return;
+      const opts = newType === "multiple_choice" ? newOptions.filter(o => o.trim()) : undefined;
+      const result = await addQuestion({
+        surveyId,
+        question_text: newQuestion.trim(),
+        question_type: newType,
+        options: opts,
+        sort_order: survey?.questions.length ?? 0,
+      });
+      if (result.error) { setErr(result.error); return; }
+      const nq: SurveyQuestion = {
+        id: crypto.randomUUID(),
+        question_text: newQuestion.trim(),
+        question_type: newType,
+        options: opts ?? null,
+        sort_order: survey?.questions.length ?? 0,
+        is_required: false,
+      };
+      setSurvey(prev => prev
+        ? { ...prev, questions: [...prev.questions, nq] }
+        : { id: surveyId, title: "Anket", is_active: true, questions: [nq] }
+      );
+      setNewQuestion(""); setNewOptions(["", ""]); setShowAdd(false);
+    });
+  }
+
+  function handleDelete(questionId: string) {
+    startTransition(async () => {
+      await deleteQuestion(questionId);
+      setSurvey(prev => prev ? { ...prev, questions: prev.questions.filter(q => q.id !== questionId) } : prev);
+    });
+  }
+
+  if (!loaded) {
+    return <div className="text-xs text-muted-foreground">Anket yükleniyor...</div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-white uppercase tracking-wider">Bu QR'a Özel Anket</p>
+        {survey && (
+          <button onClick={handleToggle} disabled={isPending} className="flex items-center gap-1.5 text-xs">
+            {survey.is_active ? (
+              <><ToggleRight className="w-5 h-5 text-brand-cyan" /><span className="text-brand-cyan">Aktif</span></>
+            ) : (
+              <><ToggleLeft className="w-5 h-5 text-muted-foreground" /><span className="text-muted-foreground">Pasif</span></>
+            )}
+          </button>
+        )}
+      </div>
+
+      {(survey?.questions ?? []).map((q, i) => (
+        <div key={q.id} className="flex items-start gap-2 p-2.5 rounded-lg bg-white/3 border border-white/8">
+          <span className="w-5 h-5 rounded-full bg-brand-indigo/15 border border-brand-indigo/25 flex items-center justify-center text-[10px] font-bold text-brand-indigo-light flex-shrink-0 mt-0.5">{i+1}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-white">{q.question_text}</p>
+            <p className="text-[11px] text-muted-foreground">{q.question_type === "yes_no" ? "Evet/Hayır" : "Çoktan Seçmeli"}</p>
+          </div>
+          <button onClick={() => handleDelete(q.id)} disabled={isPending}
+            className="p-1 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+
+      {(survey?.questions.length ?? 0) === 0 && !showAdd && (
+        <p className="text-xs text-muted-foreground">Henüz soru yok. Aşağıdan ekle.</p>
+      )}
+
+      {showAdd ? (
+        <div className="p-3 rounded-lg border border-brand-indigo/20 bg-brand-indigo/5 space-y-2">
+          <Input
+            value={newQuestion}
+            onChange={e => setNewQuestion(e.target.value)}
+            placeholder="Soru metni..."
+            className="h-8 text-xs"
+          />
+          <div className="flex gap-2">
+            {(["yes_no", "multiple_choice"] as const).map(type => (
+              <button key={type} onClick={() => setNewType(type)}
+                className={`flex-1 px-2 py-1.5 rounded-lg text-xs border transition-all ${
+                  newType === type ? "border-brand-indigo bg-brand-indigo/15 text-white" : "border-white/10 text-muted-foreground"
+                }`}>
+                {type === "yes_no" ? "Evet/Hayır" : "Çoktan Seçmeli"}
+              </button>
+            ))}
+          </div>
+          {newType === "multiple_choice" && (
+            <div className="space-y-1.5">
+              {newOptions.map((opt, i) => (
+                <div key={i} className="flex gap-1.5">
+                  <Input value={opt} onChange={e => { const u = [...newOptions]; u[i] = e.target.value; setNewOptions(u); }}
+                    placeholder={`Seçenek ${i+1}`} className="h-7 text-xs" />
+                  {newOptions.length > 2 && (
+                    <button onClick={() => setNewOptions(prev => prev.filter((_, idx) => idx !== i))}
+                      className="text-muted-foreground hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
+                  )}
+                </div>
+              ))}
+              {newOptions.length < 4 && (
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
+                  onClick={() => setNewOptions(prev => [...prev, ""])}>
+                  <Plus className="w-3 h-3" /> Seçenek
+                </Button>
+              )}
+            </div>
+          )}
+          {err && <p className="text-xs text-red-400">{err}</p>}
+          <div className="flex gap-2">
+            <Button variant="gradient" size="sm" className="h-7 text-xs" onClick={handleAddQuestion} disabled={isPending}>
+              {isPending ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowAdd(false); setErr(null); }}>İptal</Button>
+          </div>
+        </div>
+      ) : (survey?.questions.length ?? 0) < 5 && (
+        <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setShowAdd(true)}>
+          <Plus className="w-3.5 h-3.5" /> Soru Ekle
+        </Button>
+      )}
+    </div>
   );
 }
 

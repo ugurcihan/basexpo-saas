@@ -662,3 +662,114 @@ export async function deleteProduct(productId: string, exhibitorId: string) {
   revalidatePath("/exhibitor/products");
   return { error: null };
 }
+
+// ─── STANDALONE QR STATS & EXPORT ──────────────────────────────
+
+export async function getStandaloneQRStats(exhibitorId: string): Promise<{
+  scan_count: number;
+  unique_visitors: number;
+  survey_fill_count: number;
+}> {
+  const supabase = await createSupabaseServerClient();
+
+  const { count: scanCount } = await supabase
+    .from("qr_scans")
+    .select("*", { count: "exact", head: true })
+    .eq("exhibitor_id", exhibitorId);
+
+  const { data: rawScans } = await supabase
+    .from("qr_scans")
+    .select("visitor_id")
+    .eq("exhibitor_id", exhibitorId)
+    .not("visitor_id", "is", null);
+
+  const uniqueVisitors = new Set((rawScans ?? []).map(s => s.visitor_id)).size;
+
+  const { data: survey } = await supabase
+    .from("exhibitor_surveys")
+    .select("id")
+    .eq("exhibitor_id", exhibitorId)
+    .limit(1)
+    .maybeSingle();
+
+  let surveyFillCount = 0;
+  if (survey) {
+    const { data: responses } = await supabase
+      .from("survey_responses")
+      .select("visitor_id")
+      .eq("survey_id", survey.id);
+    surveyFillCount = new Set((responses ?? []).map(r => r.visitor_id)).size;
+  }
+
+  return {
+    scan_count: scanCount ?? 0,
+    unique_visitors: uniqueVisitors,
+    survey_fill_count: surveyFillCount,
+  };
+}
+
+export async function getStandaloneQRExportData(exhibitorId: string): Promise<{
+  scans: Array<{ scanned_at: string; visitor_name: string | null; visitor_email: string | null }>;
+  surveyResponses: Array<{ visitor_email: string | null; question_text: string; response_value: string; created_at: string }>;
+}> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: rawScans } = await supabase
+    .from("qr_scans")
+    .select("scanned_at, visitor_id")
+    .eq("exhibitor_id", exhibitorId)
+    .order("scanned_at", { ascending: false });
+
+  const visitorIds = [...new Set((rawScans ?? []).map(s => s.visitor_id).filter(Boolean) as string[])];
+
+  const { data: profileRows } = visitorIds.length > 0
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", visitorIds)
+    : { data: [] as { id: string; full_name: string | null; email: string }[] };
+
+  const profileMap = new Map((profileRows ?? []).map(p => [p.id, p]));
+
+  const scans = (rawScans ?? []).map(s => ({
+    scanned_at: s.scanned_at,
+    visitor_name: s.visitor_id ? (profileMap.get(s.visitor_id)?.full_name ?? null) : null,
+    visitor_email: s.visitor_id ? (profileMap.get(s.visitor_id)?.email ?? null) : null,
+  }));
+
+  const { data: survey } = await supabase
+    .from("exhibitor_surveys")
+    .select("id")
+    .eq("exhibitor_id", exhibitorId)
+    .limit(1)
+    .maybeSingle();
+
+  let surveyResponses: Array<{ visitor_email: string | null; question_text: string; response_value: string; created_at: string }> = [];
+
+  if (survey) {
+    const { data: responses } = await supabase
+      .from("survey_responses")
+      .select("response_value, created_at, visitor_id, question_id")
+      .eq("survey_id", survey.id)
+      .order("created_at", { ascending: false });
+
+    const qIds = [...new Set((responses ?? []).map(r => r.question_id))];
+    const { data: questions } = qIds.length > 0
+      ? await supabase.from("survey_questions").select("id, question_text").in("id", qIds)
+      : { data: [] as { id: string; question_text: string }[] };
+
+    const qMap = new Map((questions ?? []).map(q => [q.id, q.question_text]));
+
+    const vIds = [...new Set((responses ?? []).map(r => r.visitor_id).filter(Boolean) as string[])];
+    const { data: vProfiles } = vIds.length > 0
+      ? await supabase.from("profiles").select("id, email").in("id", vIds)
+      : { data: [] as { id: string; email: string }[] };
+    const vMap = new Map((vProfiles ?? []).map(p => [p.id, p.email]));
+
+    surveyResponses = (responses ?? []).map(r => ({
+      visitor_email: r.visitor_id ? (vMap.get(r.visitor_id) ?? null) : null,
+      question_text: qMap.get(r.question_id) ?? "",
+      response_value: r.response_value,
+      created_at: r.created_at,
+    }));
+  }
+
+  return { scans, surveyResponses };
+}
