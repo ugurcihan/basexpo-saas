@@ -6,34 +6,17 @@ import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
-  LayoutDashboard, Building2, Package, QrCode, Users,
-  TrendingUp, Settings, MessageSquare, Brain, CalendarClock,
-  Store, FileCheck, ChevronDown, Save, Download,
+  Building2, Package, Users,
+  TrendingUp, CalendarClock,
+  FileCheck, ChevronDown, Save, Download,
   Trophy, Target, Handshake, BadgeCheck, XCircle,
   MapPin, Phone, Globe, Briefcase, Tag,
-  Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { updateLeadConversion } from "@/features/leads/roiActions";
 import type { Profile } from "@/types";
 import type { LeadConversion, FairROI } from "@/features/leads/roiActions";
-
-const NAV_ITEMS = [
-  { label: "Panel",               href: "/exhibitor",                    icon: LayoutDashboard },
-  { label: "Marka Profili",       href: "/exhibitor/profile",            icon: Building2 },
-  { label: "QR Yarat",            href: "/exhibitor/qr",                 icon: QrCode },
-  { label: "Ürünlerim",           href: "/exhibitor/products",           icon: Package },
-  { label: "Ziyaretçilerim",      href: "/exhibitor/leads",              icon: Users },
-  { label: "Mesajlar",            href: "/exhibitor/messages",           icon: MessageSquare },
-  { label: "Analiz AI",           href: "/exhibitor/analytics",          icon: Brain },
-  { label: "Yaklaşan Fuarlar",    href: "/exhibitor/upcoming-fairs",     icon: CalendarClock },
-  { label: "Fuar Standlarım",     href: "/exhibitor/my-booths",          icon: Store },
-  { label: "Randevu Talepleri",   href: "/exhibitor/meeting-requests",   icon: CalendarClock },
-  { label: "Satış Pipeline'ı", href: "/exhibitor/pipeline",       icon: Workflow },
-  { label: "ROI Raporu",          href: "/exhibitor/roi-report",         icon: TrendingUp },
-  { label: "Ayarlar",             href: "/exhibitor/settings",           icon: Settings },
-];
 
 const STATUS_CONFIG = {
   lead:            { label: "Lead",            color: "bg-white/10 text-muted-foreground border-white/15" },

@@ -11,8 +11,7 @@ const LINKS = {
     { label: "Ziyaretçiler", href: "/register?role=visitor" },
   ],
   Şirket: [
-    { label: "Hakkımızda", href: "#" },
-    { label: "Blog", href: "#" },
+    { label: "Hakkımızda", href: "/about" },
     { label: "İletişim", href: "/contact" },
   ],
   Hukuki: [
