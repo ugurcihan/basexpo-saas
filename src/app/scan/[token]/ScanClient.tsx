@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { createLeadFromScan } from "@/features/leads/actions";
 import { submitSurveyResponses } from "@/features/surveys/actions";
+import { recordStandaloneInteraction } from "@/features/exhibitors/actions";
 import type { UserRole } from "@/types";
 import type { RewardTierWithStats } from "@/features/loyalty/actions";
 
@@ -42,6 +43,10 @@ interface ExhibitorData {
   linkedin_url: string | null;
   phone: string | null;
   website: string | null;
+  video_url?: string | null;
+  video_points?: number;
+  survey_points?: number;
+  custom_reward?: string | null;
   event: EventRow | EventRow[];
   products: Product[];
   contacts?: Contact[];
@@ -70,6 +75,8 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
   const [surveyAnswers, setSurveyAnswers] = useState<Record<string, string>>({});
   const [surveySubmitted, setSurveySubmitted] = useState(false);
   const [surveyPending, startSurveyTransition] = useTransition();
+  const [videoWatched, setVideoWatched] = useState(false);
+  const [videoPointsMsg, setVideoPointsMsg] = useState<string | null>(null);
 
   const ev = getEvent(exhibitor.event);
   const hasSurvey = survey && survey.is_active && survey.questions.length > 0;
@@ -102,7 +109,20 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
     startSurveyTransition(async () => {
       await submitSurveyResponses(responses);
       setSurveySubmitted(true);
+      if (visitorRole === "visitor") {
+        const r = await recordStandaloneInteraction(exhibitor.id, "survey");
+        if (r.pointsEarned > 0) setVideoPointsMsg(`+${r.pointsEarned} puan kazandınız!`);
+      }
     });
+  }
+
+  async function handleVideoWatch() {
+    window.open(exhibitor.video_url!, "_blank");
+    setVideoWatched(true);
+    if (visitorRole === "visitor") {
+      const r = await recordStandaloneInteraction(exhibitor.id, "video");
+      if (r.pointsEarned > 0) setVideoPointsMsg(`Video için +${r.pointsEarned} puan kazandınız!`);
+    }
   }
 
   return (
@@ -253,6 +273,45 @@ export function ScanClient({ exhibitor, visitorRole, alreadyCheckedIn: initial, 
             </div>
           )}
         </motion.div>
+
+        {/* ── Tanıtım Videosu ───────────────────────────────────── */}
+        {exhibitor.video_url && (
+          <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.05 }}
+            className="glass rounded-2xl border border-brand-cyan/20 p-5 space-y-3"
+          >
+            <div className="flex items-center gap-2">
+              <Play className="w-4 h-4 text-brand-cyan" />
+              <h3 className="font-semibold text-white text-sm">Tanıtım Videosu</h3>
+              {(exhibitor.video_points ?? 0) > 0 && !videoWatched && (
+                <span className="ml-auto text-xs text-brand-cyan font-medium">+{exhibitor.video_points} puan</span>
+              )}
+            </div>
+            {exhibitor.custom_reward && (
+              <div className="flex items-start gap-2 rounded-lg bg-brand-gold/10 border border-brand-gold/20 px-3 py-2">
+                <Trophy className="w-3.5 h-3.5 text-brand-gold flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-brand-gold">{exhibitor.custom_reward}</p>
+              </div>
+            )}
+            {videoPointsMsg && (
+              <div className="flex items-center gap-2 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                <p className="text-xs text-green-400 font-medium">{videoPointsMsg}</p>
+              </div>
+            )}
+            <button
+              onClick={handleVideoWatch}
+              disabled={videoWatched}
+              className={`w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all border ${
+                videoWatched
+                  ? "bg-white/5 border-white/10 text-muted-foreground cursor-default"
+                  : "bg-brand-cyan/10 border-brand-cyan/30 text-brand-cyan hover:bg-brand-cyan/20"
+              }`}
+            >
+              <Play className="w-4 h-4" />
+              {videoWatched ? "Video açıldı" : "Videoyu İzle"}
+            </button>
+          </motion.div>
+        )}
 
         {/* ── Puan Bilgisi ──────────────────────────────────────── */}
         <motion.div initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.06 }}>

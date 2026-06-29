@@ -12,6 +12,7 @@ export async function getExhibitorByToken(token: string) {
     .select(`
       id, company_name, description, logo_url, tags, qr_token, event_id,
       contact_name, job_title, linkedin_url, phone, website,
+      video_url, video_points, survey_points, custom_reward,
       event:events(id, name, location, start_date, end_date, gallery_urls),
       products(id, name, description, image_url, video_url),
       contacts:exhibitor_contacts(id, full_name, email, phone, job_title, contact_type, sort_order)

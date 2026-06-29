@@ -21,7 +21,7 @@ import {
 import {
   updateExhibitorProfile, getExhibitorContacts, upsertContact, deleteContact, getExhibitorProducts,
   createStandaloneExhibitor, deleteStandaloneExhibitor,
-  getStandaloneQRStats, getStandaloneQRExportData,
+  getStandaloneQRStats, getStandaloneQRExportData, recordStandaloneInteraction,
 } from "@/features/exhibitors/actions";
 import {
   createOrGetSurvey, addQuestion, deleteQuestion, toggleSurvey, updateQuestion, getSurveyResults,
@@ -46,7 +46,45 @@ interface ExhibitorRow {
   logo_url: string | null;
   tags: string[];
   description: string;
+  video_url: string | null;
+  video_points: number;
+  survey_points: number;
+  custom_reward: string | null;
   event: EventInfo | EventInfo[];
+}
+
+type ContactDraft = {
+  id?: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  job_title: string;
+  contact_type: "official" | "booth";
+};
+
+function EditContactRow({ c, onChange, onRemove }: {
+  c: ContactDraft;
+  onChange: (patch: Partial<ContactDraft>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-1.5 p-2.5 rounded-lg bg-white/3 border border-white/8">
+      <Input value={c.full_name} onChange={e => onChange({ full_name: e.target.value })}
+        placeholder="Ad Soyad" className="h-7 text-xs col-span-2" />
+      <Input value={c.job_title} onChange={e => onChange({ job_title: e.target.value })}
+        placeholder="Unvan" className="h-7 text-xs" />
+      <Input value={c.email} onChange={e => onChange({ email: e.target.value })}
+        placeholder="E-posta" type="email" className="h-7 text-xs" />
+      <Input value={c.phone} onChange={e => onChange({ phone: e.target.value })}
+        placeholder="Telefon" className="h-7 text-xs" />
+      <Button type="button" size="sm" variant="outline"
+        className="h-7 text-xs border-red-500/20 text-red-400 hover:bg-red-500/10 gap-1 col-span-1"
+        onClick={onRemove}
+      >
+        <X className="w-3 h-3" /> Kaldır
+      </Button>
+    </div>
+  );
 }
 interface Product {
   id: string;
@@ -695,6 +733,14 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
   const [editPhone, setEditPhone] = useState(ex.phone ?? "");
   const [editWebsite, setEditWebsite] = useState(ex.website ?? "");
   const [editCity, setEditCity] = useState(ex.city ?? "");
+  const [editVideoUrl, setEditVideoUrl] = useState(ex.video_url ?? "");
+  const [editVideoPoints, setEditVideoPoints] = useState(ex.video_points ?? 0);
+  const [editSurveyPoints, setEditSurveyPoints] = useState(ex.survey_points ?? 0);
+  const [editCustomReward, setEditCustomReward] = useState(ex.custom_reward ?? "");
+  // Contacts
+  const [contacts, setContacts] = useState<ContactDraft[]>([]);
+  const [deletedContactIds, setDeletedContactIds] = useState<string[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
   const [saving, startSave] = useTransition();
   const [saveErr, setSaveErr] = useState<string | null>(null);
 
@@ -714,6 +760,23 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
   useEffect(() => {
     setUrl(`${window.location.origin}/scan/${ex.qr_token}`);
   }, [ex.qr_token]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    if (contacts.length > 0 || contactsLoading) return;
+    setContactsLoading(true);
+    getExhibitorContacts(ex.id).then(data => {
+      setContacts(data.map(c => ({
+        id: c.id,
+        full_name: c.full_name ?? "",
+        email: c.email ?? "",
+        phone: c.phone ?? "",
+        job_title: c.job_title ?? "",
+        contact_type: (c.contact_type ?? "official") as "official" | "booth",
+      })));
+      setContactsLoading(false);
+    });
+  }, [isEditing, ex.id]);
 
   function copy() {
     if (!url) return;
@@ -737,11 +800,50 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
         contact_name: editContact || null,
         job_title: editJob || null,
         linkedin_url: ex.linkedin_url,
+        video_url: editVideoUrl || null,
+        video_points: editVideoPoints,
+        survey_points: editSurveyPoints,
+        custom_reward: editCustomReward || null,
       });
       if (result.error) { setSaveErr(result.error); return; }
+
+      for (const cid of deletedContactIds) await deleteContact(cid);
+      setDeletedContactIds([]);
+
+      for (let i = 0; i < contacts.length; i++) {
+        const c = contacts[i];
+        if (!c.full_name.trim()) continue;
+        await upsertContact({
+          id: c.id,
+          exhibitor_id: ex.id,
+          full_name: c.full_name,
+          email: c.email || null,
+          phone: c.phone || null,
+          job_title: c.job_title || null,
+          contact_type: c.contact_type,
+          sort_order: i,
+        });
+      }
+
       setIsEditing(false);
+      setContacts([]);
       router.refresh();
     });
+  }
+
+  function addContact(type: "official" | "booth") {
+    const count = contacts.filter(c => c.contact_type === type).length;
+    if (count >= 5) return;
+    setContacts(prev => [...prev, { full_name: "", email: "", phone: "", job_title: "", contact_type: type }]);
+  }
+
+  function updateContact(idx: number, patch: Partial<ContactDraft>) {
+    setContacts(prev => prev.map((c, i) => i === idx ? { ...c, ...patch } : c));
+  }
+
+  function removeContact(idx: number, id?: string) {
+    if (id) setDeletedContactIds(prev => [...prev, id]);
+    setContacts(prev => prev.filter((_, i) => i !== idx));
   }
 
   async function toggleReport() {
@@ -763,8 +865,11 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
   }
 
   function handleQRDownload() {
-    const svg = qrRef.current?.querySelector("svg");
-    if (!svg) return;
+    const svgEl = qrRef.current?.querySelector("svg");
+    if (!svgEl) return;
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(svgEl);
+    const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgStr)}`;
     const canvas = document.createElement("canvas");
     const size = 512;
     canvas.width = size;
@@ -772,19 +877,18 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const img = new window.Image();
-    const svgBlob = new Blob([svg.outerHTML], { type: "image/svg+xml" });
-    const blobUrl = URL.createObjectURL(svgBlob);
     img.onload = () => {
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
-      URL.revokeObjectURL(blobUrl);
       const a = document.createElement("a");
-      a.download = `${ex.company_name}-qr.png`;
+      a.download = `${ex.company_name.replace(/\s+/g, "-")}-qr.png`;
       a.href = canvas.toDataURL("image/png");
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
     };
-    img.src = blobUrl;
+    img.src = dataUri;
   }
 
   function handleExcelExport() {
@@ -897,9 +1001,11 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
       {/* Düzenle formu */}
       {isEditing && (
         <motion.div initial={{ y: 8 }} animate={{ y: 0 }}
-          className="border-t border-white/8 pt-4 space-y-3"
+          className="border-t border-white/8 pt-4 space-y-4"
         >
           <p className="text-xs font-semibold text-white uppercase tracking-wider">QR Bilgilerini Düzenle</p>
+
+          {/* Temel bilgiler */}
           <div className="grid grid-cols-2 gap-2">
             <div className="col-span-2 space-y-1">
               <Label className="text-xs">Firma / Etiket Adı</Label>
@@ -926,12 +1032,98 @@ function StandaloneQRCard({ ex, onDelete }: { ex: ExhibitorRow; onDelete: (id: s
               <Input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} placeholder="https://firmam.com" className="h-8 text-sm" />
             </div>
           </div>
+
+          {/* Tanıtım videosu */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-white">Tanıtım Videosu</Label>
+            <Input value={editVideoUrl} onChange={e => setEditVideoUrl(e.target.value)}
+              placeholder="https://youtube.com/watch?v=... veya Vimeo linki"
+              className="h-8 text-sm" />
+            <p className="text-[11px] text-muted-foreground">Ziyaretçiler QR taradığında bu videoyu görecek.</p>
+          </div>
+
+          {/* Puan & Ödül */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-white">Puan & Ödül Ayarları</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Video izleme puanı</Label>
+                <Input type="number" min={0} max={999} value={editVideoPoints}
+                  onChange={e => setEditVideoPoints(Number(e.target.value))}
+                  placeholder="0" className="h-7 text-xs" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Anket doldurma puanı</Label>
+                <Input type="number" min={0} max={999} value={editSurveyPoints}
+                  onChange={e => setEditSurveyPoints(Number(e.target.value))}
+                  placeholder="0" className="h-7 text-xs" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Özel ödül / teşvik mesajı</Label>
+              <Input value={editCustomReward} onChange={e => setEditCustomReward(e.target.value)}
+                placeholder='Örn: "İlk 10 ankete katılana kahve ısmarlıyoruz!"'
+                className="h-8 text-sm" />
+            </div>
+          </div>
+
+          {/* Firma Yetkilileri */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold text-white">Firma Yetkilileri</Label>
+              <Button type="button" size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-1"
+                disabled={contacts.filter(c => c.contact_type === "official").length >= 5}
+                onClick={() => addContact("official")}
+              >
+                <Plus className="w-3 h-3" /> Ekle
+              </Button>
+            </div>
+            {contactsLoading ? (
+              <div className="h-8 rounded bg-white/5 animate-pulse" />
+            ) : contacts.filter(c => c.contact_type === "official").length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">Henüz yetkili eklenmedi.</p>
+            ) : (
+              <div className="space-y-2">
+                {contacts.map((c, idx) => c.contact_type !== "official" ? null : (
+                  <EditContactRow key={c.id ?? `new-off-${idx}`} c={c}
+                    onChange={patch => updateContact(idx, patch)}
+                    onRemove={() => removeContact(idx, c.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Stant Görevlileri */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold text-white">Stant Görevlileri</Label>
+              <Button type="button" size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-1"
+                disabled={contacts.filter(c => c.contact_type === "booth").length >= 5}
+                onClick={() => addContact("booth")}
+              >
+                <Plus className="w-3 h-3" /> Ekle
+              </Button>
+            </div>
+            {!contactsLoading && contacts.filter(c => c.contact_type === "booth").length === 0 && (
+              <p className="text-[11px] text-muted-foreground">Henüz stant görevlisi eklenmedi.</p>
+            )}
+            {!contactsLoading && (
+              <div className="space-y-2">
+                {contacts.map((c, idx) => c.contact_type !== "booth" ? null : (
+                  <EditContactRow key={c.id ?? `new-booth-${idx}`} c={c}
+                    onChange={patch => updateContact(idx, patch)}
+                    onRemove={() => removeContact(idx, c.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+
           {saveErr && <p className="text-xs text-red-400">{saveErr}</p>}
           <div className="flex gap-2">
             <Button variant="gradient" size="sm" onClick={handleSave} disabled={saving}>
               {saving ? "Kaydediliyor..." : "Kaydet"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setSaveErr(null); }}>İptal</Button>
+            <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setSaveErr(null); setContacts([]); }}>İptal</Button>
           </div>
         </motion.div>
       )}

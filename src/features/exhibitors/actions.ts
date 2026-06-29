@@ -214,6 +214,10 @@ export async function updateExhibitorProfile(input: {
   contact_name?: string | null;
   job_title?: string | null;
   linkedin_url?: string | null;
+  video_url?: string | null;
+  video_points?: number;
+  survey_points?: number;
+  custom_reward?: string | null;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -232,6 +236,10 @@ export async function updateExhibitorProfile(input: {
       contact_name: input.contact_name ?? null,
       job_title: input.job_title ?? null,
       linkedin_url: input.linkedin_url ?? null,
+      video_url: input.video_url ?? null,
+      video_points: input.video_points ?? 0,
+      survey_points: input.survey_points ?? 0,
+      custom_reward: input.custom_reward ?? null,
     })
     .eq("id", input.id)
     .eq("owner_id", user.id);
@@ -251,7 +259,7 @@ export async function getAllMyExhibitorProfiles() {
 
   const { data } = await supabase
     .from("exhibitors")
-    .select("id, company_name, qr_token, contact_name, job_title, linkedin_url, website, phone, city, logo_url, tags, description, event:events(id, name, location, start_date, end_date)")
+    .select("id, company_name, qr_token, contact_name, job_title, linkedin_url, website, phone, city, logo_url, tags, description, video_url, video_points, survey_points, custom_reward, event:events(id, name, location, start_date, end_date)")
     .eq("owner_id", user.id)
     .order("event_id", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -772,4 +780,36 @@ export async function getStandaloneQRExportData(exhibitorId: string): Promise<{
   }
 
   return { scans, surveyResponses };
+}
+
+export async function recordStandaloneInteraction(
+  exhibitorId: string,
+  interaction: "video" | "survey",
+): Promise<{ pointsEarned: number; alreadyDone: boolean; error: string | null }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { pointsEarned: 0, alreadyDone: false, error: "login_required" };
+
+  const { data: exhibitor } = await supabase
+    .from("exhibitors")
+    .select("video_points, survey_points")
+    .eq("id", exhibitorId)
+    .single();
+
+  const pts = interaction === "video"
+    ? (exhibitor?.video_points ?? 0)
+    : (exhibitor?.survey_points ?? 0);
+
+  const { data: inserted, error } = await supabase
+    .from("standalone_interactions")
+    .insert({ exhibitor_id: exhibitorId, visitor_id: user.id, interaction, points: pts })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === "23505") return { pointsEarned: 0, alreadyDone: true, error: null };
+    return { pointsEarned: 0, alreadyDone: false, error: error.message };
+  }
+
+  return { pointsEarned: inserted ? pts : 0, alreadyDone: !inserted, error: null };
 }
