@@ -520,7 +520,17 @@ export interface InvitationRow {
   message: string | null;
   status: "pending" | "accepted" | "rejected";
   created_at: string;
-  event: { id: string; name: string; start_date: string; location: string } | null;
+  event: {
+    id: string;
+    name: string;
+    start_date: string;
+    end_date: string | null;
+    location: string;
+    description: string | null;
+    cover_url: string | null;
+    capacity: number | null;
+    category: string | null;
+  } | null;
   organizer: { full_name: string | null; email: string } | null;
 }
 
@@ -593,7 +603,7 @@ export async function getMyInvitations(): Promise<InvitationRow[]> {
     .from("exhibitor_invitations")
     .select(`
       id, event_id, from_organizer_id, to_user_id, message, status, created_at,
-      event:events(id, name, start_date, location),
+      event:events(id, name, start_date, end_date, location, description, cover_url, capacity, category),
       organizer:profiles!exhibitor_invitations_from_organizer_id_fkey(full_name, email)
     `)
     .eq("to_user_id", user.id)
@@ -637,8 +647,10 @@ export async function respondToInvitation(
 }
 
 function normalize(row: Record<string, unknown>): InvitationRow {
-  const ev = row.event as { id: string; name: string; start_date: string; location: string } | Array<{ id: string; name: string; start_date: string; location: string }> | null;
-  const org = row.organizer as { full_name: string | null; email: string } | Array<{ full_name: string | null; email: string }> | null;
+  type EvType = { id: string; name: string; start_date: string; end_date: string | null; location: string; description: string | null; cover_url: string | null; capacity: number | null; category: string | null };
+  type OrgType = { full_name: string | null; email: string };
+  const ev = row.event as EvType | EvType[] | null;
+  const org = row.organizer as OrgType | OrgType[] | null;
   return {
     id: row.id as string,
     event_id: row.event_id as string,

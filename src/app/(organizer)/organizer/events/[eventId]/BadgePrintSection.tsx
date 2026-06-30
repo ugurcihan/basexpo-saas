@@ -13,7 +13,7 @@ import { QRCodeCanvas } from "qrcode.react";
 interface Exhibitor  { id: string; company_name: string }
 interface BoothRow   { id: string; code: string; exhibitor_id: string | null }
 interface HallRow    { id: string; name: string; booths: BoothRow[] }
-interface StaffRow   { id: string; name: string; role: string }
+interface StaffRow   { id: string; name: string; role: string; sub?: string }
 interface Employee   { id: string; name: string; role: string }
 
 interface BadgeElement {
@@ -376,6 +376,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
   const [staff, setStaff]         = useState<StaffRow[]>([]);
   const [draftName, setDraftName]   = useState("");
   const [draftRole, setDraftRole]   = useState("");
+  const [draftSub, setDraftSub]     = useState("");
   const [staffSubLabel, setStaffSubLabel] = useState("PERSONEL");
 
   /* -- Firma çalışan -- */
@@ -467,8 +468,8 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
   /* ── Personel ────────────────────────────────────────────── */
   function addStaff() {
     if (!draftName.trim()) return;
-    setStaff(prev => [...prev, { id: crypto.randomUUID(), name: draftName.trim(), role: draftRole.trim() }]);
-    setDraftName(""); setDraftRole("");
+    setStaff(prev => [...prev, { id: crypto.randomUUID(), name: draftName.trim(), role: draftRole.trim(), sub: draftSub.trim() || undefined }]);
+    setDraftName(""); setDraftRole(""); setDraftSub("");
   }
   function removeStaff(id: string) { setStaff(prev => prev.filter(s => s.id !== id)); }
 
@@ -523,6 +524,10 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         imageTimeout: 5000,
         width: BADGE_W,
         height: BADGE_H,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: BADGE_W,
+        windowHeight: BADGE_H,
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -542,7 +547,7 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
 
   async function downloadStaffPDF() {
     await generatePDF(
-      staff.map(s => ({ name: s.name, role: s.role || "Organizasyon Ekibi", sub: staffSubLabel || "PERSONEL" })),
+      staff.map(s => ({ name: s.name, role: s.role || "Organizasyon Ekibi", sub: s.sub || staffSubLabel || "PERSONEL" })),
       `${eventName}_personel_yaka.pdf`
     );
   }
@@ -588,14 +593,16 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
         <QRCodeCanvas value={`${qrOrigin}/e/${eventId}`} size={88} level="M" />
       </div>
 
-      {/* ── Gizli capture div — html2canvas için
-           visibility:hidden boş canvas verir; position:fixed + uzak koordinat kullan  ── */}
+      {/* ── Gizli capture div — html2canvas için ── */}
       <div style={{
         position: "fixed",
         left: -9999, top: 0,
+        width: BADGE_W,
+        height: BADGE_H,
+        overflow: "hidden",
         pointerEvents: "none",
       }}>
-        <div ref={captureRef}>
+        <div ref={captureRef} style={{ width: BADGE_W, height: BADGE_H }}>
           <BadgeHTML
             template={template}
             eventName={eventName}
@@ -811,13 +818,18 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
           )}
         </div>
 
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-2 mb-3 flex-wrap">
           <input value={draftName} onChange={e => setDraftName(e.target.value)} onKeyDown={e => e.key === "Enter" && addStaff()}
-            placeholder="Ad Soyad"
-            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50" />
+            placeholder="İsim Soyisim"
+            className="flex-1 min-w-[120px] px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50" />
           <input value={draftRole} onChange={e => setDraftRole(e.target.value)} onKeyDown={e => e.key === "Enter" && addStaff()}
-            placeholder="Görev"
-            className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50" />
+            placeholder="Ünvan / Görev"
+            className="flex-1 min-w-[120px] px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50" />
+          <input value={draftSub} onChange={e => setDraftSub(e.target.value.toUpperCase())} onKeyDown={e => e.key === "Enter" && addStaff()}
+            placeholder={staffSubLabel || "PERSONEL"}
+            maxLength={20}
+            className="w-28 min-w-[90px] px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-brand-cyan/50 uppercase tracking-widest"
+          />
           <button onClick={addStaff} disabled={!draftName.trim()}
             className="px-3 py-2 rounded-xl bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan hover:bg-brand-cyan/30 transition-colors disabled:opacity-40">
             <Plus className="w-4 h-4" />
@@ -832,6 +844,9 @@ export function BadgePrintSection({ eventId, eventName, exhibitors, halls }: Pro
               <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/3 border border-white/6 text-xs">
                 <span className="flex-1 text-white font-medium truncate">{s.name}</span>
                 <span className="text-muted-foreground truncate">{s.role || "Organizasyon Ekibi"}</span>
+                {(s.sub || staffSubLabel) && (
+                  <span className="text-brand-cyan/70 font-bold tracking-widest uppercase flex-shrink-0">{s.sub || staffSubLabel}</span>
+                )}
                 <button onClick={() => removeStaff(s.id)} className="text-muted-foreground/40 hover:text-red-400 transition-colors flex-shrink-0">
                   <Trash2 className="w-3 h-3" />
                 </button>

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import {
   CalendarClock, MapPin, Calendar, CheckCircle2,
   XCircle, Clock, UserCircle2, QrCode, X, Send,
-  Users, Tag, Info, Mail, Building2, CreditCard,
+  Users, Tag, Info, Mail, Building2, CreditCard, ExternalLink,
 } from "lucide-react";
 import { respondToMeeting } from "@/features/connections/actions";
 import { applyToFair, respondToInvitation } from "@/features/exhibitors/actions";
@@ -190,6 +190,160 @@ function EventDetailModal({
   );
 }
 
+// ── Invitation detail modal ─────────────────────────────────────
+function InvitationDetailModal({
+  inv,
+  onClose,
+  onAccept,
+  onReject,
+  isPending,
+}: {
+  inv: InvitationRow;
+  onClose: () => void;
+  onAccept: () => void;
+  onReject: () => void;
+  isPending: boolean;
+}) {
+  const organizer = inv.organizer;
+  const ev = inv.event;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 16 }}
+        animate={{ y: 0 }}
+        className="w-full max-w-lg glass rounded-2xl border border-white/12 shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cover / Header */}
+        {ev?.cover_url ? (
+          <div className="h-40 relative overflow-hidden">
+            <img src={ev.cover_url} alt={ev.name} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+            <div className="absolute bottom-3 left-4">
+              <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wider mb-0.5">Fuar Daveti</p>
+              <h2 className="font-display text-xl font-bold text-white">{ev.name}</h2>
+            </div>
+            <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white/80 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="h-16 bg-gradient-to-r from-brand-indigo/30 to-brand-violet/20 relative flex items-center px-5">
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Fuar Daveti</p>
+              <h2 className="font-display text-lg font-bold text-white">{ev?.name ?? "Fuar"}</h2>
+            </div>
+            <button onClick={onClose} className="absolute top-3 right-3 text-muted-foreground hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Fuar bilgileri */}
+          {ev && (
+            <div className="flex flex-wrap gap-2.5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {ev.location}</span>
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                {formatDate(ev.start_date)}
+                {ev.end_date && ` – ${formatDate(ev.end_date)}`}
+              </span>
+              {ev.capacity && (
+                <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {ev.capacity} kişi</span>
+              )}
+              {ev.category && (
+                <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> {ev.category}</span>
+              )}
+            </div>
+          )}
+
+          {/* Açıklama */}
+          {ev?.description && (
+            <div className="glass rounded-xl border border-white/8 p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" /> Fuar Hakkında
+              </p>
+              <p className="text-sm text-white/80 leading-relaxed">{ev.description}</p>
+            </div>
+          )}
+
+          {/* Davet mesajı */}
+          {inv.message && (
+            <div className="glass rounded-xl border border-brand-indigo/20 p-4">
+              <p className="text-xs font-semibold text-brand-indigo-light uppercase tracking-wider mb-2">Organizatör Mesajı</p>
+              <p className="text-sm text-white/80 italic">&quot;{inv.message}&quot;</p>
+            </div>
+          )}
+
+          {/* Organizatör */}
+          {organizer && (
+            <div className="glass rounded-xl border border-white/8 p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organizatör</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-brand-indigo/15 border border-brand-indigo/20 flex items-center justify-center flex-shrink-0">
+                  <UserCircle2 className="w-5 h-5 text-brand-indigo-light" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">{organizer.full_name ?? "Organizatör"}</p>
+                  {organizer.email && (
+                    <a
+                      href={`mailto:${organizer.email}`}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-brand-indigo-light transition-colors mt-0.5"
+                    >
+                      <Mail className="w-3 h-3" /> {organizer.email}
+                    </a>
+                  )}
+                </div>
+                <Link
+                  href={`/o/${inv.from_organizer_id}`}
+                  target="_blank"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-brand-indigo/15 border border-brand-indigo/25 text-brand-indigo-light hover:bg-brand-indigo/25 transition-colors flex-shrink-0"
+                >
+                  <ExternalLink className="w-3 h-3" /> Profil
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        {inv.status === "pending" ? (
+          <div className="px-5 py-4 border-t border-white/8 flex gap-3">
+            <button
+              onClick={onAccept}
+              disabled={isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-indigo to-brand-violet text-white text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Kabul Et & Başvur
+            </button>
+            <button
+              onClick={onReject}
+              disabled={isPending}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-red-500/20 text-red-400 text-sm hover:bg-red-500/10 transition-colors disabled:opacity-50"
+            >
+              <XCircle className="w-4 h-4" /> Reddet
+            </button>
+            <button onClick={onClose} className="px-4 py-2.5 rounded-xl border border-white/10 text-muted-foreground text-sm hover:text-white hover:border-white/20 transition-colors">
+              Kapat
+            </button>
+          </div>
+        ) : (
+          <div className="px-5 py-4 border-t border-white/8 flex justify-end">
+            <button onClick={onClose} className="px-5 py-2 rounded-xl border border-white/10 text-muted-foreground text-sm hover:text-white hover:border-white/20 transition-colors">
+              Kapat
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Main client ─────────────────────────────────────────────────
 export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequests, invitations: initialInvitations }: Props) {
   const router = useRouter();
@@ -203,6 +357,7 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
   const [applyError, setApplyError] = useState<string | null>(null);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [selectedEvent, setSelectedEvent] = useState<UpcomingEvent | null>(null);
+  const [selectedInvitation, setSelectedInvitation] = useState<InvitationRow | null>(null);
 
   const eventExhibitors = myExhibitors.filter(ex => getEvent(ex.event) !== null);
 
@@ -421,31 +576,40 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
 
                 {pendingInvitations.map((inv, i) => (
                   <motion.div key={inv.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.05 }}
-                    className="glass rounded-xl border border-brand-indigo/25 p-4 space-y-3"
+                    className="glass rounded-xl border border-brand-indigo/25 p-4 space-y-3 cursor-pointer hover:border-brand-indigo/40 transition-colors"
+                    onClick={() => setSelectedInvitation(inv)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-brand-indigo/15 border border-brand-indigo/20 flex items-center justify-center flex-shrink-0">
-                        <Mail className="w-4 h-4 text-brand-indigo-light" />
-                      </div>
+                      {inv.event?.cover_url ? (
+                        <img src={inv.event.cover_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-white/10" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-brand-indigo/15 border border-brand-indigo/20 flex items-center justify-center flex-shrink-0">
+                          <Mail className="w-4 h-4 text-brand-indigo-light" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-white text-sm">{inv.event?.name ?? "Fuar"}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Calendar className="w-3 h-3" />
                           {inv.event?.start_date ? formatDate(inv.event.start_date) : ""}
-                          {inv.event?.location && <> · {inv.event.location}</>}
+                          {inv.event?.location && <> · <MapPin className="w-3 h-3" /> {inv.event.location}</>}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Organizatör: {inv.organizer?.full_name ?? "Bilinmiyor"}
+                          <UserCircle2 className="w-3 h-3 inline mr-1" />
+                          {inv.organizer?.full_name ?? "Bilinmiyor"}
                         </p>
                         {inv.message && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">&quot;{inv.message}&quot;</p>
+                          <p className="text-xs text-muted-foreground/70 mt-1 italic line-clamp-1">&quot;{inv.message}&quot;</p>
                         )}
                       </div>
-                      <Badge className="text-xs bg-brand-indigo/15 border-brand-indigo/25 text-brand-indigo-light flex-shrink-0">
-                        Davet
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <Badge className="text-xs bg-brand-indigo/15 border-brand-indigo/25 text-brand-indigo-light">Davet</Badge>
+                        <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
+                          <Info className="w-2.5 h-2.5" /> detay
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                       <Button size="sm" variant="gradient" className="flex-1" disabled={isPending}
                         onClick={() => handleRespondInvitation(inv.id, "accepted")}
                       >
@@ -462,7 +626,8 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
 
                 {pastInvitations.map((inv, i) => (
                   <motion.div key={inv.id} initial={{ y: 12 }} animate={{ y: 0 }} transition={{ delay: i * 0.04 }}
-                    className="glass rounded-xl border border-white/8 p-4 flex items-center gap-3"
+                    className="glass rounded-xl border border-white/8 p-4 flex items-center gap-3 cursor-pointer hover:border-white/14 transition-colors"
+                    onClick={() => setSelectedInvitation(inv)}
                   >
                     <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
                       <Mail className="w-4 h-4 text-muted-foreground" />
@@ -588,6 +753,17 @@ export function FairsClient({ profile, myExhibitors, upcomingEvents, meetingRequ
           onClose={() => setSelectedEvent(null)}
           onApply={(ev) => { setApplyingTo(ev); setApplyError(null); }}
           alreadyApplied={myEventIds.has(selectedEvent.id) || appliedIds.has(selectedEvent.id)}
+        />
+      )}
+
+      {/* Invitation detail modal */}
+      {selectedInvitation && (
+        <InvitationDetailModal
+          inv={selectedInvitation}
+          onClose={() => setSelectedInvitation(null)}
+          onAccept={() => { handleRespondInvitation(selectedInvitation.id, "accepted"); setSelectedInvitation(null); }}
+          onReject={() => { handleRespondInvitation(selectedInvitation.id, "rejected"); setSelectedInvitation(null); }}
+          isPending={isPending}
         />
       )}
 
