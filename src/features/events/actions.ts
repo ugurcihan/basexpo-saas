@@ -126,6 +126,7 @@ export interface EventDetailsInput {
   youtube_url?: string;
   social_links?: { website?: string; instagram?: string; twitter?: string; linkedin?: string };
   banner_url?: string;
+  cover_url?: string | null;
 }
 
 export async function updateEventDetails(input: EventDetailsInput) {

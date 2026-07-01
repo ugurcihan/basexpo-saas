@@ -517,6 +517,7 @@ interface EventWithHalls {
   location: string;
   status: EventStatus;
   organizer_id: string;
+  cover_url: string | null;
   gallery_urls: string[];
   halls: HallRow[];
 }
@@ -570,6 +571,10 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
   // Gallery state
   const [galleryUrls, setGalleryUrls]   = useState<string[]>(initialEvent.gallery_urls ?? []);
   const [galleryInput, setGalleryInput] = useState("");
+
+  // Cover photo state
+  const [coverUrl, setCoverUrl]     = useState<string>(initialEvent.cover_url ?? "");
+  const [coverSaved, setCoverSaved] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("genel");
@@ -755,6 +760,15 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
     const next = galleryUrls.filter((u) => u !== url);
     setGalleryUrls(next);
     await updateEventGallery(event.id, next);
+  }
+
+  async function handleSaveCoverUrl() {
+    startTransition(async () => {
+      const { updateEventDetails } = await import("@/features/events/actions");
+      await updateEventDetails({ id: event.id, cover_url: coverUrl.trim() || null });
+      setCoverSaved(true);
+      setTimeout(() => setCoverSaved(false), 2000);
+    });
   }
 
   const status = STATUS_MAP[event.status];
@@ -1046,7 +1060,35 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
 
           {/* GALERİ */}
           {activeTab === "galeri" && (
-            <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }} className="space-y-4">
+              {/* Cover photo */}
+              <div className="glass rounded-2xl border border-white/8 p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ImagePlus className="w-4 h-4 text-brand-gold" />
+                  <p className="text-sm font-semibold text-white">Kapak Fotoğrafı</p>
+                  <span className="text-xs text-muted-foreground">Ziyaretçilerin göreceği ana görsel</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.com/cover.jpg"
+                    value={coverUrl}
+                    onChange={(e) => setCoverUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveCoverUrl()}
+                    className="flex-1 font-mono text-xs"
+                  />
+                  <Button variant="gradient" size="sm" onClick={handleSaveCoverUrl} disabled={isPending}>
+                    {coverSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    {coverSaved ? "Kaydedildi" : "Kaydet"}
+                  </Button>
+                </div>
+                {coverUrl && (
+                  <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-white/5 max-w-sm">
+                    <img src={coverUrl} alt="Kapak fotoğrafı" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+
+              {/* Gallery */}
               <div className="glass rounded-2xl border border-white/8 p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <Images className="w-4 h-4 text-brand-violet-light" />
