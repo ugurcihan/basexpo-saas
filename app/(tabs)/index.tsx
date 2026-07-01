@@ -1,64 +1,149 @@
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Image, ActivityIndicator, RefreshControl, Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
-import { registerForPushNotifications, savePushToken } from "@/lib/notifications";
-import { Zap, QrCode, BookOpen, Bell } from "lucide-react-native";
+import { MapPin, Calendar } from "lucide-react-native";
+import { fetchPublishedEvents, CATEGORIES, type EventListItem } from "@/lib/api/events";
+import GradientOverlay from "@/components/GradientOverlay";
 
-type Profile = {
-  id: string;
-  full_name: string | null;
-  email: string;
-  role: string;
-};
+const { width: SCREEN_W } = Dimensions.get("window");
+const CARD_W = SCREEN_W * 0.72;
+const FEATURED_H = 200;
+const LIST_H = 160;
 
-type StatRow = { label: string; value: string; color: string };
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("tr-TR", { day: "2-digit", month: "short" }).toUpperCase();
+}
 
-export default function HomeScreen() {
+function formatFullDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const letter = (name ?? "?").charAt(0).toUpperCase();
+  return (
+    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
+      <Text style={[styles.avatarText, { fontSize: size * 0.42 }]}>{letter}</Text>
+    </View>
+  );
+}
+
+function StatusChip({ status }: { status: string }) {
+  const config = {
+    confirmed: { bg: Colors.green + "25", text: Colors.green, label: "Kayıtlısın ✓" },
+    pending_approval: { bg: Colors.amber + "25", text: Colors.amber, label: "İncelemede" },
+    waitlisted: { bg: Colors.gold + "25", text: Colors.gold, label: "Bekleme Listesi" },
+  }[status] ?? { bg: Colors.muted + "20", text: Colors.muted, label: status };
+
+  return (
+    <View style={[styles.statusChip, { backgroundColor: config.bg }]}>
+      <Text style={[styles.statusChipText, { color: config.text }]}>{config.label}</Text>
+    </View>
+  );
+}
+
+function EventCard({
+  event,
+  regStatus,
+  onPress,
+  wide = false,
+}: {
+  event: EventListItem;
+  regStatus?: string;
+  onPress: () => void;
+  wide?: boolean;
+}) {
+  const cardW = wide ? CARD_W : SCREEN_W - 40;
+  const cardH = wide ? FEATURED_H : LIST_H;
+
+  return (
+    <TouchableOpacity
+      style={[styles.eventCard, { width: cardW }]}
+      onPress={onPress}
+      activeOpacity={0.88}
+    >
+      <View style={{ height: cardH, borderRadius: 16, overflow: "hidden" }}>
+        {event.cover_url ? (
+          <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.card2 }]} />
+        )}
+        <GradientOverlay height={cardH * 0.65} />
+
+        {/* Date badge */}
+        <View style={styles.dateBadge}>
+          <Text style={styles.dateBadgeText}>{formatDate(event.start_date)}</Text>
+        </View>
+
+        {/* Bottom overlay content */}
+        <View style={styles.cardBottom}>
+          {event.category && (
+            <View style={styles.categoryPill}>
+              <Text style={styles.categoryPillText}>{event.category}</Text>
+            </View>
+          )}
+          <Text style={styles.cardTitle} numberOfLines={2}>{event.name}</Text>
+          <View style={styles.cardLocationRow}>
+            <MapPin color={Colors.muted} size={12} />
+            <Text style={styles.cardLocation} numberOfLines={1}>{event.location}</Text>
+          </View>
+        </View>
+      </View>
+
+      {regStatus && (
+        <View style={{ paddingHorizontal: 4, paddingTop: 8 }}>
+          <StatusChip status={regStatus} />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+export default function DiscoverScreen() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [stats, setStats] = useState<StatRow[]>([]);
-  const [notifications, setNotifications] = useState<{ id: string; message: string; created_at: string }[]>([]);
+  const [events, setEvents] = useState<EventListItem[]>([]);
+  const [myRegs, setMyRegs] = useState<Record<string, string>>({});
+  const [profile, setProfile] = useState<{ full_name: string | null; id: string } | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
 
-    const [profileRes, leadsRes, pointsRes, notifRes] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, email, role").eq("id", user.id).single(),
-      supabase.from("leads").select("id", { count: "exact" }).eq("visitor_id", user.id),
-      supabase.from("loyalty_points").select("points").eq("visitor_id", user.id),
-      supabase.from("notifications").select("id, message, created_at").eq("recipient_id", user.id).eq("is_read", false).order("created_at", { ascending: false }).limit(5),
+    const [eventsData, profileRes, regsRes] = await Promise.all([
+      fetchPublishedEvents(activeCategory),
+      supabase.from("profiles").select("id, full_name").eq("id", user.id).single(),
+      supabase.from("event_registrations").select("event_id, status").eq("visitor_id", user.id),
     ]);
 
-    if (profileRes.data) {
-      setProfile(profileRes.data);
-      // Register push token
-      const token = await registerForPushNotifications();
-      if (token) await savePushToken(user.id, token);
+    setEvents(eventsData);
+    if (profileRes.data) setProfile(profileRes.data as { full_name: string | null; id: string });
+
+    const regMap: Record<string, string> = {};
+    for (const r of regsRes.data ?? []) {
+      regMap[r.event_id] = r.status;
     }
-
-    const totalPoints = (pointsRes.data ?? []).reduce((s, r) => s + (r.points ?? 0), 0);
-
-    setStats([
-      { label: "Ziyaret Edilen Firma", value: String(leadsRes.count ?? 0), color: Colors.indigo },
-      { label: "Toplam Puan", value: String(totalPoints), color: Colors.gold },
-      { label: "Bildirim", value: String(notifRes.data?.length ?? 0), color: Colors.cyan },
-    ]);
-
-    setNotifications(notifRes.data ?? []);
+    setMyRegs(regMap);
     setLoading(false);
     setRefreshing(false);
   }
 
-  useEffect(() => { loadData(); }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [activeCategory])
+  );
+
+  const firstName = profile?.full_name?.split(" ")[0] ?? "Ziyaretçi";
+  const featured = events.slice(0, 4);
+  const upcoming = events.slice(0, 10);
 
   if (loading) {
     return (
@@ -68,65 +153,98 @@ export default function HomeScreen() {
     );
   }
 
-  const firstName = profile?.full_name?.split(" ")[0] ?? "Ziyaretçi";
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={Colors.indigo} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); loadData(); }}
+            tintColor={Colors.indigo}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Merhaba, {firstName} 👋</Text>
-            <Text style={styles.subtitle}>Fuarları keşfetmeye hazır mısın?</Text>
+            <Text style={styles.greeting}>Merhaba, {firstName}</Text>
+            <Text style={styles.subtitle}>Etkinlikleri keşfet</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
-          </View>
+          <Avatar name={firstName} size={42} />
         </View>
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          {stats.map(s => (
-            <View key={s.label} style={[styles.statCard, { borderColor: s.color + "30" }]}>
-              <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
+        {/* Category filter */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryContainer}
+        >
+          <TouchableOpacity
+            style={[styles.categoryPillBtn, activeCategory === null && styles.categoryPillActive]}
+            onPress={() => setActiveCategory(null)}
+          >
+            <Text style={[styles.categoryPillBtnText, activeCategory === null && styles.categoryPillBtnTextActive]}>
+              Tümü
+            </Text>
+          </TouchableOpacity>
+          {CATEGORIES.map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.categoryPillBtn, activeCategory === cat && styles.categoryPillActive]}
+              onPress={() => setActiveCategory(cat === activeCategory ? null : cat)}
+            >
+              <Text style={[styles.categoryPillBtnText, activeCategory === cat && styles.categoryPillBtnTextActive]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
-        {/* Quick actions */}
-        <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
-        <View style={styles.actionsGrid}>
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/scan")}>
-            <QrCode color={Colors.indigo} size={28} />
-            <Text style={styles.actionLabel}>QR Tara</Text>
-            <Text style={styles.actionDesc}>Firma QR'ı okut</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/contacts")}>
-            <BookOpen color={Colors.cyan} size={28} />
-            <Text style={styles.actionLabel}>Kartvizitler</Text>
-            <Text style={styles.actionDesc}>Ziyaret ettiğin firmalar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/loyalty")}>
-            <Zap color={Colors.gold} size={28} />
-            <Text style={styles.actionLabel}>Puanlarım</Text>
-            <Text style={styles.actionDesc}>Ödül kazan</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent notifications */}
-        {notifications.length > 0 && (
+        {events.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Calendar color={Colors.muted} size={48} />
+            <Text style={styles.emptyText}>Bu kategoride etkinlik bulunamadı.</Text>
+          </View>
+        ) : (
           <>
-            <Text style={styles.sectionTitle}>Son Bildirimler</Text>
-            {notifications.map(n => (
-              <View key={n.id} style={styles.notifCard}>
-                <Bell color={Colors.indigo} size={16} />
-                <Text style={styles.notifText} numberOfLines={2}>{n.message}</Text>
-              </View>
-            ))}
+            {/* Featured / Sizin İçin */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Sizin İçin Seçilenler</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+              style={styles.featuredScroll}
+            >
+              {featured.map(event => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  regStatus={myRegs[event.id]}
+                  wide
+                  onPress={() => router.push(`/events/${event.id}` as any)}
+                />
+              ))}
+            </ScrollView>
+
+            {/* Upcoming */}
+            <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+              <Text style={styles.sectionTitle}>Yaklaşan Etkinlikler</Text>
+            </View>
+            <View style={styles.listContainer}>
+              {upcoming.map(event => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  regStatus={myRegs[event.id]}
+                  onPress={() => router.push(`/events/${event.id}` as any)}
+                />
+              ))}
+            </View>
           </>
         )}
       </ScrollView>
@@ -136,21 +254,47 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
-  scroll: { padding: 20, paddingBottom: 40 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
+  scroll: { paddingBottom: 40 },
+  header: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20,
+  },
   greeting: { fontSize: 22, fontWeight: "800", color: Colors.white },
   subtitle: { fontSize: 13, color: Colors.muted, marginTop: 2 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.indigo + "30", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.indigo + "50" },
-  avatarText: { fontSize: 18, fontWeight: "700", color: Colors.indigo },
-  statsRow: { flexDirection: "row", gap: 10, marginBottom: 28 },
-  statCard: { flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 14, alignItems: "center", borderWidth: 1 },
-  statValue: { fontSize: 24, fontWeight: "800", marginBottom: 2 },
-  statLabel: { fontSize: 10, color: Colors.muted, textAlign: "center", fontWeight: "600" },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: Colors.white, marginBottom: 12 },
-  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
-  actionCard: { backgroundColor: Colors.card, borderRadius: 16, padding: 16, width: "31%", borderWidth: 1, borderColor: Colors.border, gap: 8 },
-  actionLabel: { fontSize: 13, fontWeight: "700", color: Colors.white },
-  actionDesc: { fontSize: 11, color: Colors.muted },
-  notifCard: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: Colors.card, borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.border },
-  notifText: { flex: 1, fontSize: 13, color: Colors.white, lineHeight: 18 },
+  avatar: { backgroundColor: Colors.indigo + "30", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.indigo + "50" },
+  avatarText: { fontWeight: "700", color: Colors.indigo },
+  categoryScroll: { marginBottom: 8 },
+  categoryContainer: { paddingHorizontal: 20, gap: 8 },
+  categoryPillBtn: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border,
+  },
+  categoryPillActive: { backgroundColor: Colors.indigo + "20", borderColor: Colors.indigo + "60" },
+  categoryPillBtnText: { fontSize: 13, fontWeight: "600", color: Colors.muted },
+  categoryPillBtnTextActive: { color: Colors.indigoLight },
+  sectionHeader: { paddingHorizontal: 20, marginBottom: 14 },
+  sectionTitle: { fontSize: 17, fontWeight: "800", color: Colors.white },
+  featuredScroll: { marginBottom: 4 },
+  listContainer: { paddingHorizontal: 20, gap: 12 },
+  eventCard: { },
+  cardBottom: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 12, gap: 4 },
+  dateBadge: {
+    position: "absolute", top: 10, right: 10,
+    backgroundColor: Colors.bg + "cc", borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  dateBadgeText: { fontSize: 11, fontWeight: "700", color: Colors.white },
+  categoryPill: {
+    backgroundColor: Colors.indigo + "25", borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3, alignSelf: "flex-start",
+  },
+  categoryPillText: { fontSize: 11, fontWeight: "700", color: Colors.indigoLight },
+  cardTitle: { fontSize: 15, fontWeight: "800", color: Colors.white },
+  cardLocationRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  cardLocation: { fontSize: 11, color: Colors.muted, flex: 1 },
+  statusChip: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusChipText: { fontSize: 11, fontWeight: "700" },
+  emptyState: { alignItems: "center", paddingVertical: 60, gap: 12, paddingHorizontal: 20 },
+  emptyText: { fontSize: 14, color: Colors.muted, textAlign: "center" },
 });

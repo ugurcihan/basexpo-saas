@@ -4,11 +4,13 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
+import SocialSignInButtons from "@/components/SocialSignInButtons";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,11 @@ export default function LoginScreen() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
-    if (error) Alert.alert("Giriş Hatası", error.message);
+    if (error) {
+      Alert.alert("Giriş Hatası", error.message);
+    } else {
+      router.replace("/(tabs)");
+    }
   }
 
   return (
@@ -66,6 +72,8 @@ export default function LoginScreen() {
             <Text style={styles.linkText}>Hesabın yok mu? <Text style={styles.linkBold}>Kayıt Ol</Text></Text>
           </TouchableOpacity>
         </Link>
+
+        <SocialSignInButtons onSuccess={() => router.replace("/(tabs)")} />
       </View>
     </KeyboardAvoidingView>
   );

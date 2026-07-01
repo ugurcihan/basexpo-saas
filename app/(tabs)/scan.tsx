@@ -5,7 +5,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
-import { ScanLine, CheckCircle } from "lucide-react-native";
+import { ScanLine, CheckCircle, QrCode } from "lucide-react-native";
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -14,28 +14,33 @@ export default function ScanScreen() {
   const router = useRouter();
   const lastScan = useRef<string>("");
 
+  function reset() {
+    setScanned(false);
+    setProcessing(false);
+    lastScan.current = "";
+  }
+
   async function handleBarCodeScanned({ data }: { data: string }) {
     if (scanned || processing || data === lastScan.current) return;
     lastScan.current = data;
     setScanned(true);
     setProcessing(true);
 
-    // Extract token from URL: /scan/TOKEN or /scan/booth/TOKEN
-    const match = data.match(/\/scan\/(?:booth\/)?([a-zA-Z0-9_-]+)$/);
+    // URL'den token çıkar — örn: https://domain.com/scan/abc123 veya /scan/booth/abc123
+    const match = data.match(/\/scan\/(?:booth\/)?([a-zA-Z0-9_-]+)\/?(?:\?.*)?$/);
     if (!match) {
-      Alert.alert("Geçersiz QR", "Bu QR kodu BasExpo'ya ait değil.", [
-        { text: "Tekrar Dene", onPress: () => { setScanned(false); setProcessing(false); lastScan.current = ""; } },
-      ]);
+      Alert.alert(
+        "Geçersiz QR",
+        `Bu QR kodu BasExpo'ya ait değil.\n\nOkunan: ${data}`,
+        [{ text: "Tekrar Dene", onPress: reset }],
+      );
       return;
     }
 
     const token = match[1];
-
-    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setScanned(false); setProcessing(false); return; }
+    if (!user) { reset(); return; }
 
-    // Look up exhibitor by token
     const { data: exhibitor } = await supabase
       .from("exhibitors")
       .select("id, company_name, event_id")
@@ -43,26 +48,25 @@ export default function ScanScreen() {
       .single();
 
     if (!exhibitor) {
-      Alert.alert("Bulunamadı", "Bu QR kodu geçerli değil.", [
-        { text: "Tekrar Dene", onPress: () => { setScanned(false); setProcessing(false); lastScan.current = ""; } },
-      ]);
+      Alert.alert(
+        "Bulunamadı",
+        `Token "${token}" ile eşleşen firma bulunamadı.`,
+        [{ text: "Tekrar Dene", onPress: reset }],
+      );
       return;
     }
 
-    // Create lead
     await supabase.from("leads").upsert(
       { visitor_id: user.id, exhibitor_id: exhibitor.id, source: "qr", score: 50 },
       { onConflict: "visitor_id,exhibitor_id" },
     );
 
-    // Log qr_scan
     await supabase.from("qr_scans").insert({
       visitor_id: user.id,
       exhibitor_id: exhibitor.id,
       event_id: exhibitor.event_id ?? null,
     });
 
-    // Award loyalty points (booth_visit)
     await supabase.from("loyalty_points").upsert(
       { visitor_id: user.id, exhibitor_id: exhibitor.id, points: 20, reason: "booth_visit", event_id: exhibitor.event_id ?? null },
       { onConflict: "visitor_id,exhibitor_id,reason" },
@@ -71,11 +75,11 @@ export default function ScanScreen() {
     setProcessing(false);
 
     Alert.alert(
-      "✅ Başarılı!",
-      `${exhibitor.company_name} firması kartvizit defterine eklendi. +20 puan kazandın!`,
+      "Başarılı!",
+      `${exhibitor.company_name} kartvizit defterine eklendi. +20 puan!`,
       [
-        { text: "Kartvizite Git", onPress: () => { setScanned(false); lastScan.current = ""; router.push("/(tabs)/contacts"); } },
-        { text: "Taramaya Devam", onPress: () => { setScanned(false); lastScan.current = ""; } },
+        { text: "Kartvizite Git", onPress: () => { reset(); router.push("/(tabs)/contacts"); } },
+        { text: "Taramaya Devam", onPress: reset },
       ],
     );
   }
@@ -86,6 +90,7 @@ export default function ScanScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.permissionBox}>
+          <QrCode color={Colors.indigo} size={56} />
           <Text style={styles.permissionTitle}>Kamera İzni Gerekli</Text>
           <Text style={styles.permissionText}>QR kod taramak için kameraya erişim izni ver.</Text>
           <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
@@ -99,13 +104,11 @@ export default function ScanScreen() {
   return (
     <View style={styles.container}>
       <CameraView
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         facing="back"
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
       />
-
-      {/* Overlay */}
       <View style={styles.overlay}>
         <View style={styles.topOverlay} />
         <View style={styles.middleRow}>
@@ -122,7 +125,7 @@ export default function ScanScreen() {
           {processing ? (
             <ActivityIndicator color={Colors.indigo} size="large" />
           ) : scanned ? (
-            <CheckCircle color={Colors.green} size={40} />
+            <CheckCircle color={Colors.indigo} size={40} />
           ) : (
             <>
               <ScanLine color={Colors.indigo} size={28} />
@@ -142,7 +145,7 @@ const BORDER = 3;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
-  overlay: { ...StyleSheet.absoluteFillObject },
+  overlay: { ...StyleSheet.absoluteFill },
   topOverlay: { flex: 1, backgroundColor: OVERLAY },
   middleRow: { flexDirection: "row", height: BOX },
   sideOverlay: { flex: 1, backgroundColor: OVERLAY },

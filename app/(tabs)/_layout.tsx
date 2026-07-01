@@ -1,19 +1,6 @@
 import { Tabs } from "expo-router";
-import { View, StyleSheet } from "react-native";
 import { Colors } from "@/constants/Colors";
-
-function TabIcon({ color, size, children }: { color: string; size: number; children: React.ReactNode }) {
-  return <View style={{ alignItems: "center", justifyContent: "center" }}>{children}</View>;
-}
-
-// Simple SVG-free tab icons using text/emoji — replace with react-native-vector-icons if preferred
-import {
-  Home,
-  QrCode,
-  BookOpen,
-  Star,
-  User,
-} from "lucide-react-native";
+import { Compass, QrCode, BookOpen, Ticket, User, Gamepad2 } from "lucide-react-native";
 
 export default function TabLayout() {
   return (
@@ -36,8 +23,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Ana Sayfa",
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          title: "Keşfet",
+          tabBarIcon: ({ color, size }) => <Compass color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="tickets"
+        options={{
+          title: "Biletlerim",
+          tabBarIcon: ({ color, size }) => <Ticket color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -48,17 +42,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="game"
+        options={{
+          title: "Oyunlar",
+          tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="contacts"
         options={{
           title: "Kartvizitler",
           tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="loyalty"
-        options={{
-          title: "Puanlarım",
-          tabBarIcon: ({ color, size }) => <Star color={color} size={size} />,
         }}
       />
       <Tabs.Screen

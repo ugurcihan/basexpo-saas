@@ -8,34 +8,43 @@
     "scheme": "basexpo",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a0a1a"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.basexpo.visitor",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "QR kod taramak için kamera gereklidir.",
-        "NSPhotoLibraryUsageDescription": "Profil fotoğrafı seçmek için gereklidir."
+        "NSPhotoLibraryUsageDescription": "Profil fotoğrafı seçmek için gereklidir.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#0a0a1a"
       },
       "package": "com.basexpo.visitor",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
       "expo-router",
-      "expo-barcode-scanner",
       "expo-status-bar",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.GOOGLE_IOS_CLIENT_ID"
+        }
+      ],
       [
         "expo-notifications",
         {
@@ -53,6 +62,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e3218a01-8351-47ac-ae58-5c75e99ce787"
+      }
     }
   }
 }

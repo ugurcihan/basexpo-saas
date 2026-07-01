@@ -1,14 +1,18 @@
 import { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity,
+  Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert, ScrollView,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
+import SocialSignInButtons from "@/components/SocialSignInButtons";
+
+const REGISTER_URL = "https://basexpo.site/api/mobile/register";
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,16 +28,31 @@ export default function RegisterScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { data: { full_name: fullName, role: "visitor" } },
-    });
-    setLoading(false);
-    if (error) {
-      Alert.alert("Kayıt Hatası", error.message);
-    } else {
-      Alert.alert("Başarılı", "Hesabınız oluşturuldu! Giriş yapabilirsiniz.");
+    try {
+      const res = await fetch(REGISTER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, full_name: fullName }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        Alert.alert("Kayıt Hatası", data.error || "Bir hata oluştu.");
+        return;
+      }
+      // Set session with returned tokens
+      const { error: sessionErr } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionErr) {
+        Alert.alert("Hata", "Oturum açılamadı. Giriş ekranından deneyin.");
+        return;
+      }
+      router.replace("/(tabs)");
+    } catch {
+      Alert.alert("Hata", "Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -85,6 +104,8 @@ export default function RegisterScreen() {
             <Text style={styles.linkText}>Zaten hesabın var mı? <Text style={styles.linkBold}>Giriş Yap</Text></Text>
           </TouchableOpacity>
         </Link>
+
+        <SocialSignInButtons onSuccess={() => router.replace("/(tabs)")} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

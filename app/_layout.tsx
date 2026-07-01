@@ -1,21 +1,20 @@
+import "expo-dev-client";
 import { useEffect, useState } from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { View, ActivityIndicator } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { Colors } from "@/constants/Colors";
 import type { Session } from "@supabase/supabase-js";
 
+export { ErrorBoundary } from "expo-router";
+
 export default function RootLayout() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const segments = useSegments();
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -24,17 +23,13 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (loading) return;
-
-    const inAuthGroup = segments[0] === "(auth)";
-
-    if (!session && !inAuthGroup) {
-      router.replace("/(auth)/login");
-    } else if (session && inAuthGroup) {
-      router.replace("/(tabs)");
-    }
-  }, [session, loading, segments]);
+  if (session === undefined) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={Colors.indigo} size="large" />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -42,6 +37,9 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="events/[id]" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="organizer/[id]" options={{ animation: "slide_from_right" }} />
       </Stack>
     </GestureHandlerRootView>
   );

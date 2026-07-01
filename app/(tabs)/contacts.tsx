@@ -1,12 +1,15 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, Linking, RefreshControl,
+  View, Text, StyleSheet, SectionList, TouchableOpacity,
+  ActivityIndicator, Linking, TextInput, RefreshControl, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
-import { Search, Mail, Phone, Globe, BookOpen, ChevronDown, Check } from "lucide-react-native";
+import { ChevronDown, ChevronRight, Mail, Phone, Globe, Lock } from "lucide-react-native";
+
+// ── Types ────────────────────────────────────────────────────
 
 type Contact = {
   id: string;
@@ -14,101 +17,88 @@ type Contact = {
   email: string | null;
   phone: string | null;
   job_title: string | null;
-  contact_type: string;
-};
-
-type FirmNote = {
-  contact_id: string | null;
-  personal_note: string | null;
-  status: "new" | "contacted" | "pending" | "done";
 };
 
 type FirmItem = {
-  leadId: string;
-  firm: {
-    id: string;
-    company_name: string;
-    phone: string | null;
-    website: string | null;
-    city: string | null;
-    contact_name: string | null;
-    job_title: string | null;
-    event: { name: string } | null;
-    contacts: Contact[];
-  };
-  note: FirmNote | null;
+  id: string;
+  company_name: string;
+  phone: string | null;
+  website: string | null;
+  city: string | null;
+  contacts: Contact[];
+  event_id: string | null;
+  // card viewed (points awarded) flag
+  card_viewed: boolean;
 };
 
-const STATUS_OPTS: { value: FirmNote["status"]; label: string; color: string }[] = [
-  { value: "new",       label: "Yeni",             color: Colors.muted },
-  { value: "contacted", label: "İletişime Geçtim", color: Colors.cyan },
-  { value: "pending",   label: "Beklemede",        color: Colors.amber },
-  { value: "done",      label: "Tamamlandı",       color: Colors.green },
-];
+type FairSection = {
+  fair_id: string | null;
+  fair_name: string;
+  checked_in: boolean;
+  data: FirmItem[];
+};
 
-function FirmCard({ item, onSaved }: { item: FirmItem; onSaved: () => void }) {
+// ── Firma kartı ──────────────────────────────────────────────
+
+function FirmCard({ item, fairId, onViewed }: { item: FirmItem; fairId: string | null; onViewed: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(item.note?.contact_id ?? null);
-  const [note, setNote] = useState(item.note?.personal_note ?? "");
-  const [status, setStatus] = useState<FirmNote["status"]>(item.note?.status ?? "new");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  const selected = item.firm.contacts.find(c => c.id === selectedContactId);
-  const activePhone = selected?.phone ?? item.firm.phone ?? null;
-  const activeEmail = selected?.email ?? null;
+  async function handleExpand() {
+    const next = !expanded;
+    setExpanded(next);
 
-  async function handleSave() {
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-
-    await supabase.from("visitor_firm_notes").upsert(
-      {
-        visitor_id: user.id,
-        exhibitor_id: item.firm.id,
-        contact_id: selectedContactId,
-        personal_note: note.trim() || null,
-        status,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "visitor_id,exhibitor_id" },
-    );
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onSaved(); }, 1500);
+    // İlk kez açılıyorsa +1 puan ver
+    if (next && !item.card_viewed && fairId) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        // Puan ekle
+        await supabase.from("loyalty_points").insert({
+          visitor_id: user.id,
+          event_id:   fairId,
+          exhibitor_id: item.id,
+          points:     1,
+          reason:     "card_view",
+        });
+        // visitor_firm_notes upsert ile "görüldü" işaretle
+        await supabase.from("visitor_firm_notes").upsert(
+          { visitor_id: user.id, exhibitor_id: item.id, status: "new" },
+          { onConflict: "visitor_id,exhibitor_id", ignoreDuplicates: true }
+        );
+        onViewed(item.id);
+      } catch {
+        // Sessizce geç
+      }
+    }
   }
 
-  const statusOpt = STATUS_OPTS.find(s => s.value === status)!;
+  const phone = item.contacts.find(c => c.phone)?.phone ?? item.phone;
+  const email = item.contacts.find(c => c.email)?.email;
 
   return (
     <View style={styles.firmCard}>
-      <TouchableOpacity style={styles.firmHeader} onPress={() => setExpanded(e => !e)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.firmHeader} onPress={handleExpand} activeOpacity={0.75}>
         <View style={styles.firmAvatar}>
-          <Text style={styles.firmAvatarText}>{item.firm.company_name.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.firmAvatarText}>{item.company_name.charAt(0).toUpperCase()}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.firmName}>{item.firm.company_name}</Text>
-          {item.firm.city && <Text style={styles.firmCity}>{item.firm.city}</Text>}
+          <Text style={styles.firmName}>{item.company_name}</Text>
+          {item.city && <Text style={styles.firmCity}>{item.city}</Text>}
         </View>
-        <View style={[styles.statusPill, { borderColor: statusOpt.color + "50" }]}>
-          <Text style={[styles.statusPillText, { color: statusOpt.color }]}>{statusOpt.label}</Text>
-        </View>
-        <ChevronDown color={Colors.muted} size={18} style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }} />
+        {!item.card_viewed && (
+          <View style={styles.newBadge}><Text style={styles.newBadgeText}>+1 puan</Text></View>
+        )}
+        {expanded ? <ChevronDown color={Colors.muted} size={18} /> : <ChevronRight color={Colors.muted} size={18} />}
       </TouchableOpacity>
 
       {expanded && (
         <View style={styles.firmBody}>
-          {/* Contacts */}
-          {item.firm.contacts.length > 0 && (
+          {/* Yetkili kişiler */}
+          {item.contacts.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>KİMİYLE GÖRÜŞTÜM</Text>
-              {item.firm.contacts.map(c => (
-                <TouchableOpacity
-                  key={c.id}
-                  style={[styles.contactRow, selectedContactId === c.id && styles.contactRowSelected]}
-                  onPress={() => setSelectedContactId(prev => prev === c.id ? null : c.id)}
-                >
+              <Text style={styles.sectionLabel}>YETKİLİ KİŞİLER</Text>
+              {item.contacts.map(c => (
+                <View key={c.id} style={styles.contactRow}>
                   <View style={styles.contactAvatar}>
                     <Text style={styles.contactAvatarText}>{(c.full_name ?? "?").charAt(0).toUpperCase()}</Text>
                   </View>
@@ -116,136 +106,185 @@ function FirmCard({ item, onSaved }: { item: FirmItem; onSaved: () => void }) {
                     <Text style={styles.contactName}>{c.full_name}</Text>
                     {c.job_title && <Text style={styles.contactJob}>{c.job_title}</Text>}
                   </View>
-                  {selectedContactId === c.id && <Check color={Colors.indigo} size={16} />}
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
 
-          {/* Quick actions */}
+          {/* Hızlı iletişim */}
           <View style={styles.actionsRow}>
-            {activeEmail && (
-              <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`mailto:${activeEmail}`)}>
-                <Mail color={Colors.indigo} size={16} />
+            {email && (
+              <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`mailto:${email}`)}>
+                <Mail color={Colors.indigo} size={15} />
                 <Text style={styles.actionBtnText}>Mail</Text>
               </TouchableOpacity>
             )}
-            {activePhone && (
-              <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`tel:${activePhone}`)}>
-                <Phone color={Colors.cyan} size={16} />
+            {phone && (
+              <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`tel:${phone}`)}>
+                <Phone color={Colors.cyan} size={15} />
                 <Text style={styles.actionBtnText}>Ara</Text>
               </TouchableOpacity>
             )}
-            {item.firm.website && (
-              <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(item.firm.website!)}>
-                <Globe color={Colors.muted} size={16} />
+            {item.website && (
+              <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(item.website!)}>
+                <Globe color={Colors.muted} size={15} />
                 <Text style={styles.actionBtnText}>Web</Text>
               </TouchableOpacity>
             )}
           </View>
-
-          {/* Status */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>DURUM</Text>
-            <View style={styles.statusRow}>
-              {STATUS_OPTS.map(s => (
-                <TouchableOpacity
-                  key={s.value}
-                  style={[styles.statusBtn, status === s.value && { backgroundColor: s.color + "20", borderColor: s.color + "60" }]}
-                  onPress={() => setStatus(s.value)}
-                >
-                  <Text style={[styles.statusBtnText, status === s.value && { color: s.color }]}>{s.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Note */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>NOTLARIM</Text>
-            <TextInput
-              style={styles.noteInput}
-              value={note}
-              onChangeText={setNote}
-              placeholder="Görüşme notları..."
-              placeholderTextColor={Colors.muted}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          {/* Save */}
-          <TouchableOpacity
-            style={[styles.saveBtn, saved && { backgroundColor: Colors.green + "20", borderColor: Colors.green + "50" }]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color={Colors.indigo} size="small" />
-            ) : saved ? (
-              <Text style={[styles.saveBtnText, { color: Colors.green }]}>✓ Kaydedildi</Text>
-            ) : (
-              <Text style={styles.saveBtnText}>Kaydet</Text>
-            )}
-          </TouchableOpacity>
         </View>
       )}
     </View>
   );
 }
 
-export default function ContactsScreen() {
-  const [firms, setFirms] = useState<FirmItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState("");
+// ── Kilitli fuar bölümü ──────────────────────────────────────
 
-  async function loadContacts() {
+function LockedSection({ name }: { name: string }) {
+  return (
+    <View style={styles.lockedSection}>
+      <Lock color={Colors.muted} size={20} />
+      <View>
+        <Text style={styles.lockedName}>{name}</Text>
+        <Text style={styles.lockedHint}>Fuara giriş yaptıktan sonra açılır</Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Fuar bölüm başlığı ───────────────────────────────────────
+
+function SectionHeader({ section }: { section: FairSection }) {
+  return (
+    <View style={styles.sectionHead}>
+      <Text style={styles.sectionHeadEmoji}>{section.checked_in ? "📂" : "🔒"}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.sectionHeadName}>{section.fair_name}</Text>
+        {section.checked_in && (
+          <Text style={styles.sectionHeadCount}>{section.data.length} firma</Text>
+        )}
+      </View>
+      {section.checked_in && (
+        <View style={styles.unlockedBadge}>
+          <Text style={styles.unlockedBadgeText}>Açık</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Ana Ekran ─────────────────────────────────────────────────
+
+export default function ContactsScreen() {
+  const [sections, setSections] = useState<FairSection[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [viewedIds, setViewedIds]   = useState<Set<string>>(new Set());
+
+  async function load() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const [{ data: leads }, { data: notes }] = await Promise.all([
+    // Paralel sorgular
+    const [regsRes, checkinsRes, leadsRes, notesRes] = await Promise.all([
+      supabase
+        .from("event_registrations")
+        .select("event_id, events(id, name)")
+        .eq("visitor_id", user.id),
+      supabase
+        .from("fair_checkins")
+        .select("event_id")
+        .eq("visitor_id", user.id),
       supabase
         .from("leads")
-        .select(`id, exhibitor:exhibitors(id, company_name, phone, website, city, contact_name, job_title, event:events(name), contacts:exhibitor_contacts(id, full_name, email, phone, job_title, contact_type, sort_order))`)
-        .eq("visitor_id", user.id)
-        .order("created_at", { ascending: false }),
+        .select(`exhibitor_id, exhibitors(id, company_name, phone, website, city, event_id, contacts:exhibitor_contacts(id, full_name, email, phone, job_title, sort_order))`)
+        .eq("visitor_id", user.id),
       supabase
         .from("visitor_firm_notes")
-        .select("exhibitor_id, contact_id, personal_note, status")
+        .select("exhibitor_id")
         .eq("visitor_id", user.id),
     ]);
 
-    const noteMap = new Map((notes ?? []).map(n => [n.exhibitor_id as string, n]));
+    const checkedInSet = new Set((checkinsRes.data ?? []).map(c => c.event_id as string));
+    const viewedSet    = new Set((notesRes.data ?? []).map(n => n.exhibitor_id as string));
+    setViewedIds(viewedSet);
+
+    // Lead'leri firma bazlı tekilleştir
     const seen = new Set<string>();
+    const firmsByEvent = new Map<string, FirmItem[]>();
 
-    const items: FirmItem[] = (leads ?? [])
-      .map(l => {
-        const ex = Array.isArray(l.exhibitor) ? l.exhibitor[0] : l.exhibitor;
-        if (!ex || seen.has(ex.id as string)) return null;
-        seen.add(ex.id as string);
-        const ev = Array.isArray(ex.event) ? ex.event[0] : ex.event;
-        const contacts = (Array.isArray(ex.contacts) ? ex.contacts : [])
-          .sort((a: Contact, b: Contact) => a.sort_order - b.sort_order);
-        const note = noteMap.get(ex.id as string) ?? null;
-        return {
-          leadId: l.id as string,
-          firm: { id: ex.id as string, company_name: ex.company_name as string, phone: ex.phone as string | null, website: ex.website as string | null, city: ex.city as string | null, contact_name: ex.contact_name as string | null, job_title: ex.job_title as string | null, event: ev ? { name: ev.name as string } : null, contacts },
-          note: note ? { contact_id: note.contact_id as string | null, personal_note: note.personal_note as string | null, status: (note.status ?? "new") as FirmNote["status"] } : null,
-        };
-      })
-      .filter(Boolean) as FirmItem[];
+    for (const lead of (leadsRes.data ?? [])) {
+      const ex = Array.isArray(lead.exhibitors) ? lead.exhibitors[0] : lead.exhibitors;
+      if (!ex || seen.has(ex.id as string)) continue;
+      seen.add(ex.id as string);
 
-    setFirms(items);
+      const eventId = ex.event_id as string | null;
+      const key = eventId ?? "__standalone__";
+      if (!firmsByEvent.has(key)) firmsByEvent.set(key, []);
+
+      const contacts: Contact[] = ((Array.isArray(ex.contacts) ? ex.contacts : []) as any[])
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .map(c => ({ id: c.id, full_name: c.full_name, email: c.email, phone: c.phone, job_title: c.job_title }));
+
+      firmsByEvent.get(key)!.push({
+        id:           ex.id as string,
+        company_name: ex.company_name as string,
+        phone:        ex.phone as string | null,
+        website:      ex.website as string | null,
+        city:         ex.city as string | null,
+        event_id:     eventId,
+        contacts,
+        card_viewed:  viewedSet.has(ex.id as string),
+      });
+    }
+
+    // Fuar bölümleri: önce kayıtlı fuarlar
+    const built: FairSection[] = [];
+
+    for (const reg of (regsRes.data ?? [])) {
+      const ev = Array.isArray(reg.events) ? reg.events[0] : reg.events;
+      const eventId = reg.event_id as string;
+      const checkedIn = checkedInSet.has(eventId);
+      const firms = firmsByEvent.get(eventId) ?? [];
+
+      built.push({
+        fair_id:    eventId,
+        fair_name:  ev?.name ?? "Fuar",
+        checked_in: checkedIn,
+        data:       checkedIn ? firms : [],
+      });
+    }
+
+    // Bağımsız QR'lar (event_id=null), her zaman görünür
+    const standalone = firmsByEvent.get("__standalone__") ?? [];
+    if (standalone.length > 0) {
+      built.push({ fair_id: null, fair_name: "Diğer Firmalar", checked_in: true, data: standalone });
+    }
+
+    // Sıralama: açık + firma var > açık + boş > kilitli
+    built.sort((a, b) => {
+      const scoreA = a.checked_in ? (a.data.length > 0 ? 2 : 1) : 0;
+      const scoreB = b.checked_in ? (b.data.length > 0 ? 2 : 1) : 0;
+      return scoreB - scoreA;
+    });
+
+    setSections(built);
     setLoading(false);
     setRefreshing(false);
   }
 
-  useEffect(() => { loadContacts(); }, []);
+  useFocusEffect(useCallback(() => { load(); }, []));
 
-  const filtered = search
-    ? firms.filter(f => f.firm.company_name.toLowerCase().includes(search.toLowerCase()) || (f.firm.city ?? "").toLowerCase().includes(search.toLowerCase()))
-    : firms;
+  function markViewed(firmId: string) {
+    setViewedIds(prev => new Set([...prev, firmId]));
+    setSections(prev => prev.map(s => ({
+      ...s,
+      data: s.data.map(f => f.id === firmId ? { ...f, card_viewed: true } : f),
+    })));
+  }
+
+  const totalFirms = sections.reduce((s, sec) => s + sec.data.length, 0);
+  const newCards   = sections.reduce((s, sec) => s + sec.data.filter(f => !f.card_viewed).length, 0);
 
   if (loading) {
     return (
@@ -257,36 +296,53 @@ export default function ContactsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.pageTitle}>Kartvizit Defterim</Text>
-        <Text style={styles.pageCount}>{firms.length} firma</Text>
+      <View style={styles.pageHeader}>
+        <View>
+          <Text style={styles.pageTitle}>Kartvizit Defterim</Text>
+          <Text style={styles.pageSubtitle}>{totalFirms} firma{newCards > 0 ? ` · ${newCards} yeni` : ""}</Text>
+        </View>
+        {newCards > 0 && (
+          <View style={styles.newBadgeLg}>
+            <Text style={styles.newBadgeLgText}>+{newCards} yeni kart</Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.searchBox}>
-        <Search color={Colors.muted} size={16} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Firma veya şehir ara..."
-          placeholderTextColor={Colors.muted}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-
-      {firms.length === 0 ? (
+      {sections.length === 0 ? (
         <View style={styles.emptyBox}>
-          <BookOpen color={Colors.muted} size={48} />
+          <Text style={styles.emptyEmoji}>🃏</Text>
           <Text style={styles.emptyTitle}>Henüz kartvizit yok</Text>
-          <Text style={styles.emptyText}>Bir fuarda firma QR kodlarını tarayın.</Text>
+          <Text style={styles.emptyText}>Fuarlarda firma standlarını ziyaret et, QR kodlarını tara.</Text>
         </View>
       ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={item => item.leadId}
-          renderItem={({ item }) => <FirmCard item={item} onSaved={loadContacts} />}
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadContacts(); }} tintColor={Colors.indigo} />}
+        <SectionList
+          sections={sections}
+          keyExtractor={item => item.id}
+          stickySectionHeadersEnabled={false}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={Colors.indigo} />
+          }
+          contentContainerStyle={{ paddingBottom: 48, paddingTop: 8 }}
+          renderSectionHeader={({ section }) => (
+            <View>
+              <SectionHeader section={section as FairSection} />
+              {!section.checked_in && <LockedSection name={(section as FairSection).fair_name} />}
+              {section.checked_in && section.data.length === 0 && (
+                <View style={styles.emptySection}>
+                  <Text style={styles.emptySectionText}>Henüz stant ziyaret etmedin. QR tara, kartvizit topla!</Text>
+                </View>
+              )}
+            </View>
+          )}
+          renderItem={({ item, section }) =>
+            (section as FairSection).checked_in ? (
+              <View style={{ paddingHorizontal: 16 }}>
+                <FirmCard item={item} fairId={(section as FairSection).fair_id} onViewed={markViewed} />
+              </View>
+            ) : null
+          }
+          renderSectionFooter={() => <View style={{ height: 16 }} />}
         />
       )}
     </SafeAreaView>
@@ -294,39 +350,54 @@ export default function ContactsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 },
-  pageTitle: { fontSize: 22, fontWeight: "800", color: Colors.white },
-  pageCount: { fontSize: 12, color: Colors.muted },
-  searchBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.card, borderRadius: 12, marginHorizontal: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.border, marginBottom: 8 },
-  searchInput: { flex: 1, color: Colors.white, fontSize: 14 },
-  emptyBox: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingBottom: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: Colors.white },
-  emptyText: { fontSize: 13, color: Colors.muted, textAlign: "center" },
-  firmCard: { backgroundColor: Colors.card, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
-  firmHeader: { flexDirection: "row", alignItems: "center", padding: 14, gap: 10 },
-  firmAvatar: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.indigo + "20", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.indigo + "40" },
-  firmAvatarText: { fontSize: 18, fontWeight: "700", color: Colors.indigo },
-  firmName: { fontSize: 14, fontWeight: "700", color: Colors.white },
-  firmCity: { fontSize: 11, color: Colors.muted, marginTop: 1 },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1, backgroundColor: "transparent" },
-  statusPillText: { fontSize: 10, fontWeight: "700" },
-  firmBody: { borderTopWidth: 1, borderTopColor: Colors.border, padding: 14, gap: 16 },
-  section: { gap: 8 },
-  sectionLabel: { fontSize: 10, fontWeight: "700", color: Colors.muted, letterSpacing: 0.8 },
-  contactRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 12, backgroundColor: Colors.card2, borderWidth: 1, borderColor: Colors.border },
-  contactRowSelected: { borderColor: Colors.indigo + "60", backgroundColor: Colors.indigo + "12" },
-  contactAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.indigo + "20", alignItems: "center", justifyContent: "center" },
-  contactAvatarText: { fontSize: 14, fontWeight: "700", color: Colors.indigoLight },
-  contactName: { fontSize: 13, fontWeight: "600", color: Colors.white },
-  contactJob: { fontSize: 11, color: Colors.muted },
-  actionsRow: { flexDirection: "row", gap: 8 },
-  actionBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: Colors.card2, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
-  actionBtnText: { fontSize: 12, fontWeight: "600", color: Colors.white },
-  statusRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  statusBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: "transparent" },
-  statusBtnText: { fontSize: 12, fontWeight: "600", color: Colors.muted },
-  noteInput: { backgroundColor: Colors.card2, borderRadius: 12, padding: 12, color: Colors.white, fontSize: 13, borderWidth: 1, borderColor: Colors.border, minHeight: 72, textAlignVertical: "top" },
-  saveBtn: { backgroundColor: Colors.indigo, borderRadius: 12, paddingVertical: 13, alignItems: "center", borderWidth: 1, borderColor: Colors.indigo },
-  saveBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  container:       { flex: 1, backgroundColor: Colors.bg },
+  pageHeader:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
+  pageTitle:       { fontSize: 22, fontWeight: "800", color: Colors.white },
+  pageSubtitle:    { fontSize: 12, color: Colors.muted, marginTop: 2 },
+  newBadgeLg:      { backgroundColor: Colors.indigo + "25", borderRadius: 12, borderWidth: 1, borderColor: Colors.indigo + "50", paddingHorizontal: 12, paddingVertical: 6 },
+  newBadgeLgText:  { color: Colors.indigoLight, fontSize: 12, fontWeight: "700" },
+
+  // Bölüm başlığı
+  sectionHead:     { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  sectionHeadEmoji:{ fontSize: 22 },
+  sectionHeadName: { fontSize: 15, fontWeight: "700", color: Colors.white },
+  sectionHeadCount:{ fontSize: 11, color: Colors.muted, marginTop: 2 },
+  unlockedBadge:   { backgroundColor: Colors.green + "20", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  unlockedBadgeText:{ fontSize: 10, fontWeight: "700", color: Colors.green },
+
+  // Kilitli bölüm
+  lockedSection:   { flexDirection: "row", alignItems: "center", gap: 12, margin: 16, backgroundColor: Colors.card, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: Colors.border, opacity: 0.6 },
+  lockedName:      { color: Colors.white, fontWeight: "600", fontSize: 14 },
+  lockedHint:      { color: Colors.muted, fontSize: 12, marginTop: 2 },
+
+  // Boş bölüm
+  emptySection:    { margin: 16, backgroundColor: Colors.card, borderRadius: 14, padding: 16, alignItems: "center" },
+  emptySectionText:{ color: Colors.muted, fontSize: 13, textAlign: "center" },
+
+  // Firma kartı
+  firmCard:        { backgroundColor: Colors.card, borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
+  firmHeader:      { flexDirection: "row", alignItems: "center", padding: 14, gap: 10 },
+  firmAvatar:      { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.indigo + "20", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.indigo + "40" },
+  firmAvatarText:  { fontSize: 18, fontWeight: "700", color: Colors.indigo },
+  firmName:        { fontSize: 14, fontWeight: "700", color: Colors.white },
+  firmCity:        { fontSize: 11, color: Colors.muted, marginTop: 1 },
+  newBadge:        { backgroundColor: Colors.indigo + "25", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: Colors.indigo + "40", marginRight: 4 },
+  newBadgeText:    { fontSize: 10, fontWeight: "700", color: Colors.indigoLight },
+  firmBody:        { borderTopWidth: 1, borderTopColor: Colors.border, padding: 14, gap: 14 },
+  section:         { gap: 8 },
+  sectionLabel:    { fontSize: 10, fontWeight: "700", color: Colors.muted, letterSpacing: 0.8 },
+  contactRow:      { flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 12, backgroundColor: Colors.card2, borderWidth: 1, borderColor: Colors.border },
+  contactAvatar:   { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.indigo + "20", alignItems: "center", justifyContent: "center" },
+  contactAvatarText:{ fontSize: 14, fontWeight: "700", color: Colors.indigoLight },
+  contactName:     { fontSize: 13, fontWeight: "600", color: Colors.white },
+  contactJob:      { fontSize: 11, color: Colors.muted },
+  actionsRow:      { flexDirection: "row", gap: 8 },
+  actionBtn:       { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: Colors.card2, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  actionBtnText:   { fontSize: 12, fontWeight: "600", color: Colors.white },
+
+  // Boş ekran
+  emptyBox:        { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingBottom: 60 },
+  emptyEmoji:      { fontSize: 52 },
+  emptyTitle:      { fontSize: 18, fontWeight: "700", color: Colors.white },
+  emptyText:       { fontSize: 13, color: Colors.muted, textAlign: "center", paddingHorizontal: 40 },
 });
