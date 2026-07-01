@@ -1,8 +1,13 @@
+/**
+ * GM Paneli — sadece ztest@test.com
+ * Tüm fuarları listeler, anında kayıt + giriş + puan + navigasyon sağlar.
+ */
 import { useCallback, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
@@ -10,126 +15,176 @@ import { getMyFairsWithBoxInfo, type FairWithBoxInfo } from "@/lib/api/gamificat
 
 const GM_EMAIL = "ztest@test.com";
 
-// ── Fuar Kart ──────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
+
+type EventRow = {
+  id: string;
+  name: string;
+  location: string | null;
+  start_date: string;
+  status: string;
+};
+
+type FairState = {
+  event: EventRow;
+  registered: boolean;
+  boxInfo: FairWithBoxInfo | null;
+  checkinDone: boolean;
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function randomTicket() {
+  return "GM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+// ── Fair Card ─────────────────────────────────────────────────
 
 function FairCard({
-  fair,
-  onCheckin,
-  onAddPoints,
-  onGoBoxes,
-  checkinDone,
+  state,
   pending,
+  onRegister,
+  onCheckin,
+  onPoints,
+  onGoBoxes,
 }: {
-  fair: FairWithBoxInfo;
-  onCheckin: () => void;
-  onAddPoints: () => void;
+  state: FairState;
+  pending: string | null;
+  onRegister: (id: string) => void;
+  onCheckin: (id: string) => void;
+  onPoints: (id: string) => void;
   onGoBoxes: () => void;
-  checkinDone: boolean;
-  pending: boolean;
 }) {
-  const statusColors = {
-    active:         { bg: "#14532d30", text: "#4ade80", label: "✅ Aktif" },
-    locked:         { bg: "#1e1b4b30", text: "#a5b4fc", label: "🔒 Kilitli" },
-    no_boxes:       { bg: "#1c191730", text: "#78716c", label: "Kutu Yok" },
-    not_registered: { bg: "#1c191730", text: "#78716c", label: "Kayıtsız" },
-  }[fair.status];
+  const { event, registered, boxInfo, checkinDone } = state;
+  const isLoading = pending === event.id;
+  const pts = boxInfo?.total_points ?? 0;
+  const boxes = boxInfo?.unopened_boxes ?? 0;
 
   return (
-    <View style={styles.fairCard}>
-      <View style={styles.fairHeader}>
-        <Text style={styles.fairEmoji}>🏟️</Text>
+    <View style={[s.card, registered && s.cardRegistered]}>
+      {/* Title row */}
+      <View style={s.cardHeader}>
+        <Text style={s.cardEmoji}>🏟️</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.fairName} numberOfLines={1}>{fair.event_name}</Text>
-          {fair.event_location ? <Text style={styles.fairMeta}>{fair.event_location}</Text> : null}
+          <Text style={s.cardName} numberOfLines={1}>{event.name}</Text>
+          {event.location ? <Text style={s.cardMeta}>{event.location}</Text> : null}
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-          <Text style={[styles.statusText, { color: statusColors.text }]}>{statusColors.label}</Text>
-        </View>
-      </View>
-
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statChip}>
-          <Text style={styles.statVal}>{fair.total_points}</Text>
-          <Text style={styles.statLbl}>Puan</Text>
-        </View>
-        <View style={[styles.statChip, fair.unopened_boxes > 0 && styles.statChipGold]}>
-          <Text style={[styles.statVal, fair.unopened_boxes > 0 && { color: Colors.gold }]}>
-            {fair.unopened_boxes}
+        <View style={[s.regBadge, registered ? s.regBadgeYes : s.regBadgeNo]}>
+          <Text style={[s.regBadgeText, registered ? { color: "#4ade80" } : { color: "#94a3b8" }]}>
+            {registered ? "Kayıtlı ✓" : "Kayıtsız"}
           </Text>
-          <Text style={styles.statLbl}>Kutu</Text>
         </View>
-        {fair.box_types.length > 0 && (
-          <View style={styles.statChip}>
-            <Text style={[styles.statVal, { fontSize: 13 }]}>{fair.box_types.length}</Text>
-            <Text style={styles.statLbl}>Kutu tipi</Text>
-          </View>
-        )}
       </View>
 
-      {/* Box thresholds */}
-      {fair.box_types.length > 0 && (
-        <View style={styles.tiersRow}>
-          {fair.box_types
-            .sort((a, b) => a.points_required - b.points_required)
-            .map(bt => {
-              const reached = fair.total_points >= bt.points_required;
-              return (
-                <View key={bt.tier} style={[styles.tierChip, reached && styles.tierChipReached]}>
-                  <Text style={[styles.tierChipText, reached && { color: Colors.gold }]}>
-                    {bt.name} {bt.points_required}p
-                  </Text>
-                </View>
-              );
-            })}
+      {/* Stats (only if registered) */}
+      {registered && (
+        <View style={s.statsRow}>
+          <View style={s.statChip}>
+            <Text style={s.statVal}>{pts}</Text>
+            <Text style={s.statLbl}>Puan</Text>
+          </View>
+          <View style={[s.statChip, boxes > 0 && s.statChipGold]}>
+            <Text style={[s.statVal, boxes > 0 && { color: Colors.gold }]}>{boxes}</Text>
+            <Text style={s.statLbl}>Kutu</Text>
+          </View>
+          <View style={s.statChip}>
+            <Text style={[s.statVal, { color: checkinDone ? "#4ade80" : Colors.muted }]}>
+              {checkinDone ? "✓" : "—"}
+            </Text>
+            <Text style={s.statLbl}>Giriş</Text>
+          </View>
         </View>
       )}
 
       {/* Actions */}
-      <View style={styles.actionsCol}>
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.actionBtnGreen, (pending || checkinDone) && styles.actionBtnDisabled]}
-          onPress={onCheckin}
-          disabled={pending || checkinDone}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionBtnText}>
-            {checkinDone ? "✅ Giriş Yapıldı" : "✅  Fuara Giriş Simüle (+50)"}
-          </Text>
+      {isLoading ? (
+        <ActivityIndicator color="#7c3aed" style={{ marginTop: 10 }} />
+      ) : !registered ? (
+        <TouchableOpacity style={[s.btn, s.btnPurple]} onPress={() => onRegister(event.id)} activeOpacity={0.8}>
+          <Text style={s.btnText}>⚡  Anında Fuara Kayıt Ol</Text>
         </TouchableOpacity>
+      ) : (
+        <View style={s.actCol}>
+          <TouchableOpacity
+            style={[s.btn, s.btnGreen, checkinDone && s.btnDisabled]}
+            onPress={() => onCheckin(event.id)}
+            disabled={checkinDone}
+            activeOpacity={0.8}
+          >
+            <Text style={s.btnText}>{checkinDone ? "✅  Giriş Yapıldı" : "✅  Fuara Giriş Simüle (+50)"}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.actionBtnViolet, pending && styles.actionBtnDisabled]}
-          onPress={onAddPoints}
-          disabled={pending}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionBtnText}>+20  Test Puanı (tekrar bas)</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={[s.btn, s.btnPurple]} onPress={() => onPoints(event.id)} activeOpacity={0.8}>
+            <Text style={s.btnText}>+20  Test Puanı (sınırsız bas)</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.actionBtnGold]}
-          onPress={onGoBoxes}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionBtnText}>🎁  Kutularıma Git →</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={[s.btn, s.btnGold]} onPress={onGoBoxes} activeOpacity={0.8}>
+            <Text style={s.btnText}>🎁  Kutularıma Git →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
 
-// ── Ana Ekran ─────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────
 
 export default function GMPanelScreen() {
-  const router  = useRouter();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [userId, setUserId]         = useState<string | null>(null);
-  const [fairs, setFairs]           = useState<FairWithBoxInfo[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [pending, setPending]       = useState(false);
-  const [lastMsg, setLastMsg]       = useState<string | null>(null);
-  const [checkinDone, setCheckinDone] = useState<Record<string, boolean>>({});
+  const router = useRouter();
+  const [authorized, setAuthorized]   = useState<boolean | null>(null);
+  const [userId, setUserId]           = useState<string | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [fairStates, setFairStates]   = useState<FairState[]>([]);
+  const [pending, setPending]         = useState<string | null>(null);
+  const [toast, setToast]             = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }
+
+  async function loadAll(uid: string) {
+    // 1. Tüm fuarlar
+    const { data: events } = await supabase
+      .from("events")
+      .select("id, name, location, start_date, status")
+      .in("status", ["published", "active"])
+      .order("start_date", { ascending: false });
+
+    // 2. Kullanıcının kayıtlı fuarları
+    const { data: regs } = await supabase
+      .from("event_registrations")
+      .select("event_id")
+      .eq("visitor_id", uid);
+    const registeredSet = new Set((regs ?? []).map(r => r.event_id));
+
+    // 3. Kutu/puan bilgisi
+    const boxData = await getMyFairsWithBoxInfo();
+    const boxMap = new Map(boxData.map(b => [b.event_id, b]));
+
+    // 4. Check-in bilgisi
+    const eventIds = (events ?? []).map(e => e.id);
+    let checkinSet = new Set<string>();
+    if (eventIds.length > 0) {
+      const { data: checkins } = await supabase
+        .from("fair_checkins")
+        .select("event_id")
+        .eq("visitor_id", uid)
+        .in("event_id", eventIds);
+      checkinSet = new Set((checkins ?? []).map(c => c.event_id));
+    }
+
+    const states: FairState[] = (events ?? []).map(ev => ({
+      event: ev as EventRow,
+      registered: registeredSet.has(ev.id),
+      boxInfo: boxMap.get(ev.id) ?? null,
+      checkinDone: checkinSet.has(ev.id),
+    }));
+
+    // Kayıtlılar önce
+    states.sort((a, b) => Number(b.registered) - Number(a.registered));
+    setFairStates(states);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -141,238 +196,214 @@ export default function GMPanelScreen() {
           if (active) { setAuthorized(false); setLoading(false); }
           return;
         }
-        setUserId(user.id);
-        setAuthorized(true);
-
-        // Load fair data
-        const data = await getMyFairsWithBoxInfo();
-        data.sort((a, b) => {
-          const order = { active: 0, locked: 1, no_boxes: 2, not_registered: 3 };
-          return order[a.status] - order[b.status];
-        });
-
-        // Check which fairs already have checkin
-        const eventIds = data.map(f => f.event_id);
-        if (eventIds.length > 0) {
-          const { data: checkins } = await supabase
-            .from("fair_checkins")
-            .select("event_id")
-            .eq("visitor_id", user.id)
-            .in("event_id", eventIds);
-          const done: Record<string, boolean> = {};
-          (checkins ?? []).forEach(c => { done[c.event_id] = true; });
-          if (active) setCheckinDone(done);
-        }
-
-        if (active) { setFairs(data); setLoading(false); }
+        if (active) { setUserId(user.id); setAuthorized(true); }
+        await loadAll(user.id);
+        if (active) setLoading(false);
       })();
       return () => { active = false; };
     }, [])
   );
 
-  async function refresh() {
+  async function handleRegister(eventId: string) {
     if (!userId) return;
-    const data = await getMyFairsWithBoxInfo();
-    data.sort((a, b) => {
-      const order = { active: 0, locked: 1, no_boxes: 2, not_registered: 3 };
-      return order[a.status] - order[b.status];
+    setPending(eventId);
+    const { error } = await supabase.from("event_registrations").insert({
+      event_id: eventId,
+      visitor_id: userId,
+      ticket_code: randomTicket(),
+      kvkk_consent: true,
+      status: "confirmed",
     });
-    setFairs(data);
-  }
-
-  async function handleCheckin(event_id: string) {
-    if (!userId || pending) return;
-    setPending(true);
-    setLastMsg(null);
-
-    await supabase.from("fair_checkins").insert({ event_id, visitor_id: userId });
-
-    const { error } = await supabase.from("loyalty_points").insert({
-      event_id, visitor_id: userId, points: 50, reason: "checkin",
-    });
-
-    setCheckinDone(prev => ({ ...prev, [event_id]: true }));
-
     if (error?.code === "23505") {
-      setLastMsg("ℹ️  Giriş check-ini zaten vardı. fair_checkins satırı eklendi.");
+      showToast("ℹ️  Zaten kayıtlısın.");
     } else if (error) {
-      setLastMsg(`❌  Hata: ${error.message}`);
+      showToast(`❌  ${error.message}`);
     } else {
-      setLastMsg("✅  Giriş yapıldı + 50 puan kazandın! Trigger kutu kontrol etti.");
+      showToast("✅  Fuara anında kayıt olundu!");
     }
-
-    await refresh();
-    setPending(false);
+    await loadAll(userId);
+    setPending(null);
   }
 
-  async function handleAddPoints(event_id: string) {
-    if (!userId || pending) return;
-    setPending(true);
-    setLastMsg(null);
-
+  async function handleCheckin(eventId: string) {
+    if (!userId) return;
+    setPending(eventId);
+    await supabase.from("fair_checkins").insert({ event_id: eventId, visitor_id: userId });
     const { error } = await supabase.from("loyalty_points").insert({
-      event_id, visitor_id: userId, points: 20, reason: "gm_test",
+      event_id: eventId, visitor_id: userId, points: 50, reason: "checkin",
     });
-
-    if (error) {
-      setLastMsg(`❌  Hata: ${error.message}`);
+    if (error?.code === "23505") {
+      showToast("ℹ️  Checkin puanı zaten verilmiş. fair_checkins satırı eklendi.");
     } else {
-      setLastMsg("✅  +20 gm_test puanı eklendi. Trigger kutu eşiklerini kontrol etti.");
+      showToast("✅  Giriş yapıldı + 50 puan! Trigger kutu kontrol etti.");
     }
-
-    await refresh();
-    setPending(false);
+    await loadAll(userId);
+    setPending(null);
   }
 
-  // ── Unauthorized ────────────────────────────────────────────
+  async function handlePoints(eventId: string) {
+    if (!userId) return;
+    setPending(eventId);
+    const { error } = await supabase.from("loyalty_points").insert({
+      event_id: eventId, visitor_id: userId, points: 20, reason: "gm_test",
+    });
+    if (error) {
+      showToast(`❌  ${error.message}`);
+    } else {
+      showToast("✅  +20 gm_test puanı eklendi → trigger kutu eşiği kontrol etti.");
+    }
+    await loadAll(userId);
+    setPending(null);
+  }
+
+  // ── Guards ───────────────────────────────────────────────────
 
   if (authorized === false) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.unauthorizedBox}>
-          <Text style={styles.unauthorizedIcon}>🚫</Text>
-          <Text style={styles.unauthorizedTitle}>Yetkisiz Erişim</Text>
-          <Text style={styles.unauthorizedDesc}>Bu panel sadece ztest@test.com hesabı için görünür.</Text>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>← Geri Dön</Text>
+      <SafeAreaView style={s.container}>
+        <View style={s.center}>
+          <Text style={{ fontSize: 56, marginBottom: 12 }}>🚫</Text>
+          <Text style={s.bigTitle}>Yetkisiz Erişim</Text>
+          <Text style={s.muted}>Bu panel sadece ztest@test.com içindir.</Text>
+          <TouchableOpacity style={[s.btn, s.btnPurple, { marginTop: 24, paddingHorizontal: 28 }]} onPress={() => router.back()}>
+            <Text style={s.btnText}>← Geri Dön</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── Loading ─────────────────────────────────────────────────
-
   if (loading || authorized === null) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={s.container}>
         <ActivityIndicator color="#7c3aed" size="large" style={{ flex: 1 }} />
       </SafeAreaView>
     );
   }
 
-  // ── Main ────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={s.container}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBack}>
-            <Text style={styles.headerBackText}>←</Text>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Text style={{ color: "#fff", fontSize: 22 }}>←</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>🎮  GM Paneli</Text>
-            <Text style={styles.headerSub}>ztest@test.com · Test Modu</Text>
+            <Text style={s.bigTitle}>🎮  GM Paneli</Text>
+            <Text style={s.muted}>ztest@test.com — Her şeye erişim</Text>
           </View>
-          <View style={styles.testBadge}>
-            <Text style={styles.testBadgeText}>⚠️ TEST</Text>
+          <View style={s.testBadge}>
+            <Text style={s.testBadgeText}>⚠️ TEST</Text>
           </View>
         </View>
 
-        {/* Info */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            Bu panel gerçek DB'ye yazar. Trigger zinciri: loyalty_points INSERT → check_box_milestones() → user_loot_boxes. "Giriş" bir kez çalışır (unique index), "+20 Puan" sınırsız tekrar edilebilir.
-          </Text>
+        {/* Toast */}
+        {toast && (
+          <View style={s.toast}>
+            <Text style={s.toastText}>{toast}</Text>
+          </View>
+        )}
+
+        {/* Quick Nav */}
+        <Text style={s.sectionTitle}>Hızlı Navigasyon</Text>
+        <View style={s.navRow}>
+          {[
+            { label: "📇  Kartvizitler", path: "/(tabs)/contacts" },
+            { label: "🎟️  Biletlerim",   path: "/(tabs)/tickets"  },
+            { label: "🎁  Kutularım",    path: "/game/my-boxes"   },
+            { label: "🏆  Liderlik",     path: "/game/leaderboard"},
+          ].map(item => (
+            <TouchableOpacity
+              key={item.path}
+              style={s.navBtn}
+              onPress={() => router.push(item.path as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={s.navBtnText}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Last message */}
-        {lastMsg && (
-          <View style={styles.msgBox}>
-            <Text style={styles.msgText}>{lastMsg}</Text>
+        {/* Fairs */}
+        <Text style={s.sectionTitle}>
+          Tüm Fuarlar ({fairStates.length})
+        </Text>
+
+        {fairStates.length === 0 ? (
+          <View style={s.emptyBox}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>🎪</Text>
+            <Text style={s.bigTitle}>Aktif fuar bulunamadı</Text>
+            <Text style={s.muted}>Supabase'de "published" veya "active" statüsünde fuar yok.</Text>
           </View>
-        )}
-
-        {/* No fairs */}
-        {fairs.length === 0 && (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyIcon}>🎪</Text>
-            <Text style={styles.emptyTitle}>Kayıtlı fuar yok</Text>
-            <Text style={styles.emptyDesc}>
-              ztest@test.com hesabını bir fuara kayıt edin, sonra buraya tekrar gelin.
-            </Text>
-          </View>
-        )}
-
-        {/* Fair cards */}
-        {fairs.map(fair => (
-          <FairCard
-            key={fair.event_id}
-            fair={fair}
-            checkinDone={!!checkinDone[fair.event_id]}
-            pending={pending}
-            onCheckin={() => handleCheckin(fair.event_id)}
-            onAddPoints={() => handleAddPoints(fair.event_id)}
-            onGoBoxes={() => router.push("/game/my-boxes" as any)}
-          />
-        ))}
-
-        {pending && (
-          <ActivityIndicator color="#7c3aed" style={{ marginTop: 16 }} />
+        ) : (
+          fairStates.map(state => (
+            <FairCard
+              key={state.event.id}
+              state={state}
+              pending={pending}
+              onRegister={handleRegister}
+              onCheckin={handleCheckin}
+              onPoints={handlePoints}
+              onGoBoxes={() => router.push("/game/my-boxes" as any)}
+            />
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// ── Stiller ──────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: "#0d0a1a" },
-  scroll:           { padding: 16, paddingBottom: 60 },
+const s = StyleSheet.create({
+  container:      { flex: 1, backgroundColor: "#0d0a1a" },
+  scroll:         { padding: 16, paddingBottom: 60 },
+  center:         { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
 
-  header:           { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
-  headerBack:       { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerBackText:   { color: Colors.white, fontSize: 22 },
-  headerTitle:      { fontSize: 20, fontWeight: "800", color: Colors.white },
-  headerSub:        { fontSize: 12, color: Colors.muted, marginTop: 1 },
-  testBadge:        { backgroundColor: "#ef444430", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: "#ef444460" },
-  testBadgeText:    { color: "#ef4444", fontSize: 11, fontWeight: "800" },
+  header:         { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  backBtn:        { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  bigTitle:       { fontSize: 20, fontWeight: "800", color: Colors.white },
+  muted:          { fontSize: 12, color: Colors.muted, marginTop: 2 },
+  testBadge:      { backgroundColor: "#ef444430", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: "#ef444460" },
+  testBadgeText:  { color: "#ef4444", fontSize: 11, fontWeight: "800" },
 
-  infoBox:          { backgroundColor: "#1a0a2e", borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#7c3aed40" },
-  infoText:         { color: Colors.muted, fontSize: 12, lineHeight: 18 },
+  toast:          { backgroundColor: "#0a2010", borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#4ade8040" },
+  toastText:      { color: "#4ade80", fontSize: 13, fontWeight: "600" },
 
-  msgBox:           { backgroundColor: "#0a2010", borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#4ade8040" },
-  msgText:          { color: "#4ade80", fontSize: 13, fontWeight: "600" },
+  sectionTitle:   { fontSize: 14, fontWeight: "700", color: Colors.muted, marginBottom: 10, marginTop: 4, letterSpacing: 0.5 },
 
-  emptyBox:         { alignItems: "center", paddingVertical: 60 },
-  emptyIcon:        { fontSize: 56, marginBottom: 12 },
-  emptyTitle:       { fontSize: 18, fontWeight: "700", color: Colors.white, marginBottom: 8 },
-  emptyDesc:        { fontSize: 13, color: Colors.muted, textAlign: "center", lineHeight: 20, paddingHorizontal: 24 },
+  navRow:         { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  navBtn:         { backgroundColor: Colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1, borderColor: "#7c3aed40" },
+  navBtnText:     { color: Colors.white, fontSize: 13, fontWeight: "700" },
 
-  fairCard:         { backgroundColor: Colors.card, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: "#7c3aed30" },
-  fairHeader:       { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
-  fairEmoji:        { fontSize: 28 },
-  fairName:         { fontSize: 16, fontWeight: "700", color: Colors.white },
-  fairMeta:         { fontSize: 12, color: Colors.muted, marginTop: 2 },
-  statusBadge:      { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  statusText:       { fontSize: 11, fontWeight: "700" },
+  card:           { backgroundColor: Colors.card, borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.border },
+  cardRegistered: { borderColor: "#7c3aed50" },
+  cardHeader:     { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  cardEmoji:      { fontSize: 26 },
+  cardName:       { fontSize: 15, fontWeight: "700", color: Colors.white },
+  cardMeta:       { fontSize: 11, color: Colors.muted, marginTop: 2 },
+  regBadge:       { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  regBadgeYes:    { backgroundColor: "#14532d40" },
+  regBadgeNo:     { backgroundColor: Colors.card2 },
+  regBadgeText:   { fontSize: 11, fontWeight: "700" },
 
-  statsRow:         { flexDirection: "row", gap: 8, marginBottom: 12 },
-  statChip:         { flex: 1, backgroundColor: Colors.card2, borderRadius: 12, padding: 10, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
-  statChipGold:     { borderColor: Colors.gold + "50", backgroundColor: Colors.gold + "10" },
-  statVal:          { color: Colors.white, fontSize: 20, fontWeight: "800" },
-  statLbl:          { color: Colors.muted, fontSize: 10, marginTop: 2 },
+  statsRow:       { flexDirection: "row", gap: 8, marginBottom: 12 },
+  statChip:       { flex: 1, backgroundColor: Colors.card2, borderRadius: 12, padding: 10, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
+  statChipGold:   { borderColor: Colors.gold + "50" },
+  statVal:        { color: Colors.white, fontSize: 18, fontWeight: "800" },
+  statLbl:        { color: Colors.muted, fontSize: 10, marginTop: 2 },
 
-  tiersRow:         { flexDirection: "row", gap: 6, flexWrap: "wrap", marginBottom: 12 },
-  tierChip:         { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: Colors.card2, borderWidth: 1, borderColor: Colors.border },
-  tierChipReached:  { borderColor: Colors.gold + "60", backgroundColor: Colors.gold + "10" },
-  tierChipText:     { color: Colors.muted, fontSize: 12, fontWeight: "600" },
+  actCol:         { gap: 8 },
+  btn:            { borderRadius: 12, paddingVertical: 13, alignItems: "center" },
+  btnPurple:      { backgroundColor: "#7c3aed" },
+  btnGreen:       { backgroundColor: "#15803d" },
+  btnGold:        { backgroundColor: "#92400e" },
+  btnDisabled:    { opacity: 0.45 },
+  btnText:        { color: "#fff", fontSize: 14, fontWeight: "700" },
 
-  actionsCol:       { gap: 8 },
-  actionBtn:        { borderRadius: 12, paddingVertical: 13, alignItems: "center" },
-  actionBtnGreen:   { backgroundColor: "#15803d" },
-  actionBtnViolet:  { backgroundColor: "#7c3aed" },
-  actionBtnGold:    { backgroundColor: "#92400e" },
-  actionBtnDisabled:{ opacity: 0.4 },
-  actionBtnText:    { color: "#fff", fontSize: 15, fontWeight: "700" },
-
-  unauthorizedBox:  { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
-  unauthorizedIcon: { fontSize: 64 },
-  unauthorizedTitle:{ fontSize: 22, fontWeight: "800", color: Colors.white },
-  unauthorizedDesc: { fontSize: 14, color: Colors.muted, textAlign: "center", lineHeight: 20 },
-  backBtn:          { marginTop: 16, backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 13, borderWidth: 1, borderColor: Colors.border },
-  backBtnText:      { color: Colors.white, fontSize: 15, fontWeight: "700" },
+  emptyBox:       { alignItems: "center", paddingVertical: 60 },
 });
