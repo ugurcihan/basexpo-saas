@@ -82,6 +82,7 @@ export default function RootLayout() {
         <Stack.Screen name="notifications" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="events/[id]" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="organizer/[id]" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="gm-panel" options={{ animation: "slide_from_right" }} />
       </Stack>
     </GestureHandlerRootView>
   );

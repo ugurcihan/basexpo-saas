@@ -379,6 +379,13 @@ export default function ProfileScreen() {
             </View>
           )}
 
+          {/* GM Paneli — sadece ztest@test.com için */}
+          {profile?.email === "ztest@test.com" && (
+            <TouchableOpacity style={styles.gmBtn} onPress={() => router.push("/gm-panel" as any)}>
+              <Text style={styles.gmBtnText}>🎮  GM Paneli — Test Modu</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Bildirimler */}
           <TouchableOpacity style={styles.passwordToggle} onPress={() => router.push("/notifications" as any)}>
             <Bell color={Colors.indigo} size={16} />
@@ -548,6 +555,8 @@ const styles = StyleSheet.create({
   passwordToggleText: { fontSize: 14, fontWeight: "700", color: Colors.indigo, flex: 1 },
   notifBadge:         { backgroundColor: "#ef4444", borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, alignItems: "center", justifyContent: "center" },
   notifBadgeText:     { color: "#fff", fontSize: 11, fontWeight: "800" },
+  gmBtn:        { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#7c3aed", borderRadius: 14, paddingVertical: 15, marginBottom: 8 },
+  gmBtnText:    { color: "#fff", fontSize: 15, fontWeight: "800" },
   logoutBtn:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.red + "15", borderRadius: 14, paddingVertical: 15, borderWidth: 1, borderColor: Colors.red + "30", marginTop: 8 },
   logoutText:   { fontSize: 16, fontWeight: "700", color: Colors.red },
   // Modals
