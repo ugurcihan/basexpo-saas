@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
-  ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, FlatList,
+  ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, FlatList, Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
@@ -11,6 +11,34 @@ import { COUNTRIES, flagEmoji } from "@/lib/countries";
 
 const INTERESTS = ["Teknoloji", "Gıda", "Tekstil", "İnşaat", "Savunma", "Tarım", "Enerji", "Sağlık"];
 
+const LEAGUES = [
+  { name: "Başlangıç", min: 0,     max: 49,       emoji: "🌱", color: "#6b7280" },
+  { name: "Bronz",     min: 50,    max: 249,      emoji: "🥉", color: "#cd7f32" },
+  { name: "Gümüş",    min: 250,   max: 999,      emoji: "🥈", color: "#9ca3af" },
+  { name: "Altın",    min: 1000,  max: 2999,     emoji: "🥇", color: "#f59e0b" },
+  { name: "Elmas",    min: 3000,  max: 9999,     emoji: "💎", color: "#22d3ee" },
+  { name: "Efsane",   min: 10000, max: Infinity, emoji: "👑", color: "#8b5cf6" },
+];
+
+function getLeague(points: number) {
+  return LEAGUES.find(l => points >= l.min && points <= l.max) ?? LEAGUES[0];
+}
+
+const PRESET_AVATARS = [
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Felix&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Zara&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Milo&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Luna&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Roxy&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Max&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Nova&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Pixel&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Sage&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Atlas&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Echo&size=200",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Blaze&size=200",
+];
+
 type Profile = {
   id: string;
   full_name: string | null;
@@ -18,6 +46,7 @@ type Profile = {
   role: string;
   phone_number: string | null;
   interests: string[] | null;
+  avatar_url: string | null;
 };
 
 export default function ProfileScreen() {
@@ -25,9 +54,10 @@ export default function ProfileScreen() {
   const [loading, setLoading]     = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Konum
+  // Konum & lig
   const [countryCode, setCountryCode] = useState<string>("");
   const [city, setCity]               = useState<string>("");
+  const [myLifetimePts, setMyLifetimePts] = useState(0);
 
   // Edit state
   const [editing, setEditing]         = useState(false);
@@ -36,11 +66,15 @@ export default function ProfileScreen() {
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const [editCountry, setEditCountry] = useState<string>("");
   const [editCity, setEditCity]       = useState<string>("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving]           = useState(false);
 
   // Ülke picker modal
   const [countryModal, setCountryModal] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
+
+  // Avatar picker modal
+  const [avatarModal, setAvatarModal] = useState(false);
 
   // Şifre
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -53,14 +87,19 @@ export default function ProfileScreen() {
     if (!user) { setLoading(false); return; }
 
     const [profileRes, locationRes] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, email, role, phone_number, interests").eq("id", user.id).single(),
-      supabase.from("user_lifetime_scores").select("country_code, city").eq("user_id", user.id).maybeSingle(),
+      supabase.from("profiles")
+        .select("id, full_name, email, role, phone_number, interests, avatar_url")
+        .eq("id", user.id).single(),
+      supabase.from("user_lifetime_scores")
+        .select("country_code, city, total_points")
+        .eq("user_id", user.id).maybeSingle(),
     ]);
 
     if (profileRes.data) setProfile(profileRes.data as Profile);
     if (locationRes.data) {
       setCountryCode(locationRes.data.country_code ?? "");
       setCity(locationRes.data.city ?? "");
+      setMyLifetimePts(locationRes.data.total_points ?? 0);
     }
     setLoading(false);
   }
@@ -74,6 +113,7 @@ export default function ProfileScreen() {
     setEditInterests(profile.interests ?? []);
     setEditCountry(countryCode);
     setEditCity(city);
+    setEditAvatarUrl(profile.avatar_url ?? null);
     setEditing(true);
   }
 
@@ -89,11 +129,12 @@ export default function ProfileScreen() {
     }
     setSaving(true);
 
-    const [profileErr, locationErr] = await Promise.all([
+    const [profileErr] = await Promise.all([
       supabase.from("profiles").update({
         full_name:    editName.trim(),
         phone_number: editPhone.trim() || null,
         interests:    editInterests,
+        avatar_url:   editAvatarUrl,
       }).eq("id", profile.id).then(r => r.error),
 
       editCountry
@@ -156,8 +197,10 @@ export default function ProfileScreen() {
     );
   }
 
-  const firstName = profile?.full_name?.split(" ")[0] ?? "Ziyaretçi";
-  const initial   = firstName.charAt(0).toUpperCase();
+  const firstName        = profile?.full_name?.split(" ")[0] ?? "Ziyaretçi";
+  const initial          = firstName.charAt(0).toUpperCase();
+  const league           = getLeague(myLifetimePts);
+  const currentAvatarUrl = editing ? editAvatarUrl : profile?.avatar_url;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -186,9 +229,30 @@ export default function ProfileScreen() {
 
           {/* Avatar */}
           <View style={styles.avatarBox}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial}</Text>
-            </View>
+            <TouchableOpacity
+              style={{ position: "relative" }}
+              onPress={editing ? () => setAvatarModal(true) : undefined}
+              activeOpacity={editing ? 0.75 : 1}
+            >
+              {currentAvatarUrl ? (
+                <Image source={{ uri: currentAvatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initial}</Text>
+                </View>
+              )}
+              {!editing && (
+                <View style={[styles.leagueBadge, { borderColor: league.color + "60" }]}>
+                  <Text style={{ fontSize: 14 }}>{league.emoji}</Text>
+                </View>
+              )}
+              {editing && (
+                <View style={styles.avatarEditDot}>
+                  <Pencil color="#fff" size={11} />
+                </View>
+              )}
+            </TouchableOpacity>
+
             {!editing ? (
               <>
                 <Text style={styles.name}>{profile?.full_name ?? "—"}</Text>
@@ -197,8 +261,8 @@ export default function ProfileScreen() {
             ) : (
               <Text style={styles.email}>{profile?.email}</Text>
             )}
-            <View style={styles.rolePill}>
-              <Text style={styles.rolePillText}>Ziyaretçi</Text>
+            <View style={[styles.rolePill, { borderColor: league.color + "50", backgroundColor: league.color + "15" }]}>
+              <Text style={[styles.rolePillText, { color: league.color }]}>{league.emoji} {league.name}</Text>
             </View>
           </View>
 
@@ -371,6 +435,50 @@ export default function ProfileScreen() {
           />
         </SafeAreaView>
       </Modal>
+
+      {/* Avatar Seçici Modal */}
+      <Modal visible={avatarModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Avatar Seç</Text>
+            <TouchableOpacity onPress={() => setAvatarModal(false)} style={styles.modalClose}>
+              <X color={Colors.white} size={22} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={PRESET_AVATARS}
+            keyExtractor={url => url}
+            numColumns={4}
+            contentContainerStyle={{ padding: 16 }}
+            columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
+            ListHeaderComponent={
+              <TouchableOpacity
+                style={[styles.avatarRemoveBtn, !editAvatarUrl && { opacity: 0.35 }]}
+                onPress={() => { setEditAvatarUrl(null); setAvatarModal(false); }}
+                disabled={!editAvatarUrl}
+              >
+                <Text style={styles.avatarRemoveBtnText}>Baş Harf Kullan (Avatarı Kaldır)</Text>
+              </TouchableOpacity>
+            }
+            renderItem={({ item }) => {
+              const selected = editAvatarUrl === item;
+              return (
+                <TouchableOpacity
+                  style={[styles.avatarPreset, selected && styles.avatarPresetSelected]}
+                  onPress={() => { setEditAvatarUrl(item); setAvatarModal(false); }}
+                >
+                  <Image source={{ uri: item }} style={styles.avatarPresetImg} />
+                  {selected && (
+                    <View style={styles.avatarPresetCheck}>
+                      <Check color="#fff" size={12} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -388,10 +496,12 @@ const styles = StyleSheet.create({
   avatarBox:    { alignItems: "center", marginBottom: 28, gap: 8 },
   avatar:       { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.indigo + "30", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: Colors.indigo + "60" },
   avatarText:   { fontSize: 36, fontWeight: "800", color: Colors.indigo },
+  leagueBadge:  { position: "absolute", bottom: -2, right: -4, width: 26, height: 26, borderRadius: 13, backgroundColor: Colors.card, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  avatarEditDot:{ position: "absolute", bottom: -2, right: -4, width: 26, height: 26, borderRadius: 13, backgroundColor: Colors.indigo, alignItems: "center", justifyContent: "center" },
   name:         { fontSize: 22, fontWeight: "700", color: Colors.white },
   email:        { fontSize: 14, color: Colors.muted },
-  rolePill:     { backgroundColor: Colors.indigo + "20", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: Colors.indigo + "40" },
-  rolePillText: { fontSize: 12, fontWeight: "600", color: Colors.indigoLight },
+  rolePill:     { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  rolePillText: { fontSize: 12, fontWeight: "700" },
   card:         { backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, marginBottom: 16, padding: 16 },
   infoRow:      { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 2 },
   infoLabel:    { fontSize: 14, color: Colors.muted, flex: 1 },
@@ -413,7 +523,7 @@ const styles = StyleSheet.create({
   passwordToggleText: { fontSize: 14, fontWeight: "700", color: Colors.indigo },
   logoutBtn:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.red + "15", borderRadius: 14, paddingVertical: 15, borderWidth: 1, borderColor: Colors.red + "30", marginTop: 8 },
   logoutText:   { fontSize: 16, fontWeight: "700", color: Colors.red },
-  // Modal
+  // Modals
   modalContainer:   { flex: 1, backgroundColor: Colors.bg },
   modalHeader:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
   modalTitle:       { fontSize: 18, fontWeight: "800", color: Colors.white },
@@ -425,4 +535,11 @@ const styles = StyleSheet.create({
   countryFlag:      { fontSize: 26 },
   countryName:      { flex: 1, fontSize: 15, fontWeight: "600", color: Colors.white },
   separator:        { height: 1, backgroundColor: Colors.border, marginLeft: 60 },
+  // Avatar picker
+  avatarRemoveBtn:     { marginBottom: 16, padding: 12, backgroundColor: Colors.card2, borderRadius: 12, borderWidth: 1, borderColor: Colors.border },
+  avatarRemoveBtnText: { color: Colors.muted, textAlign: "center", fontSize: 13, fontWeight: "600" },
+  avatarPreset:        { flex: 1, aspectRatio: 1, borderRadius: 14, overflow: "hidden", borderWidth: 2, borderColor: "transparent" },
+  avatarPresetSelected:{ borderColor: Colors.indigo },
+  avatarPresetImg:     { width: "100%", height: "100%" },
+  avatarPresetCheck:   { position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.indigo, alignItems: "center", justifyContent: "center" },
 });

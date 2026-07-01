@@ -1,6 +1,34 @@
+import { TouchableOpacity } from "react-native";
 import { Tabs } from "expo-router";
 import { Colors } from "@/constants/Colors";
 import { Compass, QrCode, BookOpen, Ticket, User, Gamepad2 } from "lucide-react-native";
+
+function QrAdaButton({ onPress }: { onPress?: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={{
+        top: -22,
+        justifyContent: "center",
+        alignItems: "center",
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: Colors.indigo,
+        shadowColor: Colors.indigo,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.6,
+        shadowRadius: 14,
+        elevation: 10,
+        borderWidth: 3,
+        borderColor: Colors.card,
+      }}
+    >
+      <QrCode color="#fff" size={26} />
+    </TouchableOpacity>
+  );
+}
 
 export default function TabLayout() {
   return (
@@ -11,8 +39,8 @@ export default function TabLayout() {
           backgroundColor: Colors.card,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          height: 82,
-          paddingBottom: 20,
+          height: 88,
+          paddingBottom: 24,
           paddingTop: 10,
         },
         tabBarActiveTintColor: Colors.indigo,
@@ -35,17 +63,18 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="scan"
-        options={{
-          title: "QR Tara",
-          tabBarIcon: ({ color, size }) => <QrCode color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
         name="game"
         options={{
           title: "Oyunlar",
           tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="scan"
+        options={{
+          title: "",
+          tabBarLabel: () => null,
+          tabBarButton: (props) => <QrAdaButton onPress={props.onPress ?? undefined} />,
         }}
       />
       <Tabs.Screen
