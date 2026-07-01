@@ -16,8 +16,9 @@ import Svg, { Line } from "react-native-svg";
 const { width: SCREEN_W } = Dimensions.get("window");
 
 type ActiveTab = "tickets" | "loyalty" | "game";
-type PointRow  = { reason: string; points: number; created_at: string };
+type PointRow  = { event_id: string | null; event_name: string | null; reason: string; points: number; created_at: string };
 type Badge     = { name: string; icon: string; earned_at: string };
+type FairPointGroup = { event_id: string | null; event_name: string; total: number; rows: PointRow[] };
 
 const REASON_LABELS: Record<string, string> = {
   booth_visit: "Stant Ziyareti",
@@ -106,11 +107,12 @@ export default function TicketsScreen() {
 
   // Tickets + loyalty data
   const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
-  const [totalPoints, setTotalPoints]     = useState(0);
-  const [points, setPoints]               = useState<PointRow[]>([]);
+  const [lifetimePts, setLifetimePts]     = useState(0);
+  const [fairGroups, setFairGroups]       = useState<FairPointGroup[]>([]);
   const [badges, setBadges]               = useState<Badge[]>([]);
   const [userId, setUserId]               = useState<string>("");
   const [userName, setUserName]           = useState<string>("");
+  const [expandedFair, setExpandedFair]   = useState<string | null>(null);
 
   // Game data
   const [fairs, setFairs]                 = useState<FairWithBoxInfo[]>([]);
@@ -123,27 +125,51 @@ export default function TicketsScreen() {
     if (!user) { setLoading(false); return; }
     setUserId(user.id);
 
-    const [regsData, profileRes, pointsRes, badgesRes, fairsData] = await Promise.all([
+    const [regsData, profileRes, pointsRes, badgesRes, fairsData, lifeRes] = await Promise.all([
       fetchMyRegistrations(user.id),
       supabase.from("profiles").select("full_name").eq("id", user.id).single(),
       supabase.from("loyalty_points")
-        .select("reason, points, created_at")
+        .select("event_id, reason, points, created_at, events(name)")
         .eq("visitor_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(30),
+        .limit(50),
       supabase.from("visitor_badges")
         .select("earned_at, badge:badge_definitions(name, icon)")
         .eq("visitor_id", user.id)
         .order("earned_at", { ascending: false }),
       getMyFairsWithBoxInfo(),
+      supabase.from("user_lifetime_scores")
+        .select("total_points")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     setRegistrations(regsData);
     setUserName(profileRes.data?.full_name ?? "");
+    setLifetimePts(lifeRes.data?.total_points ?? 0);
 
-    const rows = pointsRes.data ?? [];
-    setPoints(rows as PointRow[]);
-    setTotalPoints(rows.reduce((s, r) => s + (r.points ?? 0), 0));
+    // Per-fair gruplama
+    const rawRows = (pointsRes.data ?? []).map(r => {
+      const ev = Array.isArray(r.events) ? r.events[0] : r.events;
+      return {
+        event_id:   r.event_id ?? null,
+        event_name: ev?.name ?? null,
+        reason:     r.reason,
+        points:     r.points,
+        created_at: r.created_at,
+      } as PointRow;
+    });
+
+    const groupMap = new Map<string, FairPointGroup>();
+    for (const p of rawRows) {
+      const key  = p.event_id ?? "__standalone__";
+      const name = p.event_name ?? (p.event_id ? "Fuar" : "Bağımsız Puan");
+      const grp  = groupMap.get(key) ?? { event_id: p.event_id, event_name: name, total: 0, rows: [] };
+      grp.total += p.points;
+      grp.rows.push(p);
+      groupMap.set(key, grp);
+    }
+    setFairGroups(Array.from(groupMap.values()).sort((a, b) => b.total - a.total));
 
     setBadges(
       (badgesRes.data ?? []).map(b => {
@@ -242,12 +268,15 @@ export default function TicketsScreen() {
         {/* ── PUANLARIM ── */}
         {activeTab === "loyalty" && (
           <>
+            {/* Yaşam boyu toplam */}
             <View style={styles.totalCard}>
               <Zap color={Colors.gold} size={36} />
-              <Text style={styles.totalValue}>{totalPoints}</Text>
-              <Text style={styles.totalLabel}>Toplam Puan</Text>
+              <Text style={styles.totalValue}>{lifetimePts.toLocaleString()}</Text>
+              <Text style={styles.totalLabel}>Tüm Zamanlar</Text>
+              <Text style={styles.totalSubLabel}>Lig sıralamasında kullanılan puan</Text>
             </View>
 
+            {/* Rozetler */}
             {badges.length > 0 && (
               <>
                 <View style={styles.sectionRow}>
@@ -265,26 +294,54 @@ export default function TicketsScreen() {
               </>
             )}
 
+            {/* Fuar bazlı puan kartları */}
             <View style={styles.sectionRow}>
               <Trophy color={Colors.indigo} size={16} />
-              <Text style={styles.sectionTitle}>Puan Geçmişi</Text>
+              <Text style={styles.sectionTitle}>Fuar Bazlı Puanlar</Text>
             </View>
-            {points.length === 0 ? (
-              <Text style={styles.emptyText}>Henüz puan kazanmadın. Firma QR kodlarını taramaya başla!</Text>
+            {fairGroups.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={{ fontSize: 40, marginBottom: 8 }}>⚡</Text>
+                <Text style={styles.emptyTitle}>Henüz puan kazanmadın</Text>
+                <Text style={styles.emptyText}>Fuar QR kodlarını tarayarak puan kazan!</Text>
+              </View>
             ) : (
-              points.map((p, i) => (
-                <View key={i} style={styles.pointRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.pointReason}>{REASON_LABELS[p.reason] ?? p.reason}</Text>
-                    <Text style={styles.pointDate}>
-                      {new Date(p.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })}
-                    </Text>
+              fairGroups.map(grp => {
+                const key      = grp.event_id ?? "__standalone__";
+                const expanded = expandedFair === key;
+                return (
+                  <View key={key} style={styles.fairPointCard}>
+                    <TouchableOpacity
+                      style={styles.fairPointHeader}
+                      onPress={() => setExpandedFair(expanded ? null : key)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fairPointName} numberOfLines={1}>{grp.event_name}</Text>
+                        <Text style={styles.fairPointCount}>{grp.rows.length} işlem</Text>
+                      </View>
+                      <View style={styles.fairPointBadge}>
+                        <Zap color={Colors.gold} size={13} />
+                        <Text style={styles.fairPointTotal}>{grp.total.toLocaleString()}</Text>
+                      </View>
+                      <Text style={[styles.fairPointChevron, expanded && { transform: [{ rotate: "90deg" }] }]}>›</Text>
+                    </TouchableOpacity>
+                    {expanded && grp.rows.map((p, i) => (
+                      <View key={i} style={styles.pointRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.pointReason}>{REASON_LABELS[p.reason] ?? p.reason}</Text>
+                          <Text style={styles.pointDate}>
+                            {new Date(p.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })}
+                          </Text>
+                        </View>
+                        <Text style={[styles.pointValue, { color: p.points >= 0 ? Colors.green : Colors.red }]}>
+                          +{p.points}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                  <Text style={[styles.pointValue, { color: p.points >= 0 ? Colors.green : Colors.red }]}>
-                    +{p.points}
-                  </Text>
-                </View>
-              ))
+                );
+              })
             )}
           </>
         )}
@@ -295,8 +352,10 @@ export default function TicketsScreen() {
             {/* İstatistikler */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
-                <Text style={styles.statValue}>{gamePts}</Text>
-                <Text style={styles.statLabel}>Bu Fuarda</Text>
+                <Text style={styles.statValue}>{gamePts.toLocaleString()}</Text>
+                <Text style={styles.statLabel}>
+                  {activeFairs.length === 1 ? "Bu Fuarda" : "Fuar Puanı"}
+                </Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: Colors.gold }]}>{totalBoxes}</Text>
@@ -444,6 +503,14 @@ const styles = StyleSheet.create({
   totalCard:            { backgroundColor: Colors.card, borderRadius: 20, padding: 28, alignItems: "center", gap: 8, marginBottom: 24, borderWidth: 1, borderColor: Colors.gold + "30" },
   totalValue:           { fontSize: 52, fontWeight: "800", color: Colors.gold },
   totalLabel:           { fontSize: 14, color: Colors.muted, fontWeight: "600" },
+  totalSubLabel:        { fontSize: 11, color: Colors.muted, textAlign: "center" },
+  fairPointCard:        { backgroundColor: Colors.card, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
+  fairPointHeader:      { flexDirection: "row", alignItems: "center", padding: 14, gap: 10 },
+  fairPointName:        { fontSize: 14, fontWeight: "700", color: Colors.white },
+  fairPointCount:       { fontSize: 11, color: Colors.muted, marginTop: 2 },
+  fairPointBadge:       { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.gold + "15", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
+  fairPointTotal:       { fontSize: 15, fontWeight: "800", color: Colors.gold },
+  fairPointChevron:     { color: Colors.muted, fontSize: 22, fontWeight: "300" },
   badgeCard:            { backgroundColor: Colors.card, borderRadius: 16, padding: 14, alignItems: "center", width: 90, borderWidth: 1, borderColor: Colors.border, gap: 6 },
   badgeIcon:            { fontSize: 28 },
   badgeName:            { fontSize: 11, color: Colors.white, textAlign: "center", fontWeight: "600" },

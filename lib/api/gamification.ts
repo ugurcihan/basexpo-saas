@@ -81,10 +81,12 @@ export async function getMyFairsWithBoxInfo(): Promise<FairWithBoxInfo[]> {
     const hasBoxTypes = (boxTypesByEvent.get(reg.event_id)?.length ?? 0) > 0;
     const checkedIn   = checkedInEvents.has(reg.event_id);
 
+    // active: gate check-in yapıldıysa VEYA stant QR ile kutu kazandıysa
+    const hasBoxes = (unopenedByEvent.get(reg.event_id) ?? 0) > 0;
     let status: FairBoxStatus;
-    if (!hasBoxTypes)   status = "no_boxes";
-    else if (!checkedIn) status = "locked";
-    else                 status = "active";
+    if (!hasBoxTypes)              status = "no_boxes";
+    else if (checkedIn || hasBoxes) status = "active";
+    else                            status = "locked";
 
     return {
       event_id:       reg.event_id,
