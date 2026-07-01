@@ -1,7 +1,7 @@
 import { TouchableOpacity, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Colors } from "@/constants/Colors";
-import { Compass, QrCode, BookOpen, Ticket, User, Gamepad2 } from "lucide-react-native";
+import { Compass, QrCode, BookOpen, Ticket, User } from "lucide-react-native";
 
 export default function TabLayout() {
   const router = useRouter();
@@ -38,14 +38,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => <Ticket color={color} size={size} />,
           }}
         />
-        <Tabs.Screen
-          name="game"
-          options={{
-            title: "Oyunlar",
-            tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size} />,
-          }}
-        />
-        {/* Boş slot — FAB bu alanın üzerinde yüzer */}
+        {/* Merkez boş slot — FAB üzerinde yüzer */}
         <Tabs.Screen
           name="scan"
           options={{
@@ -69,9 +62,14 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
           }}
         />
+        {/* game tab görünmez — sadece route olarak erişilebilir */}
+        <Tabs.Screen
+          name="game"
+          options={{ href: null }}
+        />
       </Tabs>
 
-      {/* True Ada FAB — tab bar'dan tamamen bağımsız, gerçek floating */}
+      {/* Ada FAB — tam merkez, tab bar'dan bağımsız */}
       <TouchableOpacity
         onPress={() => router.navigate("/(tabs)/scan")}
         activeOpacity={0.85}
@@ -85,13 +83,11 @@ export default function TabLayout() {
           backgroundColor: Colors.indigo,
           alignItems: "center",
           justifyContent: "center",
-          // Güçlü glowing gölge
           shadowColor: Colors.indigo,
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.75,
           shadowRadius: 20,
           elevation: 14,
-          // Temiz sınır — arka planı keser
           borderWidth: 4,
           borderColor: Colors.bg,
         }}
