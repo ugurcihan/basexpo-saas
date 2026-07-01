@@ -296,7 +296,7 @@ export default function TicketsScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{gamePts}</Text>
-                <Text style={styles.statLabel}>Toplam Puan</Text>
+                <Text style={styles.statLabel}>Bu Fuarda</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={[styles.statValue, { color: Colors.gold }]}>{totalBoxes}</Text>
@@ -325,6 +325,30 @@ export default function TicketsScreen() {
               </View>
               <Text style={styles.ctaArrow}>›</Text>
             </TouchableOpacity>
+
+            {/* Ödüller CTA */}
+            {activeFairs.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitleLg, { marginBottom: 10 }]}>Ödüller</Text>
+                {activeFairs.map(fair => (
+                  <TouchableOpacity
+                    key={`reward-${fair.event_id}`}
+                    style={styles.rewardsFairCard}
+                    onPress={() => router.push({ pathname: "/game/rewards", params: { event_id: fair.event_id } } as any)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.fairCardLeft}>
+                      <Text style={styles.fairEmoji}>🎁</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fairName} numberOfLines={1}>{fair.event_name}</Text>
+                        <Text style={styles.fairSub}>Milestone ödüllerini gör</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.ctaArrow, { color: "#f59e0b" }]}>›</Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
 
             {/* Liderlik Tabloları */}
             <Text style={styles.sectionTitleLg}>Liderlik Tabloları</Text>
@@ -444,6 +468,7 @@ const styles = StyleSheet.create({
   leaderboardTitle:     { fontSize: 15, fontWeight: "700", color: Colors.white },
   leaderboardSub:       { fontSize: 12, color: Colors.muted, marginTop: 2 },
   fairCard:             { backgroundColor: Colors.card, borderRadius: 14, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: Colors.border, marginBottom: 10 },
+  rewardsFairCard:      { backgroundColor: "#1a1000", borderRadius: 14, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#f59e0b30", marginBottom: 10 },
   fairCardLeft:         { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   fairEmoji:            { fontSize: 28 },
   fairName:             { fontSize: 15, fontWeight: "700", color: Colors.white },
