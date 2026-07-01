@@ -1,5 +1,6 @@
 import { Hero } from "@/components/landing/Hero";
 import { FairGameSection } from "@/components/landing/FairGameSection";
+import { GamificationShowcaseSection } from "@/components/landing/GamificationShowcaseSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { UserRoles } from "@/components/landing/UserRoles";
 import { Features } from "@/components/landing/Features";
@@ -13,6 +14,7 @@ export default function LandingPage() {
     <main>
       <Hero />
       <FairGameSection />
+      <GamificationShowcaseSection />
       <HowItWorks />
       <UserRoles />
       <Features />

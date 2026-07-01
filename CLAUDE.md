@@ -127,6 +127,14 @@ meeting_status:    pending | accepted | declined
 | visitor_firm_notes | Ziyaretçi kartvizit defteri | visitor_id, exhibitor_id, contact_id (nullable FK), personal_note, status ("new"\|"contacted"\|"pending"\|"done") — UNIQUE(visitor_id, exhibitor_id) |
 | reward_tiers | Ödül eşikleri | event_id, points_required, reward_title, max_winners (null=sınırsız) |
 | reward_winners | Ödül kazananları | tier_id, visitor_id, rank, claimed_at |
+| push_subscriptions | Push token'lar | user_id, token, platform — UNIQUE user_id (onConflict upsert) |
+| notifications | Bildirimler inbox | recipient_id, sender_id, event_id, type, title, body, is_read |
+| loot_box_types | Kutu tier tanımları | event_id, tier (common/rare/epic/legendary), name, points_required |
+| loot_rewards | Ödül havuzu | event_id, loot_box_type_id, name, rarity, weight, is_active |
+| user_loot_boxes | Kazanılan kutular | user_id, event_id, loot_box_type_id, earned_at, opened_at (null=açılmamış) |
+| user_pity_counters | Pity mekanizması | user_id, event_id, opens_since_legendary |
+| box_opening_log | Kutu açma sonuçları | user_id, box_id, reward_id, opened_at |
+| user_lifetime_scores | Yaşam boyu toplam puan | user_id, total_points — Türkiye/Dünya sıralaması için |
 
 **Bağımsız QR (Standalone Exhibitor) kuralı:**
 - `exhibitors.event_id = NULL` → o kayıt bağımsız QR (fuara bağlı değil)
@@ -188,7 +196,10 @@ total_points  → toplam puan eşiği
 029_nullable_event_id_qr_scans.sql  ← qr_scans.event_id NULL yapıldı (bağımsız QR taramaları için)
 030_standalone_gamification.sql     ← exhibitors: video_url, video_points, survey_points, custom_reward + standalone_interactions tablosu
 031_visitor_firm_notes.sql          ← visitor_firm_notes tablosu (kartvizit defteri, UNIQUE visitor+exhibitor)
+032_gamification_lootboxes_leaderboard.sql ← loot_box_types, loot_rewards, user_loot_boxes, pity system, box_opening_log, user_lifetime_scores
+033_gamification_helpers.sql               ← check_box_milestones trigger, leaderboard views (v_fair/turkey/world_leaderboard)
 ```
+Sonraki migration numarası: **034**
 
 ---
 
@@ -390,6 +401,10 @@ npx tsc --noEmit   # TypeScript kontrol
 - **Yetkili Kişiler & Stant Yetkilileri** (`exhibitor_contacts`): firma başına max 5'er kişi, Kartvizit sekmesinden CRUD
 - **Video + Puan Sistemi** (`standalone_interactions`): firma video URL + puan ayarı; ziyaretçi video izle / anketi doldur → puan kazan
 - **Kartvizit Defteri** (`visitor_firm_notes`): Ziyaretçi paneli `/visitor/contacts` — taradığı firmalar fuar bazında gruplu, yetkili kişi seç, not al, durum belirle ("Yeni/İletişime Geçtim/Beklemede/Tamamlandı"), CSV + vCard indir; tüm visitor nav'larına "Kartvizitler" eklendi (shared `_nav.ts`)
+- **Oyunlaştırma sistemi** — Loot box (kutu tipleri, ödül havuzu, pity mekanizması), organizatör `Oyunlaştırma` sekmesi (`GamificationSection.tsx`), `features/gamification/actions.ts` server actions, migration 032+033
+- **Push bildirim pipeline** — expo-notifications EAS entegrasyonu, `push_subscriptions` token kaydı, Expo Push API batch gönderimi (100/chunk), bildirim inbox (`/notifications` ekranı), `features/notifications/notificationActions.ts`
+- **Altın QR sistemi** — `golden_qr_codes` + `golden_qr_scans`, mobil scanner pattern tespiti + GoldenPrizeModal, web Ödüller sekmesinde analitik panel (`GoldenQRAnalyticsPanel.tsx`)
+- **Liderlik tablosu & per-fuar puan** — `v_fair/turkey/world_leaderboard` views, `user_lifetime_scores`, Biletlerim'de fuar bazlı puan breakdown (`FairPointGroup` tipi)
 
 ### Faz C — Büyüme
 1. **Post-fuar AI PDF raporu** — organizatör + firma için ayrı, `@react-pdf/renderer`

@@ -23,7 +23,7 @@ const FEATURES = [
     icon: QrCode,
     title: "QR Lead Capture",
     description:
-      "Her firma ve ziyaretçiye benzersiz QR token. Stand ziyareti anında lead'e dönüşür, kayıp sıfır.",
+      "Her firma ve ziyaretçiye benzersiz QR token. Stand ziyareti anında lead'e dönüşür, kayıp sıfır. Altın QR çekilişlerine katıl — fuardaki sürpriz ödülleri anında kazan.",
     color: "cyan",
     tag: "Çekirdek Özellik",
   },
@@ -45,11 +45,11 @@ const FEATURES = [
   },
   {
     icon: Trophy,
-    title: "Rozet & Sadakat Sistemi",
+    title: "Oyunlaştırma & Loot Box",
     description:
-      "Stant ziyaretleri, bağlantılar ve toplantılar puana dönüşür. Biriktirdiğin puanları organizatörün belirlediği ödüllerle değerlendir.",
+      "Stant ziyaretleri puana dönüşür. Loot box aç, organizatörün belirlediği ödülleri kazan. Fuar / Türkiye / Dünya liderlik tablosunda sıralan.",
     color: "gold",
-    tag: "Ödül",
+    tag: "Gamification",
   },
   {
     icon: BarChart2,
