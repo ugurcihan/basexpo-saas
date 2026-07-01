@@ -63,6 +63,7 @@ import {
   Copy,
   Check,
   Printer,
+  Gamepad2,
 } from "lucide-react";
 import {
   createHall,
@@ -90,6 +91,7 @@ import { RegistrantsSection } from "./RegistrantsSection";
 import { BadgePrintSection } from "./BadgePrintSection";
 import { QRCodesSection } from "./QRCodesSection";
 import { GoldenQRAnalyticsPanel } from "./GoldenQRAnalyticsPanel";
+import { GamificationSection } from "./GamificationSection";
 
 // ── Ödül Yönetimi Bileşeni ───────────────────────────────
 function RewardManagementSection({ eventId, alwaysOpen }: { eventId: string; alwaysOpen?: boolean }) {
@@ -771,10 +773,11 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
 
   const TABS = [
     { id: "genel",    label: "Genel",              icon: LayoutDashboard },
-    { id: "salonlar", label: "Salonlar & Standlar", icon: Layers          },
-    { id: "oduller",  label: "Ödüller",             icon: Trophy          },
-    { id: "galeri",   label: "Galeri",              icon: Images          },
     { id: "kayitlar", label: "Kayıtlar",            icon: ClipboardList   },
+    { id: "oyun",     label: "Oyunlaştırma",        icon: Gamepad2        },
+    { id: "oduller",  label: "Ödüller",             icon: Trophy          },
+    { id: "salonlar", label: "Salonlar & Standlar", icon: Layers          },
+    { id: "galeri",   label: "Galeri",              icon: Images          },
     { id: "sponsor",  label: "Sponsor",             icon: Crown           },
     { id: "yaka",     label: "Yaka Kartı",          icon: Printer         },
     { id: "kodlar",   label: "QR Kodlar",            icon: QrCode          },
@@ -823,24 +826,31 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
 
         {/* ── Pill Tab Bar ───────────────────────────────────── */}
         <div className="px-4 lg:px-6 border-b border-white/8">
-          <div className="flex gap-2 overflow-x-auto pb-3 pt-1" style={{ scrollbarWidth: "none" }}>
-            {TABS.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
-                    activeTab === tab.id
-                      ? "bg-brand-indigo text-white shadow-lg shadow-brand-indigo/20"
-                      : "glass border border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="relative">
+            <div
+              className="flex gap-2 overflow-x-auto pb-3 pt-1"
+              style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+            >
+              {TABS.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                      activeTab === tab.id
+                        ? "bg-brand-indigo text-white shadow-lg shadow-brand-indigo/20"
+                        : "glass border border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Daha fazla tab olduğunu gösteren sağ kenar gradient */}
+            <div className="absolute right-0 top-0 bottom-3 w-12 bg-gradient-to-l from-brand-dark to-transparent pointer-events-none" />
           </div>
         </div>
 
@@ -1025,6 +1035,13 @@ export function EventDetailClient({ event: initialEvent, sponsors: initialSponso
                 <RewardManagementSection eventId={event.id} alwaysOpen />
               </motion.div>
             </div>
+          )}
+
+          {/* OYUNLAŞTIRMA */}
+          {activeTab === "oyun" && (
+            <motion.div initial={{ y: 16 }} animate={{ y: 0 }}>
+              <GamificationSection eventId={event.id} />
+            </motion.div>
           )}
 
           {/* GALERİ */}
