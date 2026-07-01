@@ -3,6 +3,53 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 
+// ── Expo Push API ────────────────────────────────────────────────
+
+async function deliverPushNotifications(
+  recipientIds: string[],
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+) {
+  if (recipientIds.length === 0) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: subs } = await supabase
+    .from("push_subscriptions")
+    .select("token")
+    .in("user_id", recipientIds);
+
+  const tokens = (subs ?? []).map((s) => s.token).filter(Boolean) as string[];
+  if (tokens.length === 0) return;
+
+  // Expo Push API batches up to 100 messages
+  for (let i = 0; i < tokens.length; i += 100) {
+    const chunk = tokens.slice(i, i + 100);
+    const messages = chunk.map((to) => ({
+      to,
+      sound: "default",
+      title,
+      body: body || undefined,
+      data: data ?? {},
+      channelId: "announcements",
+    }));
+
+    try {
+      await fetch("https://exp.host/--/exponent/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Accept-Encoding": "gzip, deflate",
+        },
+        body: JSON.stringify(messages),
+      });
+    } catch {
+      // Push delivery failure is non-blocking — DB notification already saved
+    }
+  }
+}
+
 export async function sendNotification(params: {
   eventId: string;
   targetType: "exhibitors" | "visitors" | "both";
@@ -49,6 +96,12 @@ export async function sendNotification(params: {
 
   const { error } = await supabase.from("notifications").insert(rows);
   if (error) return { error: error.message };
+
+  // Push bildirim gönder (arka planda, non-blocking)
+  deliverPushNotifications(recipientIds, params.title, params.body, {
+    type: params.type,
+    eventId: params.eventId,
+  });
 
   revalidatePath("/organizer/messages");
   return { success: true, count: recipientIds.length };
