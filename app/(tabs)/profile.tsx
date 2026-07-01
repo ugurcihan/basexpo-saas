@@ -4,9 +4,10 @@ import {
   ScrollView, TextInput, KeyboardAvoidingView, Platform, Modal, FlatList, Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Colors } from "@/constants/Colors";
-import { LogOut, Pencil, Check, X, Mail, Shield, User, Phone, Lock, MapPin, Globe } from "lucide-react-native";
+import { LogOut, Pencil, Check, X, Mail, Shield, User, Phone, Lock, MapPin, Globe, Bell } from "lucide-react-native";
 import { COUNTRIES, flagEmoji } from "@/lib/countries";
 
 const INTERESTS = ["Teknoloji", "Gıda", "Tekstil", "İnşaat", "Savunma", "Tarım", "Enerji", "Sağlık"];
@@ -50,9 +51,11 @@ type Profile = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [profile, setProfile]     = useState<Profile | null>(null);
   const [loading, setLoading]     = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Konum & lig
   const [countryCode, setCountryCode] = useState<string>("");
@@ -104,7 +107,18 @@ export default function ProfileScreen() {
     setLoading(false);
   }
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => {
+    loadProfile();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_id", user.id)
+        .eq("is_read", false);
+      setUnreadCount(count ?? 0);
+    });
+  }, []);
 
   function startEditing() {
     if (!profile) return;
@@ -365,6 +379,17 @@ export default function ProfileScreen() {
             </View>
           )}
 
+          {/* Bildirimler */}
+          <TouchableOpacity style={styles.passwordToggle} onPress={() => router.push("/notifications" as any)}>
+            <Bell color={Colors.indigo} size={16} />
+            <Text style={styles.passwordToggleText}>Bildirimler</Text>
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           {/* Şifre */}
           <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPasswordSection(!showPasswordSection)}>
             <Lock color={Colors.indigo} size={16} />
@@ -519,8 +544,10 @@ const styles = StyleSheet.create({
   tagsWrap:     { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" },
   tagChip:      { backgroundColor: Colors.indigo + "15", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: Colors.indigo + "30" },
   tagChipText:  { fontSize: 11, fontWeight: "600", color: Colors.indigoLight },
-  passwordToggle: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 4, marginBottom: 8 },
-  passwordToggleText: { fontSize: 14, fontWeight: "700", color: Colors.indigo },
+  passwordToggle:     { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 4, marginBottom: 8 },
+  passwordToggleText: { fontSize: 14, fontWeight: "700", color: Colors.indigo, flex: 1 },
+  notifBadge:         { backgroundColor: "#ef4444", borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, alignItems: "center", justifyContent: "center" },
+  notifBadgeText:     { color: "#fff", fontSize: 11, fontWeight: "800" },
   logoutBtn:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.red + "15", borderRadius: 14, paddingVertical: 15, borderWidth: 1, borderColor: Colors.red + "30", marginTop: 8 },
   logoutText:   { fontSize: 16, fontWeight: "700", color: Colors.red },
   // Modals
